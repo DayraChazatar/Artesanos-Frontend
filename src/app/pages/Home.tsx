@@ -1,9 +1,9 @@
 import { Link } from 'react-router';
-import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Heart, Truck, Shield, Star } from 'lucide-react';
 import { products } from '../data/products';
+import { useAuth } from '../context/AuthContext';
 
 export function Home() {
   const { isAuthenticated } = useAuth();
@@ -28,15 +28,15 @@ export function Home() {
               Productos únicos creados por artesanos talentosos. Cada pieza cuenta una historia.
             </p>
             <div className="flex gap-4">
-             <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
-              <Link to="/catalogo">Ver Catálogo</Link>
-             </Button>
-           {!isAuthenticated && (
-             <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
-              <Link to="/registro">Registrarse</Link>
-            </Button>
-          )}
-           </div>
+              <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
+                <Link to="/catalogo">Ver Catálogo</Link>
+              </Button>
+              {!isAuthenticated && (
+                <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
+                  <Link to="/registro">Registrarse</Link>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -49,36 +49,28 @@ export function Home() {
               <CardContent className="pt-6 text-center">
                 <Heart className="h-12 w-12 mx-auto mb-4 text-orange-600" />
                 <h3 className="font-semibold mb-2">Hecho con Amor</h3>
-                <p className="text-sm text-gray-600">
-                  Cada producto es creado con dedicación y pasión
-                </p>
+                <p className="text-sm text-gray-600">Cada producto es creado con dedicación y pasión</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
                 <Star className="h-12 w-12 mx-auto mb-4 text-orange-600" />
                 <h3 className="font-semibold mb-2">Calidad Premium</h3>
-                <p className="text-sm text-gray-600">
-                  Productos de la más alta calidad artesanal
-                </p>
+                <p className="text-sm text-gray-600">Productos de la más alta calidad artesanal</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
                 <Truck className="h-12 w-12 mx-auto mb-4 text-orange-600" />
                 <h3 className="font-semibold mb-2">Envío Seguro</h3>
-                <p className="text-sm text-gray-600">
-                  Entrega confiable a todo el país
-                </p>
+                <p className="text-sm text-gray-600">Entrega confiable a todo el país</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6 text-center">
                 <Shield className="h-12 w-12 mx-auto mb-4 text-orange-600" />
                 <h3 className="font-semibold mb-2">Compra Segura</h3>
-                <p className="text-sm text-gray-600">
-                  Protegemos tus datos y tu inversión
-                </p>
+                <p className="text-sm text-gray-600">Protegemos tus datos y tu inversión</p>
               </CardContent>
             </Card>
           </div>
@@ -88,30 +80,18 @@ export function Home() {
       {/* Featured Products */}
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-semibold mb-8 text-center">
-            Productos Destacados
-          </h2>
+          <h2 className="text-3xl font-semibold mb-8 text-center">Productos Destacados</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {featuredProducts.map((product) => (
               <Link to={`/producto/${product.id}`} key={product.id}>
                 <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-64 object-cover"
-                  />
+                  <img src={product.image} alt={product.name} className="w-full h-64 object-cover" />
                   <CardContent className="p-4">
                     <h3 className="font-semibold mb-2">{product.name}</h3>
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                      {product.description}
-                    </p>
+                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description}</p>
                     <div className="flex justify-between items-center">
-                      <span className="text-orange-600 font-semibold">
-                        ${product.price.toLocaleString('es-CO')}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        Por {product.artisan}
-                      </span>
+                      <span className="text-orange-600 font-semibold">${product.price.toLocaleString('es-CO')}</span>
+                      <span className="text-xs text-gray-500">Por {product.artisan}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -120,9 +100,7 @@ export function Home() {
           </div>
           <div className="text-center mt-8">
             <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
-              <Link to="/catalogo">
-                Ver Todos los Productos
-              </Link>
+              <Link to="/catalogo">Ver Todos los Productos</Link>
             </Button>
           </div>
         </div>
@@ -133,23 +111,21 @@ export function Home() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
-              <h2 className="text-3xl font-semibold mb-6">
-                Apoyando a Artesanos Locales
-              </h2>
+              <h2 className="text-3xl font-semibold mb-6">Apoyando a Artesanos Locales</h2>
               <p className="text-gray-700 mb-4">
                 Nuestra plataforma conecta directamente a artesanos talentosos con clientes
                 que valoran el trabajo hecho a mano. Cada compra apoya a familias y preserva
                 tradiciones ancestrales.
               </p>
               <p className="text-gray-700 mb-6">
-                Trabajamos con 50 artesanos de la cuidad de Pasto ofreciendo productos
+                Trabajamos con más de 50 artesanos en todo el país, ofreciendo productos
                 únicos que no encontrarás en ningún otro lugar.
               </p>
-              <Button className="bg-orange-600 hover:bg-orange-700" asChild>
-                <Link to="/registro">
-                  Únete a Nuestra Comunidad
-                </Link>
-              </Button>
+              {!isAuthenticated && (
+                <Button className="bg-orange-600 hover:bg-orange-700" asChild>
+                  <Link to="/registro">Únete a Nuestra Comunidad</Link>
+                </Button>
+              )}
             </div>
             <div>
               <img

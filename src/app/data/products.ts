@@ -4,132 +4,181 @@ export const products: Product[] = [
   {
     id: '1',
     name: 'Jarrón de Cerámica Artesanal',
-    description: 'Hermoso jarrón de cerámica hecho a mano con técnicas tradicionales. Cada pieza es única con acabados en tonos tierra.',
+    description:
+      'Hermoso jarrón de cerámica hecho a mano con técnicas tradicionales. Cada pieza es única con acabados en tonos tierra.',
     price: 45000,
-    image: 'https://images.unsplash.com/photo-1578500494198-246f612d3b3d?w=800',
+    image:
+      'https://images.unsplash.com/photo-1578500494198-246f612d3b3d?w=800',
     category: 'Cerámica',
     artisan: 'María González',
     stock: 8,
+    discount: 20,
   },
+
   {
     id: '2',
     name: 'Manta Tejida a Mano',
-    description: 'Manta de lana 100% natural tejida con técnicas ancestrales. Perfecta para decorar o abrigarse.',
+    description:
+      'Manta de lana 100% natural tejida con técnicas ancestrales. Perfecta para decorar o abrigarse.',
     price: 120000,
-    image: 'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=800',
+    image:
+      'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=800',
     category: 'Fibras',
     artisan: 'Pedro Ramírez',
     stock: 5,
   },
+
   {
     id: '3',
     name: 'Collar de Plata con Turquesa',
-    description: 'Collar artesanal de plata 925 con piedra turquesa natural. Diseño exclusivo.',
+    description:
+      'Collar artesanal de plata 925 con piedra turquesa natural. Diseño exclusivo.',
     price: 85000,
-    image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800',
+    image:
+      'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800',
     category: 'Joyería',
     artisan: 'Ana Martínez',
     stock: 12,
+    discount: 15,
   },
+
   {
     id: '4',
     name: 'Cesta de Mimbre Natural',
-    description: 'Cesta tejida a mano con mimbre natural. Ideal para almacenamiento decorativo.',
+    description:
+      'Cesta tejida a mano con mimbre natural. Ideal para almacenamiento decorativo.',
     price: 35000,
-    image: 'https://images.unsplash.com/photo-1591114136711-81040bf7ec6e?w=800',
+    image:
+      'https://images.unsplash.com/photo-1591114136711-81040bf7ec6e?w=800',
     category: 'Fibras',
     artisan: 'Juan López',
     stock: 15,
   },
+
   {
     id: '5',
     name: 'Set de Tazas de Barro',
-    description: 'Set de 4 tazas de barro cocido con diseños tradicionales. Perfecto para café o té.',
+    description:
+      'Set de 4 tazas de barro cocido con diseños tradicionales. Perfecto para café o té.',
     price: 55000,
-    image: 'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=800',
+    image:
+      'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=800',
     category: 'Cerámica',
     artisan: 'María González',
     stock: 10,
+    discount: 10,
   },
+
   {
     id: '6',
     name: 'Bolso de Cuero Artesanal',
-    description: 'Bolso de cuero genuino trabajado a mano con detalles bordados.',
+    description:
+      'Bolso de cuero genuino trabajado a mano con detalles bordados.',
     price: 95000,
-    image: 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=800',
+    image:
+      'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?w=800',
     category: 'Marroquinería',
     artisan: 'Carlos Díaz',
     stock: 7,
   },
+
   {
     id: '7',
     name: 'Tapiz Decorativo',
-    description: 'Tapiz tejido a mano con motivos geométricos tradicionales. Colores naturales.',
+    description:
+      'Tapiz tejido a mano con motivos geométricos tradicionales. Colores naturales.',
     price: 150000,
-    image: 'https://images.unsplash.com/photo-1601156842768-a7873a7d2a7e?w=800',
+    image:
+      'https://images.unsplash.com/photo-1601156842768-a7873a7d2a7e?w=800',
     category: 'Fibras',
     artisan: 'Pedro Ramírez',
     stock: 4,
+    discount: 25,
   },
+
   {
     id: '8',
     name: 'Aretes de Plata con Ámbar',
-    description: 'Par de aretes de plata con incrustaciones de ámbar natural.',
+    description:
+      'Par de aretes de plata con incrustaciones de ámbar natural.',
     price: 65000,
-    image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800',
+    image:
+      'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=800',
     category: 'Joyería',
     artisan: 'Ana Martínez',
     stock: 20,
   },
+
   {
     id: '9',
     name: 'Lámpara de Madera Tallada',
-    description: 'Lámpara de mesa con base de madera tallada a mano. Diseño único.',
+    description:
+      'Lámpara de mesa con base de madera tallada a mano. Diseño único.',
     price: 110000,
-    image: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800',
+    image:
+      'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=800',
     category: 'Tallado',
     artisan: 'Roberto Silva',
     stock: 6,
+    discount: 30,
   },
+
   {
     id: '10',
     name: 'Plato Decorativo de Cerámica',
-    description: 'Plato decorativo de cerámica pintado a mano con diseños florales.',
+    description:
+      'Plato decorativo de cerámica pintado a mano con diseños florales.',
     price: 40000,
-    image: 'https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=800',
+    image:
+      'https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=800',
     category: 'Cerámica',
     artisan: 'María González',
     stock: 11,
   },
+
   {
     id: '11',
     name: 'Cojines Bordados',
-    description: 'Set de 2 cojines con bordados tradicionales en colores vibrantes.',
+    description:
+      'Set de 2 cojines con bordados tradicionales en colores vibrantes.',
     price: 70000,
-    image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=800',
+    image:
+      'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=800',
     category: 'Fibras',
     artisan: 'Laura Fernández',
     stock: 9,
   },
+
   {
     id: '12',
     name: 'Pulsera de Plata Trenzada',
-    description: 'Pulsera de plata 925 con diseño trenzado artesanal.',
+    description:
+      'Pulsera de plata 925 con diseño trenzado artesanal.',
     price: 50000,
-    image: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=800',
+    image:
+      'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=800',
     category: 'Joyería',
     artisan: 'Ana Martínez',
     stock: 18,
+    discount: 5,
   },
 ];
 
 export const categories = [
+
+  // Categorías con productos actuales
+  'Cerámica',
+  'Fibras',
+  'Joyería',
+  'Marroquinería',
+  'Tallado',
+
+  // Categorías futuras
   'Arte con telas',
   'Enchapado en tamo',
-  'Joyeria artesanal',
-  'Ceramica',
   'Madera',
   'Instrumentos',
   'Barniz de Pasto',
-  'Arte manual en tela, escultura textil',
+  'Arte manual en tela',
+  'Escultura textil',
 ];

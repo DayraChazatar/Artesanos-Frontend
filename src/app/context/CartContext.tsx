@@ -9,6 +9,7 @@ export interface Product {
   category: string;
   artisan: string;
   stock: number;
+  discount?: number;
 }
 
 interface CartItem extends Product {

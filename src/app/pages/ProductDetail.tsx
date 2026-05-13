@@ -15,7 +15,6 @@ export function ProductDetail() {
   const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
 
-  // Combinar productos predefinidos con productos personalizados
   const customProducts = JSON.parse(localStorage.getItem('customProducts') || '[]');
   const allProducts = [...products, ...customProducts];
   const product = allProducts.find((p) => p.id === id);
@@ -30,6 +29,10 @@ export function ProductDetail() {
       </div>
     );
   }
+
+  const discountedPrice = product.discount
+    ? Math.round(product.price * (1 - product.discount / 100))
+    : null;
 
   const handleAddToCart = () => {
     if (quantity > product.stock) {
@@ -64,20 +67,30 @@ export function ProductDetail() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Product Image */}
-          <div>
+          <div className="relative">
             <img
               src={product.image}
               alt={product.name}
               className="w-full rounded-lg shadow-lg"
             />
+            {product.discount && (
+              <span className="absolute top-4 right-4 bg-gradient-to-r from-red-500 to-red-700 text-white text-sm font-bold px-4 py-2 rounded-full shadow-lg">
+                🏷️ -{product.discount}% descuento
+              </span>
+            )}
           </div>
 
           {/* Product Info */}
           <div>
-            <div className="mb-4">
+            <div className="mb-4 flex items-center gap-2 flex-wrap">
               <span className="text-sm bg-orange-100 text-orange-700 px-3 py-1 rounded">
                 {product.category}
               </span>
+              {product.discount && (
+                <span className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded font-medium">
+                  ¡En oferta!
+                </span>
+              )}
             </div>
             <h1 className="text-3xl md:text-4xl mb-4">{product.name}</h1>
             <p className="text-gray-600 mb-6">{product.description}</p>
@@ -85,9 +98,22 @@ export function ProductDetail() {
             <Card className="mb-6">
               <CardContent className="p-4">
                 <div className="flex justify-between items-center mb-4">
-                  <span className="text-3xl text-orange-600 font-semibold">
-                    ${product.price.toLocaleString('es-CO')}
-                  </span>
+                  <div className="flex flex-col">
+                    {discountedPrice ? (
+                      <>
+                        <span className="text-gray-400 line-through text-lg font-medium">
+                          ${product.price.toLocaleString('es-CO')}
+                        </span>
+                        <span className="text-3xl text-red-600 font-bold">
+                          ${discountedPrice.toLocaleString('es-CO')}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-3xl text-orange-600 font-semibold">
+                        ${product.price.toLocaleString('es-CO')}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-sm text-gray-500">
                     Stock: {product.stock} unidades
                   </span>
