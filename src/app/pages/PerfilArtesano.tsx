@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import {
-  getCategorias, createCategoria, deleteCategoria,
-  getProductos,  createProducto,  deleteProducto,
-  getKardex,     createKardex,
+  getCategorias, createCategoria, deleteCategoria, updateCategoria,
+  getProductos, createProducto, deleteProducto, updateProducto,
+  getKardex, createKardex,
   type Categoria, type Producto, type Kardex,
 } from '../data/artesanoApi';
+
 
 const ARTESANO_ID: number = Number(localStorage.getItem('usuario_id') ?? 1);
 const ARTESANO_NOMBRE: string = localStorage.getItem('usuario_nombre') ?? 'Artesano';
@@ -41,26 +42,44 @@ function StockBadge({ p }: { p: Producto }) {
 }
 
 // ── Topbar ───────────────────────────────────────────────────────────────────
+const NOTIFICACIONES_MOCK = [
+  { id: 1, tipo: 'stock', titulo: 'Stock bajo', detalle: 'El producto "Aretes de Mariposa" tiene solo 2 unidades disponibles.', fecha: '2025-06-10', leida: false },
+  { id: 2, tipo: 'pedido', titulo: 'Nuevo pedido', detalle: 'Tienes un nuevo pedido #0023 por $85.000 pendiente de confirmación.', fecha: '2025-06-09', leida: false },
+  { id: 3, tipo: 'sistema', titulo: 'Perfil incompleto', detalle: 'Tu perfil de artesano no tiene foto ni descripción. Complétalo para atraer más clientes.', fecha: '2025-06-08', leida: true },
+];
+
 function Topbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [openNoti, setOpenNoti] = useState(false);
+  const [notificaciones, setNotificaciones] = useState(NOTIFICACIONES_MOCK);
+  const [notiDetalle, setNotiDetalle] = useState<typeof NOTIFICACIONES_MOCK[0] | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const notiRef = useRef<HTMLDivElement>(null);
+
+  const noLeidas = notificaciones.filter(n => !n.leida).length;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
+      if (notiRef.current && !notiRef.current.contains(e.target as Node)) {
+        setOpenNoti(false);
+        setNotiDetalle(null);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
+  const handleLogout = () => { logout(); navigate('/'); };
+
+  const handleClickNoti = (n: typeof NOTIFICACIONES_MOCK[0]) => {
+    setNotiDetalle(n);
+    setNotificaciones(prev => prev.map(x => x.id === n.id ? { ...x, leida: true } : x));
   };
+
+  const iconoTipo = (tipo: string) => tipo === 'stock' ? '📦' : tipo === 'pedido' ? '🛍️' : '🔔';
 
   return (
     <header className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-amber-100 flex items-center justify-between px-6 shadow-sm">
@@ -74,66 +93,145 @@ function Topbar() {
         </a>
       </nav>
 
-      {/* Menú de usuario */}
-      <div className="relative" ref={menuRef}>
-        <button
-          onClick={() => setOpen(prev => !prev)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-100 bg-amber-50 hover:bg-amber-100 transition"
-        >
-          <div className="w-7 h-7 rounded-full bg-amber-600 flex items-center justify-center text-white text-xs font-bold">
-            {user?.name?.slice(0, 2).toUpperCase()}
-          </div>
-          <span className="text-sm text-stone-700 font-medium hidden sm:block">{user?.name}</span>
-          <span className="w-2 h-2 rounded-full bg-green-400" />
-        </button>
+      <div className="flex items-center gap-3">
 
-        {open && (
-          <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
-            <div className="px-4 py-3 border-b border-gray-100">
-              <p className="font-semibold text-sm truncate">{user?.name}</p>
-              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-              <span className="inline-block mt-1.5 text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
-                🧵 Artesano
+        {/* Campana de notificaciones */}
+        <div className="relative" ref={notiRef}>
+          <button
+            onClick={() => { setOpenNoti(prev => !prev); setNotiDetalle(null); }}
+            className="relative w-9 h-9 flex items-center justify-center rounded-xl border border-amber-100 bg-amber-50 hover:bg-amber-100 transition"
+          >
+            <span className="text-lg">🔔</span>
+            {noLeidas > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
+                {noLeidas}
               </span>
+            )}
+          </button>
+
+          {openNoti && (
+            <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-amber-100 z-50 overflow-hidden">
+              <div className="px-4 py-3 border-b border-amber-100 flex items-center justify-between">
+                <span className="font-semibold text-sm text-stone-800">Notificaciones</span>
+                {noLeidas > 0 && (
+                  <button
+                    onClick={() => setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })))}
+                    className="text-xs text-amber-600 hover:text-amber-800 font-medium transition"
+                  >
+                    Marcar todas como leídas
+                  </button>
+                )}
+              </div>
+
+              {notiDetalle ? (
+                <div className="p-4">
+                  <button
+                    onClick={() => setNotiDetalle(null)}
+                    className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800 mb-3 font-medium transition"
+                  >
+                    ← Volver
+                  </button>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">{iconoTipo(notiDetalle.tipo)}</span>
+                    <span className="font-semibold text-stone-800 text-sm">{notiDetalle.titulo}</span>
+                  </div>
+                  <p className="text-sm text-stone-600 leading-relaxed mb-3">{notiDetalle.detalle}</p>
+                  <p className="text-xs text-stone-400">{notiDetalle.fecha}</p>
+                </div>
+              ) : (
+                <div className="max-h-72 overflow-y-auto">
+                  {notificaciones.length === 0 ? (
+                    <p className="px-4 py-6 text-center text-sm text-stone-400">Sin notificaciones</p>
+                  ) : (
+                    notificaciones.map(n => (
+                      <button
+                        key={n.id}
+                        onClick={() => handleClickNoti(n)}
+                        className={`w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-amber-50 transition border-b border-amber-50 last:border-0 ${!n.leida ? 'bg-amber-50/60' : ''}`}
+                      >
+                        <span className="text-xl mt-0.5">{iconoTipo(n.tipo)}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`text-sm font-semibold truncate ${!n.leida ? 'text-stone-800' : 'text-stone-500'}`}>
+                              {n.titulo}
+                            </span>
+                            {!n.leida && <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />}
+                          </div>
+                          <p className="text-xs text-stone-400 truncate mt-0.5">{n.detalle}</p>
+                          <p className="text-xs text-stone-300 mt-0.5">{n.fecha}</p>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
-            >
-              <span>↩</span> Cerrar Sesión
-            </button>
-          </div>
-        )}
+          )}
+        </div>
+
+        {/* Menú de usuario */}
+        <div className="relative" ref={menuRef}>
+          <button
+            onClick={() => setOpen(prev => !prev)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-100 bg-amber-50 hover:bg-amber-100 transition"
+          >
+            <div className="w-7 h-7 rounded-full bg-amber-600 flex items-center justify-center text-white text-xs font-bold">
+              {user?.name?.slice(0, 2).toUpperCase()}
+            </div>
+            <span className="text-sm text-stone-700 font-medium hidden sm:block">{user?.name}</span>
+            <span className="w-2 h-2 rounded-full bg-green-400" />
+          </button>
+
+          {open && (
+            <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <p className="font-semibold text-sm truncate">{user?.name}</p>
+                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                <span className="inline-block mt-1.5 text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                  🧵 Artesano
+                </span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
+              >
+                <span>↩</span> Cerrar Sesión
+              </button>
+            </div>
+          )}
+        </div>
+
       </div>
     </header>
   );
 }
-
 // ── Sidebar ──────────────────────────────────────────────────────────────────
-type Tab = 'catalogo' | 'contable' | 'productos' | 'inventario';
+type Tab = 'catalogo' | 'contable' | 'productos' | 'inventario' | "pedidos" | 'reportes';
 
 const NAV_ITEMS: { tab: Tab; icon: string; label: string }[] = [
-  { tab: 'catalogo',   icon: '📋', label: 'Catálogo'   },
-  { tab: 'contable',   icon: '📒', label: 'Contable'   },
-  { tab: 'productos',  icon: '🛍️',  label: 'Productos'  },
+  { tab: 'catalogo', icon: '📋', label: 'Catálogo' },
+  { tab: 'contable', icon: '📒', label: 'Contable' },
+  { tab: 'productos', icon: '🛍️', label: 'Productos' },
   { tab: 'inventario', icon: '📊', label: 'Inventario' },
+  { tab: 'pedidos', icon: '🛒', label: 'Pedidos' },
+  { tab: 'reportes', icon: '📈', label: 'Reportes' },
 ];
 
 function Sidebar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   return (
-    <aside className="fixed top-14 left-0 bottom-0 z-20 w-40 bg-white border-r border-amber-100 flex flex-col items-center py-8 gap-4 shadow-sm">
+    <aside className="fixed top-16 left-0 bottom-0 z-20 w-40 bg-white border-r border-amber-100 flex flex-col items-center py-8 gap-4 shadow-sm overflow-y-auto">
       {NAV_ITEMS.map(({ tab, icon, label }) => (
         <button
           key={tab}
           onClick={() => onChange(tab)}
           title={label}
-          className={`flex flex-col items-center gap-3 w-28 py-6 rounded-2xl text-center transition
+          className={`flex flex-col items-center gap-2 w-24 py-4 rounded-2xl text-center transition
             ${active === tab
               ? 'bg-amber-600 text-white shadow-md'
               : 'text-amber-800 hover:bg-amber-50'
             }`}
         >
-          <span className="text-5xl leading-none">{icon}</span>
+          <span className="text-4xl leading-none">{icon}</span>
           <span className={`text-sm font-semibold leading-tight ${active === tab ? 'text-white' : 'text-stone-500'}`}>
             {label}
           </span>
@@ -142,15 +240,103 @@ function Sidebar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void
     </aside>
   );
 }
+function SidebarNotificaciones({ notificaciones, setNotificaciones }: {
+  notificaciones: typeof NOTIFICACIONES_MOCK;
+  setNotificaciones: React.Dispatch<React.SetStateAction<typeof NOTIFICACIONES_MOCK>>;
+}) {
+  const [detalle, setDetalle] = useState<typeof NOTIFICACIONES_MOCK[0] | null>(null);
+
+  const iconoTipo = (tipo: string) => tipo === 'stock' ? '📦' : tipo === 'pedido' ? '🛍️' : '🔔';
+
+  const handleClick = (n: typeof NOTIFICACIONES_MOCK[0]) => {
+    setDetalle(n);
+    setNotificaciones(prev => prev.map(x => x.id === n.id ? { ...x, leida: true } : x));
+  };
+
+  return (
+    <aside className="fixed top-16 right-0 bottom-0 z-20 w-64 bg-white border-l border-amber-100 flex flex-col shadow-sm">
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-5 border-b border-amber-100">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">🔔</span>
+          <span className="font-serif text-base font-bold text-amber-800">Notificaciones</span>
+        </div>
+        {notificaciones.filter(n => !n.leida).length > 0 && (
+          <span className="w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+            {notificaciones.filter(n => !n.leida).length}
+          </span>
+        )}
+      </div>
+
+      {/* Detalle o lista */}
+      {detalle ? (
+        <div className="flex-1 overflow-y-auto p-5">
+          <button
+            onClick={() => setDetalle(null)}
+            className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800 mb-4 font-semibold transition"
+          >
+            ← Volver
+          </button>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-3xl">{iconoTipo(detalle.tipo)}</span>
+            <span className="font-semibold text-stone-800 text-sm">{detalle.titulo}</span>
+          </div>
+          <p className="text-sm text-stone-600 leading-relaxed mb-4">{detalle.detalle}</p>
+          <p className="text-xs text-stone-400">{detalle.fecha}</p>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto py-3">
+          {notificaciones.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-stone-300">
+              <span className="text-5xl">🔕</span>
+              <span className="text-sm">Sin notificaciones</span>
+            </div>
+          ) : (
+            <>
+              {notificaciones.filter(n => !n.leida).length > 0 && (
+                <button
+                  onClick={() => setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })))}
+                  className="w-full text-xs text-amber-600 hover:text-amber-800 font-semibold px-5 py-2 text-right transition"
+                >
+                  Marcar todas como leídas
+                </button>
+              )}
+              {notificaciones.map(n => (
+                <button
+                  key={n.id}
+                  onClick={() => handleClick(n)}
+                  className={`w-full text-left px-5 py-4 flex items-start gap-3 hover:bg-amber-50 transition border-b border-amber-50 last:border-0
+                    ${!n.leida ? 'bg-amber-50/60' : ''}`}
+                >
+                  <span className="text-2xl mt-0.5 leading-none">{iconoTipo(n.tipo)}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <span className={`text-sm font-semibold truncate ${!n.leida ? 'text-stone-800' : 'text-stone-400'}`}>
+                        {n.titulo}
+                      </span>
+                      {!n.leida && <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />}
+                    </div>
+                    <p className="text-xs text-stone-400 line-clamp-2 leading-relaxed">{n.detalle}</p>
+                    <p className="text-xs text-stone-300 mt-1">{n.fecha}</p>
+                  </div>
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </aside>
+  );
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 // MÓDULO CATÁLOGO
 // ════════════════════════════════════════════════════════════════════════════
-function ModuloCatalogo({ productos }: { productos: Producto[] }) {
+function ModuloCatalogo({ productos, imagenes }: { productos: Producto[]; imagenes: Record<number, string> }) {
   const [visibles, setVisibles] = useState<Record<number, boolean>>(() =>
     Object.fromEntries(productos.map(p => [p.id!, true]))
   );
-  const [imagenes, setImagenes] = useState<Record<number, string>>({});
   const [modalImg, setModalImg] = useState<{ nombre: string; src: string } | null>(null);
 
   useEffect(() => {
@@ -163,61 +349,85 @@ function ModuloCatalogo({ productos }: { productos: Producto[] }) {
 
   const toggleVisible = (id: number) =>
     setVisibles(prev => ({ ...prev, [id]: !prev[id] }));
-
-  const handleImagen = (id: number, file: File) => {
-    const reader = new FileReader();
-    reader.onload = e => setImagenes(prev => ({ ...prev, [id]: e.target?.result as string }));
-    reader.readAsDataURL(file);
-  };
-
   return (
     <div className="space-y-5">
+
       {modalImg && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setModalImg(null)}>
-          <div className="bg-white rounded-2xl shadow-2xl p-4 max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-semibold text-stone-800 text-sm">{modalImg.nombre}</span>
-              <button onClick={() => setModalImg(null)} className="text-stone-400 hover:text-stone-700 text-lg font-bold leading-none">✕</button>
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setModalImg(null)}
+        >
+          <div
+            style={{ background: 'white', borderRadius: '1rem', padding: '1.25rem', maxWidth: '480px', width: '90%', boxShadow: '0 25px 50px rgba(0,0,0,0.3)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <span style={{ fontWeight: 600, fontSize: '0.875rem', color: '#1c1917' }}>{modalImg.nombre}</span>
+              <button
+                onClick={() => setModalImg(null)}
+                style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#a8a29e', lineHeight: 1 }}
+              >✕</button>
             </div>
-            <img src={modalImg.src} alt={modalImg.nombre} className="w-full rounded-xl object-contain max-h-64" />
+            <img
+              src={modalImg.src}
+              alt={modalImg.nombre}
+              style={{ width: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '0.75rem' }}
+            />
           </div>
         </div>
       )}
+
       <div className="bg-white rounded-2xl shadow-sm p-6">
         <h2 className="font-serif text-xl text-amber-800 mb-4">📋 Productos en catálogo</h2>
         <div className="overflow-x-auto rounded-xl border border-amber-100">
           <table className="w-full text-base">
             <thead className="bg-amber-50 text-sm uppercase tracking-wider text-amber-900/60">
-              <tr>{['Código','Lote','Producto','Categoría','Precio neto','IVA','Desc.','Stock','Imagen','Visible'].map(h => <th key={h} className="px-3 py-3 text-left font-semibold">{h}</th>)}</tr>
+              <tr>
+                {['Código', 'Lote', 'Producto', 'Categoría', 'Precio neto', 'Precio PVP', 'IVA', 'Desc.', 'Stock', 'Imagen', 'Visible'].map(h => (
+                  <th key={h} className="px-3 py-3 text-left font-semibold">{h}</th>
+                ))}
+              </tr>
             </thead>
             <tbody>
               {productos.map(p => {
                 const esVisible = visibles[p.id!] ?? true;
-                const imgSrc = imagenes[p.id!];
                 return (
                   <tr key={p.id} className={`border-t border-amber-50 transition ${esVisible ? 'hover:bg-amber-50/50' : 'opacity-40 bg-stone-50'}`}>
                     <td className="px-3 py-3 font-mono text-sm">{p.codigo_barra || '—'}</td>
                     <td className="px-3 py-3 text-sm">{p.lote || '—'}</td>
                     <td className="px-3 py-3 font-semibold">{p.nombre}</td>
-                    <td className="px-3 py-3"><Badge color="bg-amber-100 text-amber-800">{p.categoria_nombre ?? '—'}</Badge></td>
+                    <td className="px-3 py-3">
+                      <Badge color="bg-amber-100 text-amber-800">{p.categoria_nombre ?? '—'}</Badge>
+                    </td>
                     <td className="px-3 py-3">${Number(p.precio_neto).toLocaleString()}</td>
+                    <td className="px-3 py-3">
+                      {p.precio_pvp
+                        ? <span className="font-semibold text-green-700">${Number(p.precio_pvp).toLocaleString()}</span>
+                        : <span className="text-stone-300 text-xs italic">Sin definir</span>}
+                    </td>
                     <td className="px-3 py-3">{p.iva}%</td>
-                    <td className="px-3 py-3">{p.descuento ? <Badge color="bg-green-100 text-green-700">Sí</Badge> : '—'}</td>
+                    <td className="px-3 py-3">
+                      {p.descuento ? <Badge color="bg-green-100 text-green-700">Sí</Badge> : '—'}
+                    </td>
                     <td className="px-3 py-3"><StockBadge p={p} /></td>
                     <td className="px-3 py-3">
-                      <div className="flex items-center gap-2">
-                        {imgSrc ? (
-                          <button title="Ver imagen" onClick={() => setModalImg({ nombre: p.nombre, src: imgSrc })} className="relative group">
-                            <img src={imgSrc} alt={p.nombre} className="w-9 h-9 rounded-lg object-cover border border-amber-200 group-hover:ring-2 group-hover:ring-amber-400 transition" />
-                          </button>
-                        ) : (
-                          <div className="w-9 h-9 rounded-lg border-2 border-dashed border-amber-200 flex items-center justify-center text-stone-300 text-lg">🖼️</div>
-                        )}
-                        <label className="cursor-pointer px-2 py-1 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-700 hover:bg-amber-100 transition" title="Subir imagen">
-                          📎
-                          <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleImagen(p.id!, f); }} />
-                        </label>
-                      </div>
+                      {imagenes[p.id!] ? (
+                        <button
+                          title="Ver imagen"
+                          onClick={() => setModalImg({ nombre: p.nombre, src: imagenes[p.id!] })}
+                          className="relative group"
+                        >
+                          <img
+                            src={imagenes[p.id!]}
+                            alt={p.nombre}
+                            className="w-9 h-9 rounded-lg object-cover border border-amber-200 group-hover:ring-2 group-hover:ring-amber-400 transition cursor-pointer"
+                          />
+                        </button>
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg border-2 border-dashed border-amber-200 flex items-center justify-center text-stone-300 text-lg">
+                          🖼️
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-3">
                       <button
@@ -232,7 +442,11 @@ function ModuloCatalogo({ productos }: { productos: Producto[] }) {
                   </tr>
                 );
               })}
-              {productos.length === 0 && <tr><td colSpan={10} className="px-4 py-6 text-center text-stone-400">Sin productos</td></tr>}
+              {productos.length === 0 && (
+                <tr>
+                  <td colSpan={11} className="px-4 py-6 text-center text-stone-400">Sin productos</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -364,12 +578,18 @@ const HEX_MAP: Record<string, string> = Object.fromEntries(
   Object.entries(COLOR_MAP).map(([nombre, hex]) => [hex, nombre])
 );
 
-function ModuloProductos({ productos, setProductos, categorias, setCategorias }: {
-  productos: Producto[];   setProductos: React.Dispatch<React.SetStateAction<Producto[]>>;
-  categorias: Categoria[]; setCategorias: React.Dispatch<React.SetStateAction<Categoria[]>>;
+function ModuloProductos({ productos, setProductos, categorias, setCategorias, imagenes, setImagenes }: {
+  productos: Producto[];
+  setProductos: React.Dispatch<React.SetStateAction<Producto[]>>;
+  categorias: Categoria[];
+  setCategorias: React.Dispatch<React.SetStateAction<Categoria[]>>;
+  imagenes: Record<number, string>;
+  setImagenes: React.Dispatch<React.SetStateAction<Record<number, string>>>;
 }) {
   const [tabLocal, setTabLocal] = useState<'producto' | 'categoria' | 'lista'>('categoria');
   const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [editandoCatId, setEditandoCatId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [archivos, setArchivos] = useState<string[]>([]);
 
@@ -394,11 +614,11 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias }:
 
   useEffect(() => {
     const codigo = generarCodigo(productos);
-    const lote   = generarLote(productos);
+    const lote = generarLote(productos);
     setProd(prev => ({
       ...prev,
       codigo_barra: prev.codigo_barra || codigo,
-      lote:         prev.lote         || lote,
+      lote: prev.lote || lote,
     }));
   }, [productos]);
 
@@ -413,12 +633,33 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias }:
       return showAlert('El porcentaje de descuento debe ser mayor a 0', 'error');
     if (prod.descuento && (prod.valor_descuento ?? 0) >= 100)
       return showAlert('El descuento no puede ser 100% o más', 'error');
+
     setLoading(true);
     try {
-      const nuevo = await createProducto(prod);
-      setProductos(prev => [...prev, nuevo]);
-      const nuevoCodigo = generarCodigo([...productos, nuevo]);
-      const nuevoLote   = generarLote([...productos, nuevo]);
+      if (editandoId !== null) {
+        // ── EDITAR ──
+        const actualizado = await updateProducto(editandoId, prod);
+        setProductos(prev => prev.map(p => p.id === editandoId ? actualizado : p));
+        setEditandoId(null);
+        showAlert('✓ Producto actualizado correctamente');
+      } else {
+        // ── CREAR ──
+        const nuevo = await createProducto(prod);
+        setProductos(prev => [...prev, nuevo]);
+
+        if (archivos.length > 0) {
+          const input = document.querySelector('input[type=file][multiple]') as HTMLInputElement;
+          const file = input?.files?.[0];
+          if (file && nuevo.id) {
+            const reader = new FileReader();
+            reader.onload = e => setImagenes(prev => ({ ...prev, [nuevo.id!]: e.target?.result as string }));
+            reader.readAsDataURL(file);
+          }
+        }
+      }
+
+      const nuevoCodigo = generarCodigo(productos);
+      const nuevoLote = generarLote(productos);
       setProd({
         codigo_barra: nuevoCodigo, lote: nuevoLote,
         nombre: '', categoria: null,
@@ -427,7 +668,6 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias }:
         artesano: ARTESANO_ID,
         colores: [], maneja_tallas: false, tallas: [],
       });
-      showAlert('✓ Producto creado correctamente');
     } catch (err: any) {
       showAlert(`Error: ${err?.message ?? 'Error desconocido'}`, 'error');
     } finally {
@@ -441,9 +681,10 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias }:
     showAlert('Producto eliminado');
   };
 
-    const handleEditProducto = (id: number) => {
+  const handleEditProducto = (id: number) => {
     const producto = productos.find(p => p.id === id);
     if (!producto) return;
+    setEditandoId(id);
     setProd({
       codigo_barra: producto.codigo_barra,
       lote: producto.lote,
@@ -470,12 +711,24 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias }:
     if (!cat.nombre) return showAlert('El nombre es obligatorio', 'error');
     setLoading(true);
     try {
-      const nueva = await createCategoria({ ...cat, artesano: ARTESANO_ID });
-      setCategorias(prev => [...prev, nueva]);
+      if (editandoCatId !== null) {
+        // ── EDITAR ──
+        const actualizada = await updateCategoria(editandoCatId, { ...cat, artesano: ARTESANO_ID });
+        setCategorias(prev => prev.map(c => c.id === editandoCatId ? actualizada : c));
+        setEditandoCatId(null);
+        showAlert('✓ Categoría actualizada correctamente');
+      } else {
+        // ── CREAR ──
+        const nueva = await createCategoria({ ...cat, artesano: ARTESANO_ID });
+        setCategorias(prev => [...prev, nueva]);
+        showAlert('✓ Categoría creada correctamente');
+      }
       setCat({ nombre: '', descripcion: '' });
-      showAlert('✓ Categoría creada correctamente');
-    } catch { showAlert('Error al guardar la categoría', 'error'); }
-    finally { setLoading(false); }
+    } catch {
+      showAlert('Error al guardar la categoría', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteCategoria = async (id: number) => {
@@ -484,18 +737,19 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias }:
   };
 
   const handleEditCategoria = (id: number) => {
-  const categoria = categorias.find(c => c.id === id);
-  if (!categoria) return;
-  setCat({
-    nombre: categoria.nombre,
-    descripcion: categoria.descripcion,
-  });
-  setTabLocal('categoria'); // lleva al formulario de categoría
-};
+    const categoria = categorias.find(c => c.id === id);
+    if (!categoria) return;
+    setEditandoCatId(id);
+    setCat({
+      nombre: categoria.nombre,
+      descripcion: categoria.descripcion,
+    });
+    setTabLocal('categoria'); // lleva al formulario de categoría
+  };
 
   const handleAgregarColor = () => {
     const nombre = colorNombreRef.current?.value.trim() ?? '';
-    const hex    = colorPickerRef.current?.value ?? '#c8a96e';
+    const hex = colorPickerRef.current?.value ?? '#c8a96e';
     if (!nombre) return;
     setProd(prev => ({ ...prev, colores: [...(prev.colores ?? []), { hex, nombre }] }));
     if (colorNombreRef.current) colorNombreRef.current.value = '';
@@ -525,8 +779,8 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias }:
       {alert && <Alert msg={alert.msg} type={alert.type} />}
       <div className="flex gap-3 flex-wrap">
         <button className={tabCls('categoria')} onClick={() => setTabLocal('categoria')}>🏷️ Nueva Categoría</button>
-        <button className={tabCls('producto')}  onClick={() => setTabLocal('producto')}>➕ Nuevo Producto</button>
-        <button className={tabCls('lista')}     onClick={() => setTabLocal('lista')}>📋 Ver todo</button>
+        <button className={tabCls('producto')} onClick={() => setTabLocal('producto')}>➕ Nuevo Producto</button>
+        <button className={tabCls('lista')} onClick={() => setTabLocal('lista')}>📋 Ver todo</button>
       </div>
 
       {tabLocal === 'producto' && (
@@ -619,17 +873,16 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias }:
                   {prod.maneja_tallas && (
                     <>
                       <div className="flex flex-wrap gap-2 mb-3">
-                        {['XS','S','M','L','XL','XXL','6','8','10','12','14','16','Única'].map(t => (
+                        {['XS', 'S', 'M', 'L', 'XL', 'XXL', '6', '8', '10', '12', '14', '16', 'Única'].map(t => (
                           <button key={t}
                             onClick={() => {
                               const yaEsta = (prod.tallas ?? []).includes(t);
                               setProd({ ...prod, tallas: yaEsta ? (prod.tallas ?? []).filter(x => x !== t) : [...(prod.tallas ?? []), t] });
                             }}
-                            className={`px-3 py-1 rounded-full text-xs font-semibold border transition ${
-                              (prod.tallas ?? []).includes(t)
-                                ? 'bg-orange-500 text-white border-orange-500'
-                                : 'bg-white text-stone-600 border-stone-200 hover:border-orange-300'
-                            }`}>{t}</button>
+                            className={`px-3 py-1 rounded-full text-xs font-semibold border transition ${(prod.tallas ?? []).includes(t)
+                              ? 'bg-orange-500 text-white border-orange-500'
+                              : 'bg-white text-stone-600 border-stone-200 hover:border-orange-300'
+                              }`}>{t}</button>
                         ))}
                       </div>
                       <div className="flex gap-2 items-center">
@@ -741,7 +994,7 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias }:
               <div className="flex gap-3 mt-2">
                 <button onClick={handleAddProducto} disabled={loading}
                   className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white text-sm font-semibold shadow hover:shadow-md transition disabled:opacity-60">
-                  {loading ? 'Guardando...' : 'Guardar producto'}
+                  {loading ? 'Guardando...' : editandoId ? 'Actualizar producto' : 'Guardar producto'}
                 </button>
                 <button onClick={() => {
                   const codigo = generarCodigo(productos);
@@ -778,7 +1031,7 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias }:
             </Field>
             <button onClick={handleAddCategoria} disabled={loading}
               className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white text-sm font-semibold shadow hover:shadow-md transition disabled:opacity-60">
-              {loading ? 'Guardando...' : 'Guardar categoría'}
+              {loading ? 'Guardando...' : editandoCatId ? 'Actualizar categoría' : 'Guardar categoría'}
             </button>
           </div>
         </div>
@@ -791,7 +1044,7 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias }:
             <div className="overflow-x-auto rounded-xl border border-amber-100">
               <table className="w-full text-sm">
                 <thead className="bg-amber-50 text-sm uppercase tracking-wider text-amber-900/60">
-                  <tr>{['Código','Lote','Nombre','Categoría','Precio','IVA','Desc.','Stock','Mín.','Máx.',''].map(h => (
+                  <tr>{['Código', 'Lote', 'Nombre', 'Categoría', 'Precio', 'IVA', 'Desc.', 'Stock', 'Mín.', 'Máx.', ''].map(h => (
                     <th key={h} className="px-3 py-3 text-left font-semibold text-sm">{h}</th>
                   ))}</tr>
                 </thead>
@@ -829,7 +1082,7 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias }:
             <div className="overflow-x-auto rounded-xl border border-amber-100">
               <table className="w-full text-sm">
                 <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
-                  <tr>{['Nombre','Descripción',''].map(h => (
+                  <tr>{['Nombre', 'Descripción', ''].map(h => (
                     <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>
                   ))}</tr>
                 </thead>
@@ -883,7 +1136,7 @@ function ModuloInventario({ productos, kardex, setKardex }: {
   };
 
   const totalEntradas = kardex.filter(k => k.tipo === 'Entrada').reduce((s, k) => s + k.cantidad, 0);
-  const totalSalidas  = kardex.filter(k => k.tipo === 'Salida').reduce((s, k) => s + k.cantidad, 0);
+  const totalSalidas = kardex.filter(k => k.tipo === 'Salida').reduce((s, k) => s + k.cantidad, 0);
 
   const productosBajoStock = productos.filter(p => p.stock_minimo > 0 && p.cantidad <= p.stock_minimo);
 
@@ -896,50 +1149,62 @@ function ModuloInventario({ productos, kardex, setKardex }: {
 
   // ✅ Producto seleccionado actualmente en el form — para mostrar su stock de solo lectura
   const productoSeleccionado = productos.find(p => p.id === form.producto);
+  const [pvpLocal, setPvpLocal] = useState<number>(productoSeleccionado?.precio_pvp ?? 0);
 
-const handleAdd = async () => {
-  if (!form.producto || !form.cantidad || !form.fecha)
-    return showAlert('Producto, cantidad y fecha son obligatorios', 'error');
-  if (form.cantidad === 0)
-    return showAlert('La cantidad no puede ser 0', 'error');
+  // Sincronizar pvpLocal cuando cambia el producto seleccionado
+  useEffect(() => {
+    const p = productos.find(x => x.id === form.producto);
+    setPvpLocal(p?.precio_pvp ?? 0);
+  }, [form.producto, productos]);
 
-  // ✅ Validación de salida
-  if (form.cantidad < 0) {
-    const cantidadSalida = Math.abs(form.cantidad);
-    if (productoSeleccionado && cantidadSalida > productoSeleccionado.cantidad) {
-      return showAlert(
-        `Stock insuficiente. Solo hay ${productoSeleccionado.cantidad} unidades disponibles.`,
-        'error'
-      );
+  const handleAdd = async () => {
+    if (!form.producto || !form.cantidad || !form.fecha)
+      return showAlert('Producto, cantidad y fecha son obligatorios', 'error');
+    if (form.cantidad === 0)
+      return showAlert('La cantidad no puede ser 0', 'error');
+
+    // ✅ Validación de salida
+    if (form.cantidad < 0) {
+      const cantidadSalida = Math.abs(form.cantidad);
+      if (productoSeleccionado && cantidadSalida > productoSeleccionado.cantidad) {
+        return showAlert(
+          `Stock insuficiente. Solo hay ${productoSeleccionado.cantidad} unidades disponibles.`,
+          'error'
+        );
+      }
     }
-  }
 
-  // ✅ Validación de entrada vs stock máximo
-  if (form.cantidad > 0 && productoSeleccionado) {
-    const stockResultante = productoSeleccionado.cantidad + form.cantidad;
-    if (productoSeleccionado.stock_maximo > 0 && stockResultante > productoSeleccionado.stock_maximo) {
-      return showAlert(
-        `La entrada superaría el stock máximo (${productoSeleccionado.stock_maximo}). Stock actual: ${productoSeleccionado.cantidad}.`,
-        'error'
-      );
+    // ✅ Validación de entrada vs stock máximo
+    if (form.cantidad > 0 && productoSeleccionado) {
+      const stockResultante = productoSeleccionado.cantidad + form.cantidad;
+      if (productoSeleccionado.stock_maximo > 0 && stockResultante > productoSeleccionado.stock_maximo) {
+        return showAlert(
+          `La entrada superaría el stock máximo (${productoSeleccionado.stock_maximo}). Stock actual: ${productoSeleccionado.cantidad}.`,
+          'error'
+        );
+      }
     }
-  }
 
-  const tipoDetectado: 'Entrada' | 'Salida' = form.cantidad > 0 ? 'Entrada' : 'Salida';
-  const data = { ...form, tipo: tipoDetectado, cantidad: Math.abs(form.cantidad) };
+    const tipoDetectado: 'Entrada' | 'Salida' = form.cantidad > 0 ? 'Entrada' : 'Salida';
+    const data = { ...form, tipo: tipoDetectado, cantidad: Math.abs(form.cantidad) };
 
-  setLoading(true);
-  try {
-    const nuevo = await createKardex(data);
-    setKardex(prev => [nuevo, ...prev]);
-    setForm({ producto: productos[0]?.id ?? 0, tipo: 'Entrada', cantidad: 0, fecha: '', nota: '' });
-    showAlert(`✓ Movimiento registrado (${tipoDetectado})`);
-  } catch {
-    showAlert('Error al registrar el movimiento', 'error');
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const nuevo = await createKardex(data);
+      setKardex(prev => [nuevo, ...prev]);
+
+      // ✅ Guardar PVP si cambió
+      if (productoSeleccionado && pvpLocal !== (productoSeleccionado.precio_pvp ?? 0)) {
+        productoSeleccionado.precio_pvp = pvpLocal;
+        // cuando tengas el endpoint: await updateProducto(productoSeleccionado.id!, { precio_pvp: pvpLocal });
+      }
+
+      setForm({ producto: productos[0]?.id ?? 0, tipo: 'Entrada', cantidad: 0, fecha: '', nota: '' });
+      showAlert(`✓ Movimiento registrado${pvpLocal > 0 ? ' y PVP actualizado en catálogo' : ''}`);
+    } catch {
+      showAlert('Error al registrar el movimiento', 'error');
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -960,9 +1225,9 @@ const handleAdd = async () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: 'Total entradas', val: `+${totalEntradas}`, color: 'text-green-700' },
-          { label: 'Total salidas',  val: `-${totalSalidas}`,  color: 'text-red-600'   },
-          { label: 'Balance neto',   val: `${totalEntradas - totalSalidas}`, color: 'text-amber-800' },
-          { label: 'Movimientos',    val: `${kardex.length}`,  color: 'text-stone-700' },
+          { label: 'Total salidas', val: `-${totalSalidas}`, color: 'text-red-600' },
+          { label: 'Balance neto', val: `${totalEntradas - totalSalidas}`, color: 'text-amber-800' },
+          { label: 'Movimientos', val: `${kardex.length}`, color: 'text-stone-700' },
         ].map(({ label, val, color }) => (
           <div key={label} className="bg-white rounded-2xl shadow-sm p-4">
             <div className="text-xs font-semibold uppercase tracking-wider text-stone-400 mb-1">{label}</div>
@@ -1001,9 +1266,8 @@ const handleAdd = async () => {
           </div>
 
           {form.cantidad !== 0 && (
-            <div className={`text-xs font-semibold px-3 py-1 rounded-full w-fit ${
-              form.cantidad > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-            }`}>
+            <div className={`text-xs font-semibold px-3 py-1 rounded-full w-fit ${form.cantidad > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+              }`}>
               {form.cantidad > 0 ? '📥 Se registrará como Entrada' : '📤 Se registrará como Salida'}
             </div>
           )}
@@ -1014,33 +1278,45 @@ const handleAdd = async () => {
               placeholder="Ej: venta feria artesanal" />
           </Field>
 
-          {/* ✅ Stock del producto seleccionado — solo lectura, referencia informativa */}
-          {productoSeleccionado && (
-            <div className="p-4 bg-stone-50 rounded-xl border border-stone-200">
-              <p className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-3">
-                📊 Stock de "{productoSeleccionado.nombre}"
-                <span className="ml-2 font-normal normal-case text-stone-400">(solo lectura — editable desde Productos)</span>
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <div className="flex-1 min-w-[100px] bg-white rounded-xl px-4 py-3 border border-stone-100 text-center">
-                  <div className="text-xs uppercase tracking-wider text-stone-400 font-semibold mb-1">Stock mínimo</div>
-                  <div className="text-lg font-bold text-stone-700">{productoSeleccionado.stock_minimo}</div>
+          {/* ── Precio de venta al público ── */}
+          <div className="mt-4 p-4 bg-green-50 rounded-xl border border-green-200">
+            <p className="text-xs font-bold uppercase tracking-wider text-green-700 mb-3">
+              🏷️ Precio de venta al público (PVP)
+              <span className="ml-2 font-normal normal-case text-green-500">— se refleja en el catálogo</span>
+            </p>
+            <div className="flex flex-wrap gap-4 items-end">
+              <Field label="Precio PVP *">
+                <div className="flex items-center border border-green-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-green-200">
+                  <span className="px-3 py-3 bg-green-100 text-green-700 text-sm font-semibold border-r border-green-300">$</span>
+                  <input
+                    className="px-4 py-3 bg-white text-base text-stone-800 focus:outline-none flex-1"
+                    type="number"
+                    min="0"
+                    value={pvpLocal === 0 ? '' : pvpLocal}
+                    onChange={e => setPvpLocal(Number(e.target.value))}
+                    placeholder={`Neto: $${Number(productoSeleccionado?.precio_neto ?? 0).toLocaleString()}`}
+                  />
                 </div>
-                <div className="flex-1 min-w-[100px] bg-white rounded-xl px-4 py-3 border border-stone-100 text-center">
-                  <div className="text-xs uppercase tracking-wider text-stone-400 font-semibold mb-1">Stock máximo</div>
-                  <div className="text-lg font-bold text-stone-700">{productoSeleccionado.stock_maximo}</div>
+              </Field>
+              {pvpLocal > 0 && productoSeleccionado && Number(productoSeleccionado.precio_neto) > 0 && (
+                <div className="flex-1 min-w-[140px] bg-white rounded-xl px-4 py-3 border border-green-100">
+                  <div className="text-xs uppercase tracking-wider text-green-700/70 font-semibold mb-2">Margen de ganancia</div>
+                  <div className="text-2xl font-bold text-green-700">
+                    {Math.round(((pvpLocal - Number(productoSeleccionado?.precio_neto ?? 0)) / pvpLocal) * 100)}%
+                  </div>
+                  <div className="text-sm font-semibold text-green-600 mt-1">
+                    +${(pvpLocal - Number(productoSeleccionado?.precio_neto ?? 0)).toLocaleString('es-CO')}
+                  </div>
+                  <div className="text-xs text-stone-400 mt-1">por unidad vendida</div>
                 </div>
-                <div className="flex-1 min-w-[100px] bg-white rounded-xl px-4 py-3 border border-stone-100 text-center">
-                  <div className="text-xs uppercase tracking-wider text-stone-400 font-semibold mb-1">Stock actual</div>
-                  <div className={`text-lg font-bold ${
-                    productoSeleccionado.cantidad <= productoSeleccionado.stock_minimo
-                      ? 'text-red-600'
-                      : 'text-green-700'
-                  }`}>{productoSeleccionado.cantidad}</div>
-                </div>
-              </div>
+              )}
             </div>
-          )}
+            {pvpLocal > 0 && (
+              <p className="text-xs text-green-600 mt-2 font-medium">
+                Este precio se verá reflejado en la columna "Precio PVP" del catálogo al guardar.
+              </p>
+            )}
+          </div>
 
           <button onClick={handleAdd} disabled={loading}
             className="px-5 py-2 rounded-xl bg-gradient-to-r from-green-700 to-green-500 text-white text-sm font-semibold shadow hover:shadow-md transition disabled:opacity-60">
@@ -1048,6 +1324,32 @@ const handleAdd = async () => {
           </button>
         </div>
       </div>
+      {/* ✅ Stock del producto seleccionado — solo lectura, referencia informativa */}
+      {productoSeleccionado && (
+        <div className="p-4 bg-stone-50 rounded-xl border border-stone-200">
+          <p className="text-xs font-bold uppercase tracking-wider text-stone-500 mb-3">
+            📊 Stock de "{productoSeleccionado.nombre}"
+            <span className="ml-2 font-normal normal-case text-stone-400">(solo lectura — editable desde Productos)</span>
+          </p>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1 min-w-[100px] bg-white rounded-xl px-4 py-3 border border-stone-100 text-center">
+              <div className="text-xs uppercase tracking-wider text-stone-400 font-semibold mb-1">Stock mínimo</div>
+              <div className="text-lg font-bold text-stone-700">{productoSeleccionado.stock_minimo}</div>
+            </div>
+            <div className="flex-1 min-w-[100px] bg-white rounded-xl px-4 py-3 border border-stone-100 text-center">
+              <div className="text-xs uppercase tracking-wider text-stone-400 font-semibold mb-1">Stock máximo</div>
+              <div className="text-lg font-bold text-stone-700">{productoSeleccionado.stock_maximo}</div>
+            </div>
+            <div className="flex-1 min-w-[100px] bg-white rounded-xl px-4 py-3 border border-stone-100 text-center">
+              <div className="text-xs uppercase tracking-wider text-stone-400 font-semibold mb-1">Stock actual</div>
+              <div className={`text-lg font-bold ${productoSeleccionado.cantidad <= productoSeleccionado.stock_minimo
+                ? 'text-red-600'
+                : 'text-green-700'
+                }`}>{productoSeleccionado.cantidad}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Historial */}
       <div className="bg-white rounded-2xl shadow-sm p-6">
@@ -1085,7 +1387,7 @@ const handleAdd = async () => {
             <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
               {/* ✅ Historial limpio: sin columnas Cant. Inicial, Stock Mín., Stock Máx. */}
               <tr>
-                {['Producto','Tipo','Movimiento','Fecha','Nota']
+                {['Producto', 'Tipo', 'Movimiento', 'Fecha', 'Nota']
                   .map(h => <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>)}
               </tr>
             </thead>
@@ -1121,15 +1423,712 @@ const handleAdd = async () => {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// MÓDULO PEDIDOS
+// ════════════════════════════════════════════════════════════════════════════
+function ModuloPedidosArtesano() {
+  const [alert, setAlert] = useState<{
+    msg: string;
+    type: 'success' | 'error';
+  } | null>(null);
+
+  const [filtroEstado, setFiltroEstado] = useState('');
+  const [busqueda, setBusqueda] = useState('');
+
+  const showAlert = (
+    msg: string,
+    type: 'success' | 'error' = 'success'
+  ) => {
+    setAlert({ msg, type });
+    setTimeout(() => setAlert(null), 3000);
+  };
+
+  // 🔹 PEDIDOS SIMULADOS
+  // Luego puedes traerlos desde backend
+  const [pedidos, setPedidos] = useState([
+    {
+      id: 1,
+      codigo: 'PED-0001',
+      cliente: 'María López',
+      producto: 'Mochila artesanal',
+      cantidad: 2,
+      total: 120000,
+      estado: 'Pendiente',
+      fecha: '2026-05-13',
+    },
+    {
+      id: 2,
+      codigo: 'PED-0002',
+      cliente: 'Carlos Ruiz',
+      producto: 'Sombrero artesanal',
+      cantidad: 1,
+      total: 45000,
+      estado: 'Enviado',
+      fecha: '2026-05-12',
+    },
+    {
+      id: 3,
+      codigo: 'PED-0003',
+      cliente: 'Ana Gómez',
+      producto: 'Collar artesanal',
+      cantidad: 3,
+      total: 90000,
+      estado: 'Entregado',
+      fecha: '2026-05-11',
+    },
+  ]);
+
+  // 🔹 FILTROS
+  const pedidosFiltrados = pedidos.filter((p) => {
+    const coincideEstado =
+      filtroEstado === '' || p.estado === filtroEstado;
+
+    const coincideBusqueda =
+      p.cliente.toLowerCase().includes(busqueda.toLowerCase()) ||
+      p.producto.toLowerCase().includes(busqueda.toLowerCase());
+
+    return coincideEstado && coincideBusqueda;
+  });
+
+  // 🔹 CAMBIAR ESTADO
+  const actualizarEstado = (
+    id: number,
+    nuevoEstado: string
+  ) => {
+    setPedidos((prev) =>
+      prev.map((pedido) =>
+        pedido.id === id
+          ? { ...pedido, estado: nuevoEstado }
+          : pedido
+      )
+    );
+
+    showAlert('Estado actualizado correctamente');
+  };
+
+  const estadoColor = (estado: string) => {
+    switch (estado) {
+      case 'Pendiente':
+        return 'bg-yellow-100 text-yellow-700';
+
+      case 'Enviado':
+        return 'bg-blue-100 text-blue-700';
+
+      case 'Entregado':
+        return 'bg-green-100 text-green-700';
+
+      case 'Cancelado':
+        return 'bg-red-100 text-red-700';
+
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+
+      {alert && (
+        <Alert msg={alert.msg} type={alert.type} />
+      )}
+
+      {/* HEADER */}
+      <div className="bg-white rounded-2xl shadow-sm p-6">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 className="font-serif text-2xl text-amber-800">
+              🛒 Gestión de Pedidos
+            </h2>
+
+            <p className="text-stone-500 text-sm mt-1">
+              Administra pedidos realizados por los clientes
+            </p>
+          </div>
+
+          <div className="flex gap-3 flex-wrap">
+            <div className="bg-amber-50 px-4 py-3 rounded-xl border border-amber-100">
+              <p className="text-xs uppercase text-amber-700 font-bold">
+                Pedidos
+              </p>
+
+              <p className="text-2xl font-bold text-amber-900">
+                {pedidos.length}
+              </p>
+            </div>
+
+            <div className="bg-green-50 px-4 py-3 rounded-xl border border-green-100">
+              <p className="text-xs uppercase text-green-700 font-bold">
+                Ventas
+              </p>
+
+              <p className="text-2xl font-bold text-green-700">
+                $
+                {pedidos
+                  .reduce((acc, p) => acc + p.total, 0)
+                  .toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* FILTROS */}
+      <div className="bg-white rounded-2xl shadow-sm p-6">
+        <div className="flex flex-wrap gap-4">
+
+          <input
+            type="text"
+            placeholder="Buscar cliente o producto..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className={inputCls}
+          />
+
+          <select
+            value={filtroEstado}
+            onChange={(e) => setFiltroEstado(e.target.value)}
+            className={inputCls}
+          >
+            <option value="">Todos los estados</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Enviado">Enviado</option>
+            <option value="Entregado">Entregado</option>
+            <option value="Cancelado">Cancelado</option>
+          </select>
+
+        </div>
+      </div>
+
+      {/* TABLA */}
+      <div className="bg-white rounded-2xl shadow-sm p-6">
+        <h2 className="font-serif text-xl text-amber-800 mb-4">
+          📋 Lista de pedidos
+        </h2>
+
+        <div className="overflow-x-auto rounded-xl border border-amber-100">
+          <table className="w-full text-sm">
+
+            <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+              <tr>
+                {[
+                  'Código',
+                  'Cliente',
+                  'Producto',
+                  'Cantidad',
+                  'Total',
+                  'Estado',
+                  'Fecha',
+                  '',
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left font-semibold"
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+
+            <tbody>
+              {pedidosFiltrados.map((pedido) => (
+                <tr
+                  key={pedido.id}
+                  className="border-t border-amber-50 hover:bg-amber-50/50"
+                >
+                  <td className="px-4 py-3 font-mono">
+                    {pedido.codigo}
+                  </td>
+
+                  <td className="px-4 py-3 font-semibold">
+                    {pedido.cliente}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    {pedido.producto}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    {pedido.cantidad}
+                  </td>
+
+                  <td className="px-4 py-3 font-semibold text-green-700">
+                    ${pedido.total.toLocaleString()}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${estadoColor(
+                        pedido.estado
+                      )}`}
+                    >
+                      {pedido.estado}
+                    </span>
+                  </td>
+
+                  <td className="px-4 py-3 text-stone-500">
+                    {pedido.fecha}
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <select
+                      value={pedido.estado}
+                      onChange={(e) =>
+                        actualizarEstado(
+                          pedido.id,
+                          e.target.value
+                        )
+                      }
+                      className="px-3 py-2 rounded-lg border border-amber-200 bg-white text-xs"
+                    >
+                      <option value="Pendiente">
+                        Pendiente
+                      </option>
+
+                      <option value="Enviado">
+                        Enviado
+                      </option>
+
+                      <option value="Entregado">
+                        Entregado
+                      </option>
+
+                      <option value="Cancelado">
+                        Cancelado
+                      </option>
+                    </select>
+                  </td>
+                </tr>
+              ))}
+
+              {pedidosFiltrados.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-4 py-6 text-center text-stone-400"
+                  >
+                    No hay pedidos registrados
+                  </td>
+                </tr>
+              )}
+            </tbody>
+
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+// ════════════════════════════════════════════════════════════════════════════
+// MÓDULO REPORTES
+// ════════════════════════════════════════════════════════════════════════════
+function ModuloReportes({
+  productos,
+  kardex,
+}: {
+  productos: Producto[];
+  kardex: any[];
+}) {
+
+  const [tabReporte, setTabReporte] = useState<
+    'ventas' |
+    'inventario' |
+    'productos' |
+    'contable'
+  >('ventas');
+
+  const totalProductos = productos.length;
+
+  const stockBajo = productos.filter(
+    (p) => p.cantidad <= p.stock_minimo
+  ).length;
+
+  const valorInventario = productos.reduce(
+    (acc, p) => acc + p.precio_neto * p.cantidad,
+    0
+  );
+
+  const totalEntradas = kardex
+    .filter((k) => k.movimiento > 0)
+    .reduce((acc, k) => acc + k.movimiento, 0);
+
+  const totalSalidas = kardex
+    .filter((k) => k.movimiento < 0)
+    .reduce((acc, k) => acc + Math.abs(k.movimiento), 0);
+
+  const tabCls = (t: string) =>
+    `px-5 py-2 rounded-xl text-sm font-semibold transition ${
+      tabReporte === t
+        ? 'bg-amber-700 text-white shadow'
+        : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+    }`;
+
+  return (
+    <div className="space-y-5">
+
+      {/* HEADER */}
+      <div className="bg-white rounded-2xl shadow-sm p-6">
+
+        <h2 className="font-serif text-2xl text-amber-800 mb-2">
+          📈 Reportería
+        </h2>
+
+        <p className="text-stone-500 text-sm">
+          Visualiza estadísticas generales del sistema artesanal
+        </p>
+
+      </div>
+
+      {/* TABS */}
+      <div className="flex flex-wrap gap-3">
+
+        <button
+          className={tabCls('ventas')}
+          onClick={() => setTabReporte('ventas')}
+        >
+          📈 Ventas
+        </button>
+
+        <button
+          className={tabCls('inventario')}
+          onClick={() => setTabReporte('inventario')}
+        >
+          📦 Inventario
+        </button>
+
+        <button
+          className={tabCls('productos')}
+          onClick={() => setTabReporte('productos')}
+        >
+          🛍️ Productos
+        </button>
+
+        <button
+          className={tabCls('contable')}
+          onClick={() => setTabReporte('contable')}
+        >
+          📒 Contable
+        </button>
+
+      </div>
+
+      {/* ========================= */}
+      {/* REPORTE VENTAS */}
+      {/* ========================= */}
+
+      {tabReporte === 'ventas' && (
+
+        <div className="space-y-5">
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <div className="bg-white rounded-2xl shadow-sm p-5 border border-green-100">
+              <p className="text-xs uppercase tracking-wider text-green-700 font-bold">
+                Ventas totales
+              </p>
+
+              <h3 className="text-3xl font-bold text-green-700 mt-3">
+                $850.000
+              </h3>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm p-5 border border-blue-100">
+              <p className="text-xs uppercase tracking-wider text-blue-700 font-bold">
+                Pedidos realizados
+              </p>
+
+              <h3 className="text-3xl font-bold text-blue-700 mt-3">
+                24
+              </h3>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm p-5 border border-amber-100">
+              <p className="text-xs uppercase tracking-wider text-amber-700 font-bold">
+                Producto más vendido
+              </p>
+
+              <h3 className="text-xl font-bold text-amber-800 mt-3">
+                Mochila Wayuu
+              </h3>
+            </div>
+
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+
+            <h2 className="font-serif text-xl text-amber-800 mb-4">
+              📈 Resumen de ventas
+            </h2>
+
+            <div className="overflow-x-auto rounded-xl border border-amber-100">
+
+              <table className="w-full text-sm">
+
+                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Producto</th>
+                    <th className="px-4 py-3 text-left">Ventas</th>
+                    <th className="px-4 py-3 text-left">Ingresos</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+
+                  {productos.map((p) => (
+
+                    <tr
+                      key={p.id}
+                      className="border-t border-amber-50"
+                    >
+
+                      <td className="px-4 py-3 font-semibold">
+                        {p.nombre}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        {Math.floor(Math.random() * 20) + 1}
+                      </td>
+
+                      <td className="px-4 py-3 text-green-700 font-semibold">
+                        $
+                        {(
+                          p.precio_neto *
+                          (Math.floor(Math.random() * 10) + 1)
+                        ).toLocaleString()}
+                      </td>
+
+                    </tr>
+
+                  ))}
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {/* ========================= */}
+      {/* REPORTE INVENTARIO */}
+      {/* ========================= */}
+
+      {tabReporte === 'inventario' && (
+
+        <div className="space-y-5">
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <div className="bg-white rounded-2xl shadow-sm p-5 border border-amber-100">
+              <p className="text-xs uppercase tracking-wider text-amber-700 font-bold">
+                Productos registrados
+              </p>
+
+              <h3 className="text-3xl font-bold text-amber-900 mt-3">
+                {totalProductos}
+              </h3>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm p-5 border border-red-100">
+              <p className="text-xs uppercase tracking-wider text-red-700 font-bold">
+                Stock bajo
+              </p>
+
+              <h3 className="text-3xl font-bold text-red-600 mt-3">
+                {stockBajo}
+              </h3>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm p-5 border border-blue-100">
+              <p className="text-xs uppercase tracking-wider text-blue-700 font-bold">
+                Movimientos
+              </p>
+
+              <h3 className="text-xl font-bold text-blue-700 mt-3">
+                +{totalEntradas} / -{totalSalidas}
+              </h3>
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {/* ========================= */}
+      {/* REPORTE PRODUCTOS */}
+      {/* ========================= */}
+
+      {tabReporte === 'productos' && (
+
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+
+          <h2 className="font-serif text-xl text-amber-800 mb-4">
+            🛍️ Reporte de productos
+          </h2>
+
+          <div className="overflow-x-auto rounded-xl border border-amber-100">
+
+            <table className="w-full text-sm">
+
+              <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+                <tr>
+
+                  <th className="px-4 py-3 text-left">
+                    Código
+                  </th>
+
+                  <th className="px-4 py-3 text-left">
+                    Producto
+                  </th>
+
+                  <th className="px-4 py-3 text-left">
+                    Precio
+                  </th>
+
+                  <th className="px-4 py-3 text-left">
+                    Stock
+                  </th>
+
+                </tr>
+              </thead>
+
+              <tbody>
+
+                {productos.map((p) => (
+
+                  <tr
+                    key={p.id}
+                    className="border-t border-amber-50"
+                  >
+
+                    <td className="px-4 py-3 font-mono text-xs">
+                      {p.codigo_barra}
+                    </td>
+
+                    <td className="px-4 py-3 font-semibold">
+                      {p.nombre}
+                    </td>
+
+                    <td className="px-4 py-3 text-green-700 font-semibold">
+                      ${Number(p.precio_neto).toLocaleString()}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      {p.cantidad}
+                    </td>
+
+                  </tr>
+
+                ))}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {/* ========================= */}
+      {/* REPORTE CONTABLE */}
+      {/* ========================= */}
+
+      {tabReporte === 'contable' && (
+
+        <div className="space-y-5">
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            <div className="bg-white rounded-2xl shadow-sm p-5 border border-green-100">
+              <p className="text-xs uppercase tracking-wider text-green-700 font-bold">
+                Ingresos
+              </p>
+
+              <h3 className="text-3xl font-bold text-green-700 mt-3">
+                $1.250.000
+              </h3>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm p-5 border border-red-100">
+              <p className="text-xs uppercase tracking-wider text-red-700 font-bold">
+                Egresos
+              </p>
+
+              <h3 className="text-3xl font-bold text-red-600 mt-3">
+                $350.000
+              </h3>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm p-5 border border-amber-100">
+              <p className="text-xs uppercase tracking-wider text-amber-700 font-bold">
+                Utilidad estimada
+              </p>
+
+              <h3 className="text-3xl font-bold text-amber-800 mt-3">
+                $900.000
+              </h3>
+            </div>
+
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+
+            <h2 className="font-serif text-xl text-amber-800 mb-4">
+              📒 Resumen contable
+            </h2>
+
+            <div className="space-y-3 text-sm">
+
+              <div className="flex justify-between border-b pb-2">
+                <span>Total ventas</span>
+                <span className="font-semibold">$1.250.000</span>
+              </div>
+
+              <div className="flex justify-between border-b pb-2">
+                <span>IVA generado</span>
+                <span className="font-semibold">$190.000</span>
+              </div>
+
+              <div className="flex justify-between border-b pb-2">
+                <span>Descuentos aplicados</span>
+                <span className="font-semibold">$45.000</span>
+              </div>
+
+              <div className="flex justify-between pt-2 text-lg font-bold text-green-700">
+                <span>Ganancia estimada</span>
+                <span>$900.000</span>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+    </div>
+  );
+}
+// ════════════════════════════════════════════════════════════════════════════
 // PÁGINA PRINCIPAL
 // ════════════════════════════════════════════════════════════════════════════
 export default function PerfilArtesano() {
   const [tab, setTab] = useState<Tab>('catalogo');
-  const [productos,  setProductos]  = useState<Producto[]>([]);
+  const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [kardex,     setKardex]     = useState<Kardex[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [error,      setError]      = useState('');
+  const [kardex, setKardex] = useState<Kardex[]>([]);
+  const [pedidos, setPedidos] = useState([]);
+  const [imagenes, setImagenes] = useState<Record<number, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [notificaciones, setNotificaciones] = useState(NOTIFICACIONES_MOCK);
 
   const cargarDatos = useCallback(async () => {
     setLoading(true);
@@ -1150,25 +2149,67 @@ export default function PerfilArtesano() {
   }, []);
 
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
-
   return (
     <div className="min-h-screen bg-amber-50/60 font-sans text-base">
-      <Topbar/>
+      <Topbar />
+
       <Sidebar active={tab} onChange={setTab} />
-      <main className="pt-14 pl-40 min-h-screen text-base">
+
+      <SidebarNotificaciones
+        notificaciones={notificaciones}
+        setNotificaciones={setNotificaciones}
+      />
+
+      <main className="pt-16 pl-40 pr-64 min-h-screen text-base">
         <div className="max-w-7xl mx-auto px-8 py-8">
           {loading ? (
             <div className="flex items-center justify-center py-20 text-amber-700 text-sm gap-3">
-              <span className="animate-spin text-xl">⏳</span> Cargando datos del servidor...
+              <span className="animate-spin text-xl">⏳</span>
+              Cargando datos del servidor...
             </div>
           ) : error ? (
             <Alert msg={error} type="error" />
           ) : (
             <>
-              {tab === 'catalogo'   && <ModuloCatalogo   productos={productos} />}
-              {tab === 'contable'   && <ModuloContable   productos={productos} />}
-              {tab === 'productos'  && <ModuloProductos  productos={productos} setProductos={setProductos} categorias={categorias} setCategorias={setCategorias} />}
-              {tab === 'inventario' && <ModuloInventario productos={productos} kardex={kardex} setKardex={setKardex} />}
+              {tab === "catalogo" && (
+                <ModuloCatalogo
+                  productos={productos}
+                  imagenes={imagenes}
+                />
+              )}
+
+              {tab === "contable" && (
+                <ModuloContable productos={productos} />
+              )}
+
+              {tab === "productos" && (
+                <ModuloProductos
+                  productos={productos}
+                  setProductos={setProductos}
+                  categorias={categorias}
+                  setCategorias={setCategorias}
+                  imagenes={imagenes}
+                  setImagenes={setImagenes}
+                />
+              )}
+
+              {tab === "inventario" && (
+                <ModuloInventario
+                  productos={productos}
+                  kardex={kardex}
+                  setKardex={setKardex}
+                />
+              )}
+              {tab === "pedidos" && (
+                <ModuloPedidosArtesano
+                />
+              )}
+              {tab === "reportes" && (
+                <ModuloReportes
+                  productos={productos}
+                  kardex={kardex}
+                />
+              )}
             </>
           )}
         </div>
