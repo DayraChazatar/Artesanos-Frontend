@@ -12,7 +12,7 @@ import { jwtDecode } from 'jwt-decode';
 export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login, updateProfile } = useAuth();
+  const { login, loginWithGoogle} = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,7 +38,7 @@ export function Login() {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse: any) => {
+const handleGoogleSuccess = async (credentialResponse: any) => {
     try {
       const decoded: any = jwtDecode(credentialResponse.credential);
       const googleUser = {
@@ -48,14 +48,7 @@ export function Login() {
         role: 'customer' as const,
         profileImage: decoded.picture,
       };
-
-      // Guardar datos de Google en localStorage
-      localStorage.setItem('user', JSON.stringify(googleUser));
-      localStorage.setItem('usuario_id', decoded.sub);
-      localStorage.setItem('usuario_nombre', decoded.name);
-      localStorage.setItem('token', credentialResponse.credential);
-
-      await updateProfile(googleUser);
+      loginWithGoogle(googleUser);
       toast.success(`¡Bienvenido, ${decoded.name}!`);
       navigate('/catalogo');
     } catch (error) {
