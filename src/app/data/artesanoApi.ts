@@ -117,3 +117,10 @@ export const getKardex = () =>
 
 export const createKardex = (data: Kardex) =>
   request<Kardex>(`${BASE}/kardex/`, { method: 'POST', body: JSON.stringify(data) });
+// ── Reportes ──────────────────────────────────────────────────────────────────
+const REPORTES_BASE = 'http://localhost:8000/api/reportes';
+
+export const descargarReporte = (tipo: string, formato: 'excel' | 'pdf', artesanoId: number) => {
+  const url = `${REPORTES_BASE}/${tipo}/${formato}/?artesano=${artesanoId}`;
+  window.open(url, '_blank');
+};

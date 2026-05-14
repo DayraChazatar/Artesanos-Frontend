@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import { descargarReporte } from '../data/artesanoApi';
 import {
   getCategorias, createCategoria, deleteCategoria, updateCategoria,
   getProductos, createProducto, deleteProducto, updateProducto,
@@ -48,25 +49,15 @@ const NOTIFICACIONES_MOCK = [
   { id: 3, tipo: 'sistema', titulo: 'Perfil incompleto', detalle: 'Tu perfil de artesano no tiene foto ni descripción. Complétalo para atraer más clientes.', fecha: '2025-06-08', leida: true },
 ];
 
-function Topbar() {
+function Topbar({ noLeidas }: { noLeidas: number }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [openNoti, setOpenNoti] = useState(false);
-  const [notificaciones, setNotificaciones] = useState(NOTIFICACIONES_MOCK);
-  const [notiDetalle, setNotiDetalle] = useState<typeof NOTIFICACIONES_MOCK[0] | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const notiRef = useRef<HTMLDivElement>(null);
-
-  const noLeidas = notificaciones.filter(n => !n.leida).length;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
-      if (notiRef.current && !notiRef.current.contains(e.target as Node)) {
-        setOpenNoti(false);
-        setNotiDetalle(null);
-      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -74,15 +65,8 @@ function Topbar() {
 
   const handleLogout = () => { logout(); navigate('/'); };
 
-  const handleClickNoti = (n: typeof NOTIFICACIONES_MOCK[0]) => {
-    setNotiDetalle(n);
-    setNotificaciones(prev => prev.map(x => x.id === n.id ? { ...x, leida: true } : x));
-  };
-
-  const iconoTipo = (tipo: string) => tipo === 'stock' ? '📦' : tipo === 'pedido' ? '🛍️' : '🔔';
-
   return (
-    <header className="fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-amber-100 flex items-center justify-between px-6 shadow-sm">
+    <header className="fixed top-0 left-0 right-0 z-30 h-16 bg-white border-b border-amber-100 flex items-center justify-between px-6 shadow-sm">
       <div className="flex items-center gap-1.5">
         <span className="font-serif text-lg font-bold text-amber-700">Pakari Shop</span>
         <span className="text-pink-400 text-sm"></span>
@@ -95,78 +79,16 @@ function Topbar() {
 
       <div className="flex items-center gap-3">
 
-        {/* Campana de notificaciones */}
-        <div className="relative" ref={notiRef}>
-          <button
-            onClick={() => { setOpenNoti(prev => !prev); setNotiDetalle(null); }}
-            className="relative w-9 h-9 flex items-center justify-center rounded-xl border border-amber-100 bg-amber-50 hover:bg-amber-100 transition"
-          >
-            <span className="text-lg">🔔</span>
+        {/* Campana — solo indicador visual */}
+        <div className="relative">
+          <div className="relative w-10 h-10 flex items-center justify-center rounded-xl border border-amber-100 bg-amber-50">
+            <span className="text-xl">🔔</span>
             {noLeidas > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
                 {noLeidas}
               </span>
             )}
-          </button>
-
-          {openNoti && (
-            <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-amber-100 z-50 overflow-hidden">
-              <div className="px-4 py-3 border-b border-amber-100 flex items-center justify-between">
-                <span className="font-semibold text-sm text-stone-800">Notificaciones</span>
-                {noLeidas > 0 && (
-                  <button
-                    onClick={() => setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })))}
-                    className="text-xs text-amber-600 hover:text-amber-800 font-medium transition"
-                  >
-                    Marcar todas como leídas
-                  </button>
-                )}
-              </div>
-
-              {notiDetalle ? (
-                <div className="p-4">
-                  <button
-                    onClick={() => setNotiDetalle(null)}
-                    className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800 mb-3 font-medium transition"
-                  >
-                    ← Volver
-                  </button>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-2xl">{iconoTipo(notiDetalle.tipo)}</span>
-                    <span className="font-semibold text-stone-800 text-sm">{notiDetalle.titulo}</span>
-                  </div>
-                  <p className="text-sm text-stone-600 leading-relaxed mb-3">{notiDetalle.detalle}</p>
-                  <p className="text-xs text-stone-400">{notiDetalle.fecha}</p>
-                </div>
-              ) : (
-                <div className="max-h-72 overflow-y-auto">
-                  {notificaciones.length === 0 ? (
-                    <p className="px-4 py-6 text-center text-sm text-stone-400">Sin notificaciones</p>
-                  ) : (
-                    notificaciones.map(n => (
-                      <button
-                        key={n.id}
-                        onClick={() => handleClickNoti(n)}
-                        className={`w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-amber-50 transition border-b border-amber-50 last:border-0 ${!n.leida ? 'bg-amber-50/60' : ''}`}
-                      >
-                        <span className="text-xl mt-0.5">{iconoTipo(n.tipo)}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className={`text-sm font-semibold truncate ${!n.leida ? 'text-stone-800' : 'text-stone-500'}`}>
-                              {n.titulo}
-                            </span>
-                            {!n.leida && <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />}
-                          </div>
-                          <p className="text-xs text-stone-400 truncate mt-0.5">{n.detalle}</p>
-                          <p className="text-xs text-stone-300 mt-0.5">{n.fecha}</p>
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Menú de usuario */}
@@ -1756,11 +1678,27 @@ function ModuloReportes({
     .reduce((acc, k) => acc + Math.abs(k.movimiento), 0);
 
   const tabCls = (t: string) =>
-    `px-5 py-2 rounded-xl text-sm font-semibold transition ${
-      tabReporte === t
-        ? 'bg-amber-700 text-white shadow'
-        : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+    `px-5 py-2 rounded-xl text-sm font-semibold transition ${tabReporte === t
+      ? 'bg-amber-700 text-white shadow'
+      : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
     }`;
+
+  const BotonesDescarga = ({ tipo }: { tipo: string }) => (
+    <div className="flex gap-2">
+      <button
+        onClick={() => descargarReporte(tipo, 'excel', ARTESANO_ID)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-xs font-semibold hover:bg-green-100 transition"
+      >
+        📊 Excel
+      </button>
+      <button
+        onClick={() => descargarReporte(tipo, 'pdf', ARTESANO_ID)}
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-semibold hover:bg-red-100 transition"
+      >
+        📄 PDF
+      </button>
+    </div>
+  );
 
   return (
     <div className="space-y-5">
@@ -1816,11 +1754,11 @@ function ModuloReportes({
       {/* ========================= */}
 
       {tabReporte === 'ventas' && (
-
         <div className="space-y-5">
-
+          <div className="flex justify-end">
+            <BotonesDescarga tipo="kardex" />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
             <div className="bg-white rounded-2xl shadow-sm p-5 border border-green-100">
               <p className="text-xs uppercase tracking-wider text-green-700 font-bold">
                 Ventas totales
@@ -1917,9 +1855,10 @@ function ModuloReportes({
       {/* ========================= */}
 
       {tabReporte === 'inventario' && (
-
         <div className="space-y-5">
-
+          <div className="flex justify-end">
+            <BotonesDescarga tipo="inventario" />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
             <div className="bg-white rounded-2xl shadow-sm p-5 border border-amber-100">
@@ -1963,12 +1902,11 @@ function ModuloReportes({
       {/* ========================= */}
 
       {tabReporte === 'productos' && (
-
         <div className="bg-white rounded-2xl shadow-sm p-6">
-
-          <h2 className="font-serif text-xl text-amber-800 mb-4">
-            🛍️ Reporte de productos
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-serif text-xl text-amber-800">🛍️ Reporte de productos</h2>
+            <BotonesDescarga tipo="productos" />
+          </div>
 
           <div className="overflow-x-auto rounded-xl border border-amber-100">
 
@@ -2040,9 +1978,10 @@ function ModuloReportes({
       {/* ========================= */}
 
       {tabReporte === 'contable' && (
-
         <div className="space-y-5">
-
+          <div className="flex justify-end">
+            <BotonesDescarga tipo="contable" />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
             <div className="bg-white rounded-2xl shadow-sm p-5 border border-green-100">
@@ -2151,7 +2090,8 @@ export default function PerfilArtesano() {
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
   return (
     <div className="min-h-screen bg-amber-50/60 font-sans text-base">
-      <Topbar />
+      <Topbar noLeidas={notificaciones.filter(n => !n.leida).length} />
+      <Sidebar active={tab} onChange={setTab} />
 
       <Sidebar active={tab} onChange={setTab} />
 
