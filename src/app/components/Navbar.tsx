@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { ShoppingCart, User, LogOut, BarChart3, UserCircle, Bell, FileText } from 'lucide-react';
+import { ShoppingCart, User, LogOut, BarChart3, UserCircle, Bell, FileText, Package, ChevronLeft } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
@@ -27,21 +27,19 @@ interface NavbarProps {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  'Pendiente':             'bg-yellow-100 text-yellow-700',
-  'En proceso':            'bg-orange-100 text-orange-700',
-  'Enviado':               'bg-blue-100 text-blue-700',
-  'Entregado':             'bg-green-100 text-green-700',
-  'Cancelado':             'bg-red-100 text-red-700',
-  'Devolución solicitada': 'bg-purple-100 text-purple-700',
+  'Pendiente':  'bg-yellow-100 text-yellow-700',
+  'En proceso': 'bg-orange-100 text-orange-700',
+  'Enviado':    'bg-blue-100 text-blue-700',
+  'Entregado':  'bg-green-100 text-green-700',
+  'Cancelado':  'bg-red-100 text-red-700',
 };
 
 const STATUS_ICONS: Record<string, string> = {
-  'Pendiente':             '🕐',
-  'En proceso':            '⚙️',
-  'Enviado':               '🚚',
-  'Entregado':             '✅',
-  'Cancelado':             '❌',
-  'Devolución solicitada': '↩️',
+  'Pendiente':  '🕐',
+  'En proceso': '⚙️',
+  'Enviado':    '🚚',
+  'Entregado':  '✅',
+  'Cancelado':  '❌',
 };
 
 export function Navbar({ activeTab, onTabChange }: NavbarProps) {
@@ -50,36 +48,47 @@ export function Navbar({ activeTab, onTabChange }: NavbarProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [ordersOpen, setOrdersOpen] = useState(false);
   const [orders, setOrders] = useState<any[]>([]);
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [unseenCount, setUnseenCount] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
   const bellRef = useRef<HTMLDivElement>(null);
+  const ordersRef = useRef<HTMLDivElement>(null);
 
   const isArtisan = user?.role === 'artisan';
   const isClient = user?.role !== 'artisan' && user?.role !== 'admin';
 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem('orders') || '[]');
+    setOrders(saved);
     const seen = parseInt(localStorage.getItem('orders_seen') || '0');
     setUnseenCount(Math.max(0, saved.length - seen));
   }, []);
 
   useEffect(() => {
     if (bellOpen) {
-      const saved = JSON.parse(localStorage.getItem('orders') || '[]');
-      setOrders(saved);
       setUnseenCount(0);
+      const saved = JSON.parse(localStorage.getItem('orders') || '[]');
       localStorage.setItem('orders_seen', saved.length.toString());
     }
   }, [bellOpen]);
 
   useEffect(() => {
+    if (ordersOpen) {
+      const saved = JSON.parse(localStorage.getItem('orders') || '[]');
+      setOrders(saved);
+      setSelectedOrder(null);
+    }
+  }, [ordersOpen]);
+
+  useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
-        setBellOpen(false);
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) setBellOpen(false);
+      if (ordersRef.current && !ordersRef.current.contains(e.target as Node)) {
+        setOrdersOpen(false);
+        setSelectedOrder(null);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -105,13 +114,11 @@ export function Navbar({ activeTab, onTabChange }: NavbarProps) {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between gap-4">
 
-          {/* Izquierda: logo */}
           <Link to="/" className="flex items-center gap-1 flex-shrink-0">
             <img src="/logo.jpg" alt="Logo" className="h-14 w-14 object-contain" />
             <span className="text-xl font-bold text-orange-600">Pakari Shop</span>
           </Link>
 
-          {/* Centro: tabs artesano O links normales */}
           {isArtisan && onTabChange ? (
             <div className="flex items-center gap-1 overflow-x-auto">
               {ARTESANO_TABS.map(t => (
@@ -138,7 +145,6 @@ export function Navbar({ activeTab, onTabChange }: NavbarProps) {
             </div>
           )}
 
-          {/* Derecha */}
           <div className="flex items-center gap-3 flex-shrink-0">
 
             {/* Carrito */}
@@ -153,6 +159,125 @@ export function Navbar({ activeTab, onTabChange }: NavbarProps) {
                   )}
                 </Button>
               </Link>
+            )}
+
+            {/* Pedidos — solo clientes */}
+            {isAuthenticated && isClient && (
+              <div className="relative" ref={ordersRef}>
+                <button
+                  onClick={() => setOrdersOpen(prev => !prev)}
+                  className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <Package className="h-5 w-5 text-gray-600" />
+                  {unseenCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-orange-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                      {unseenCount}
+                    </span>
+                  )}
+                </button>
+
+                {ordersOpen && (
+                  <div className="absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                      {selectedOrder ? (
+                        <button
+                          onClick={() => setSelectedOrder(null)}
+                          className="flex items-center gap-1 text-sm font-semibold text-gray-700 hover:text-orange-600 transition-colors"
+                        >
+                          <ChevronLeft className="h-4 w-4" /> Volver
+                        </button>
+                      ) : (
+                        <h3 className="font-semibold text-gray-900">Mis Pedidos</h3>
+                      )}
+                      <span className="text-xs text-gray-500">{orders.length} en total</span>
+                    </div>
+
+                    {!selectedOrder && (
+                      <div className="max-h-96 overflow-y-auto">
+                        {orders.length === 0 ? (
+                          <div className="text-center py-8 text-gray-400">
+                            <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                            <p className="text-sm">No tienes pedidos aún</p>
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-gray-50">
+                            {orders.slice().reverse().map((order: any) => (
+                              <div
+                                key={order.id}
+                                onClick={() => setSelectedOrder(order)}
+                                className="flex items-center justify-between px-4 py-3 hover:bg-orange-50 cursor-pointer transition-colors"
+                              >
+                                <div>
+                                  <p className="text-sm font-semibold text-gray-800">
+                                    {order.items?.[0]?.name || 'Pedido'}
+                                    {order.items?.length > 1 && ` + ${order.items.length - 1} más`}
+                                  </p>
+                                  <p className="text-xs text-gray-400">{new Date(order.date).toLocaleDateString('es-CO')}</p>
+                                </div>
+                                <span className="font-bold text-orange-600 text-sm">${order.total.toLocaleString('es-CO')}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {selectedOrder && (
+                      <div className="max-h-96 overflow-y-auto">
+                        <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                          <div className="flex justify-between items-center">
+                            <p className="text-sm font-semibold text-gray-800">
+                              Pedido #{selectedOrder.id.slice(-3).toUpperCase()}
+                            </p>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLES[selectedOrder.status] || STATUS_STYLES['Pendiente']}`}>
+                              {STATUS_ICONS[selectedOrder.status] || '🕐'} {selectedOrder.status || 'Pendiente'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {new Date(selectedOrder.date).toLocaleDateString('es-CO', { year: 'numeric', month: 'long', day: 'numeric' })}
+                          </p>
+                        </div>
+
+                        <div className="px-4 py-3 space-y-2">
+                          <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Productos</p>
+                          {selectedOrder.items?.map((item: any, i: number) => (
+                            <div key={i} className="flex justify-between text-sm">
+                              <span className="text-gray-700">{item.name} <span className="text-gray-400">x{item.quantity}</span></span>
+                              <span className="font-medium">${(item.price * item.quantity).toLocaleString('es-CO')}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="px-4 py-3 border-t border-gray-100 flex justify-between items-center">
+                          <span className="font-bold text-gray-800">Total</span>
+                          <span className="font-bold text-orange-600 text-lg">${selectedOrder.total.toLocaleString('es-CO')}</span>
+                        </div>
+
+                        <div className="px-4 pb-4">
+                          <button
+                            onClick={() => handleFactura(selectedOrder)}
+                            disabled={selectedOrder.status?.toLowerCase() === 'cancelado'}
+                            className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <FileText className="h-4 w-4" />
+                            Descargar Factura
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="px-4 py-3 border-t border-gray-100">
+                      <Link
+                        to="/mis-pedidos"
+                        onClick={() => setOrdersOpen(false)}
+                        className="text-xs text-orange-600 hover:text-orange-700 font-medium"
+                      >
+                        Ver todos los pedidos →
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Campana — solo clientes */}
@@ -172,55 +297,42 @@ export function Navbar({ activeTab, onTabChange }: NavbarProps) {
 
                 {bellOpen && (
                   <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
-
-                    <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">Mis Pedidos</h3>
-                      <span className="text-xs text-gray-500">{orders.length} en total</span>
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <h3 className="font-semibold text-gray-900">Notificaciones</h3>
                     </div>
-
-                    <div className="max-h-96 overflow-y-auto">
+                    <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
                       {orders.length === 0 ? (
                         <div className="text-center py-8 text-gray-400">
                           <Bell className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                          <p className="text-sm">No tienes pedidos aún</p>
+                          <p className="text-sm">No hay notificaciones nuevas</p>
                         </div>
                       ) : (
-                        orders.slice().reverse().map((order: any) => (
-                          <div key={order.id} className="px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                            <div className="flex justify-between items-start mb-1.5">
-                              <span className="text-sm font-semibold text-gray-800">
-                                Pedido #{order.id.slice(-6).toUpperCase()}
-                              </span>
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLES[order.status] || STATUS_STYLES['Pendiente']}`}>
-                                {STATUS_ICONS[order.status] || '🕐'} {order.status || 'Pendiente'}
-                              </span>
-                            </div>
-                            <p className="text-xs text-gray-500 mb-2">
-                              {new Date(order.date).toLocaleDateString('es-CO')} · ${order.total.toLocaleString('es-CO')}
-                            </p>
-                            <button
-                              onClick={() => handleFactura(order)}
-                              disabled={order.status?.toLowerCase() === 'cancelado'}
-                              className="flex items-center gap-1.5 text-xs text-orange-600 hover:text-orange-700 font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            >
-                              <FileText className="h-3.5 w-3.5" />
-                              Descargar Factura
-                            </button>
-                          </div>
-                        ))
+                        orders.slice().reverse().map((order: any) => {
+                          const status = order.status || 'Pendiente';
+                          const icon = STATUS_ICONS[status] || '🕐';
+return (
+  <div key={order.id} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+    <span className="text-xl mt-0.5">{icon}</span>
+    <div className="flex-1">
+      <p className="text-sm font-semibold text-gray-800">
+        {order.items?.[0]?.name || 'Pedido'}
+        {order.items?.length > 1 && ` + ${order.items.length - 1} más`}
+      </p>
+      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLES[status] || STATUS_STYLES['Pendiente']}`}>
+        {icon} {status}
+      </span>
+      <p className="text-xs text-gray-400 mt-1">
+        {new Date(order.date).toLocaleDateString('es-CO')}
+      </p>
+    </div>
+    <span className="text-xs font-bold text-orange-600 mt-1">
+      ${order.total.toLocaleString('es-CO')}
+    </span>
+  </div>
+);
+                        })
                       )}
                     </div>
-
-                    <div className="px-4 py-3 border-t border-gray-100">
-                      <Link
-                        to="/perfil"
-                        onClick={() => setBellOpen(false)}
-                        className="text-xs text-orange-600 hover:text-orange-700 font-medium"
-                      >
-                        Ver todos los pedidos →
-                      </Link>
-                    </div>
-
                   </div>
                 )}
               </div>
@@ -295,7 +407,6 @@ export function Navbar({ activeTab, onTabChange }: NavbarProps) {
               </Link>
             )}
           </div>
-
         </div>
       </div>
     </nav>

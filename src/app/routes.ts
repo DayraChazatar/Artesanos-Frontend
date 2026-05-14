@@ -13,6 +13,7 @@ import { Checkout } from "./pages/Checkout";
 import { Dashboard } from "./pages/Dashboard";
 import { NotFound } from "./pages/NotFound";
 import PerfilArtesano from "./pages/PerfilArtesano";
+import { MisPedidos } from "./pages/MisPedidos";
 
 export const router = createBrowserRouter([
   {
@@ -30,6 +31,7 @@ export const router = createBrowserRouter([
       { path: "producto/editar/:id", Component: ProductEdit },
       { path: "carrito", Component: Cart },
       { path: "checkout", Component: Checkout },
+      { path: "mis-pedidos", Component: MisPedidos },
       { path: "dashboard", Component: Dashboard },
       { path: "*", Component: NotFound },
     ],
