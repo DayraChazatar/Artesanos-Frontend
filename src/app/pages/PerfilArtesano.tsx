@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate } from 'react-router-dom';  // ← solo useNavigate, quita useRouter
 import { useAuth } from '../context/AuthContext';
 import { descargarReporte } from '../data/artesanoApi';
 import {
@@ -8,7 +8,7 @@ import {
   getKardex, createKardex,
   type Categoria, type Producto, type Kardex,
 } from '../data/artesanoApi';
-
+// Hook de notificaciones — ajusta la ruta según dónde lo creaste
 
 const ARTESANO_ID: number = Number(localStorage.getItem('usuario_id') ?? 1);
 const ARTESANO_NOMBRE: string = localStorage.getItem('usuario_nombre') ?? 'Artesano';
@@ -43,17 +43,60 @@ function StockBadge({ p }: { p: Producto }) {
 }
 
 // ── Topbar ───────────────────────────────────────────────────────────────────
-const NOTIFICACIONES_MOCK = [
-  { id: 1, tipo: 'stock', titulo: 'Stock bajo', detalle: 'El producto "Aretes de Mariposa" tiene solo 2 unidades disponibles.', fecha: '2025-06-10', leida: false },
-  { id: 2, tipo: 'pedido', titulo: 'Nuevo pedido', detalle: 'Tienes un nuevo pedido #0023 por $85.000 pendiente de confirmación.', fecha: '2025-06-09', leida: false },
-  { id: 3, tipo: 'sistema', titulo: 'Perfil incompleto', detalle: 'Tu perfil de artesano no tiene foto ni descripción. Complétalo para atraer más clientes.', fecha: '2025-06-08', leida: true },
-];
+// hooks/useNotificaciones.ts
+
+const API = 'http://localhost:8000/api';
+
+export interface Notificacion {
+  id: number;
+  tipo: string;
+  titulo: string;
+  detalle: string;
+  leida: boolean;
+  fecha: string;
+  referencia_id?: number;
+  ruta?: string;
+}
+
+export function useNotificaciones() {
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+
+  const cargar = useCallback(async () => {
+    try {
+      const res = await fetch(`${API}/notificaciones/`);
+      const data = await res.json();
+      setNotificaciones(data);
+    } catch (e) {
+      console.error('Error cargando notificaciones', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    cargar();
+    const interval = setInterval(cargar, 30_000);
+    return () => clearInterval(interval);
+  }, [cargar]);
+
+  const marcarLeida = async (id: number) => {
+    await fetch(`${API}/notificaciones/${id}/leer/`, { method: 'PATCH' });
+    setNotificaciones(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
+  };
+
+  const marcarTodasLeidas = async () => {
+    await fetch(`${API}/notificaciones/leer-todas/`, { method: 'PATCH' });
+    setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
+  };
+
+  return { notificaciones, marcarLeida, marcarTodasLeidas, recargar: cargar };
+}
 
 function Topbar({ noLeidas }: { noLeidas: number }) {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const navigate = useNavigate(); 
+  const handleLogout = () => { logout(); navigate('/'); };
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -63,7 +106,6 @@ function Topbar({ noLeidas }: { noLeidas: number }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => { logout(); navigate('/'); };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-30 h-16 bg-white border-b border-amber-100 flex items-center justify-between px-6 shadow-sm">
@@ -162,17 +204,27 @@ function Sidebar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void
     </aside>
   );
 }
-function SidebarNotificaciones({ notificaciones, setNotificaciones }: {
-  notificaciones: typeof NOTIFICACIONES_MOCK;
-  setNotificaciones: React.Dispatch<React.SetStateAction<typeof NOTIFICACIONES_MOCK>>;
+// ajusta la ruta
+
+function SidebarNotificaciones({
+  notificaciones,
+  marcarLeida,
+  marcarTodasLeidas,
+  onNavegar,  
+}: {
+  notificaciones: Notificacion[];
+  marcarLeida: (id: number) => Promise<void>;
+  marcarTodasLeidas: () => Promise<void>;
+  onNavegar: (tab: Tab) => void;
 }) {
-  const [detalle, setDetalle] = useState<typeof NOTIFICACIONES_MOCK[0] | null>(null);
+  const [detalle, setDetalle] = useState<Notificacion | null>(null);
 
-  const iconoTipo = (tipo: string) => tipo === 'stock' ? '📦' : tipo === 'pedido' ? '🛍️' : '🔔';
+  const iconoTipo = (tipo: string) =>
+    tipo === 'stock' ? '📦' : tipo === 'pedido' ? '🛍️' : '🔔';
 
-  const handleClick = (n: typeof NOTIFICACIONES_MOCK[0]) => {
+  const handleClick = async (n: Notificacion) => {
+    await marcarLeida(n.id);
     setDetalle(n);
-    setNotificaciones(prev => prev.map(x => x.id === n.id ? { ...x, leida: true } : x));
   };
 
   return (
@@ -205,7 +257,21 @@ function SidebarNotificaciones({ notificaciones, setNotificaciones }: {
             <span className="font-semibold text-stone-800 text-sm">{detalle.titulo}</span>
           </div>
           <p className="text-sm text-stone-600 leading-relaxed mb-4">{detalle.detalle}</p>
-          <p className="text-xs text-stone-400">{detalle.fecha}</p>
+          <p className="text-xs text-stone-400 mb-5">{detalle.fecha}</p>
+
+          {/* Botón de acción según tipo */}
+          {detalle.ruta && (
+            <button
+              onClick={() => {
+              const tab = detalle.ruta!.replace('/', '') as Tab;
+onNavegar(tab);
+                setDetalle(null);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors shadow-sm"
+            >
+              {detalle.tipo === 'pedido' ? '🛍️ Ir a pedidos' : '📦 Ir a inventario'} →
+            </button>
+          )}
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto py-3">
@@ -218,7 +284,7 @@ function SidebarNotificaciones({ notificaciones, setNotificaciones }: {
             <>
               {notificaciones.filter(n => !n.leida).length > 0 && (
                 <button
-                  onClick={() => setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })))}
+                  onClick={marcarTodasLeidas}
                   className="w-full text-xs text-amber-600 hover:text-amber-800 font-semibold px-5 py-2 text-right transition"
                 >
                   Marcar todas como leídas
@@ -240,6 +306,12 @@ function SidebarNotificaciones({ notificaciones, setNotificaciones }: {
                       {!n.leida && <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />}
                     </div>
                     <p className="text-xs text-stone-400 line-clamp-2 leading-relaxed">{n.detalle}</p>
+                    {/* Hint de acción */}
+                    {n.ruta && (
+                      <span className="text-xs text-amber-500 font-semibold mt-1 inline-block">
+                        Toca para {n.tipo === 'pedido' ? 'ver el pedido' : 'ver inventario'} →
+                      </span>
+                    )}
                     <p className="text-xs text-stone-300 mt-1">{n.fecha}</p>
                   </div>
                 </button>
@@ -2063,11 +2135,12 @@ export default function PerfilArtesano() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [kardex, setKardex] = useState<Kardex[]>([]);
-  const [pedidos, setPedidos] = useState([]);
   const [imagenes, setImagenes] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [notificaciones, setNotificaciones] = useState(NOTIFICACIONES_MOCK);
+
+  // ✅ Hook real de notificaciones
+  const { notificaciones, marcarLeida, marcarTodasLeidas } = useNotificaciones();
 
   const cargarDatos = useCallback(async () => {
     setLoading(true);
@@ -2081,23 +2154,25 @@ export default function PerfilArtesano() {
       setCategorias(cats);
       setKardex(kard);
     } catch {
-      setError('No se pudo conectar con el servidor. Verifica que Django esté corriendo en localhost:8000');
+      setError('No se pudo conectar con el servidor.');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
+
   return (
     <div className="min-h-screen bg-amber-50/60 font-sans text-base">
       <Topbar noLeidas={notificaciones.filter(n => !n.leida).length} />
-      <Sidebar active={tab} onChange={setTab} />
+      <Sidebar active={tab} onChange={setTab} />  {/* ✅ Solo una vez */}
 
-      <Sidebar active={tab} onChange={setTab} />
-
+      {/* ✅ SidebarNotificaciones con las props correctas */}
       <SidebarNotificaciones
         notificaciones={notificaciones}
-        setNotificaciones={setNotificaciones}
+        marcarLeida={marcarLeida}
+        marcarTodasLeidas={marcarTodasLeidas}
+        onNavegar={setTab}
       />
 
       <main className="pt-16 pl-40 pr-64 min-h-screen text-base">
@@ -2111,45 +2186,20 @@ export default function PerfilArtesano() {
             <Alert msg={error} type="error" />
           ) : (
             <>
-              {tab === "catalogo" && (
-                <ModuloCatalogo
-                  productos={productos}
-                  imagenes={imagenes}
-                />
-              )}
-
-              {tab === "contable" && (
-                <ModuloContable productos={productos} />
-              )}
-
-              {tab === "productos" && (
+              {tab === 'catalogo' && <ModuloCatalogo productos={productos} imagenes={imagenes} />}
+              {tab === 'contable' && <ModuloContable productos={productos} />}
+              {tab === 'productos' && (
                 <ModuloProductos
-                  productos={productos}
-                  setProductos={setProductos}
-                  categorias={categorias}
-                  setCategorias={setCategorias}
-                  imagenes={imagenes}
-                  setImagenes={setImagenes}
+                  productos={productos} setProductos={setProductos}
+                  categorias={categorias} setCategorias={setCategorias}
+                  imagenes={imagenes} setImagenes={setImagenes}
                 />
               )}
-
-              {tab === "inventario" && (
-                <ModuloInventario
-                  productos={productos}
-                  kardex={kardex}
-                  setKardex={setKardex}
-                />
+              {tab === 'inventario' && (
+                <ModuloInventario productos={productos} kardex={kardex} setKardex={setKardex} />
               )}
-              {tab === "pedidos" && (
-                <ModuloPedidosArtesano
-                />
-              )}
-              {tab === "reportes" && (
-                <ModuloReportes
-                  productos={productos}
-                  kardex={kardex}
-                />
-              )}
+              {tab === 'pedidos' && <ModuloPedidosArtesano />}
+              {tab === 'reportes' && <ModuloReportes productos={productos} kardex={kardex} />}
             </>
           )}
         </div>
