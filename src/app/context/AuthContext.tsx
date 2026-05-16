@@ -1,8 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+} from 'react';
 
 const BASE = 'http://localhost:8000/api';
 
-// ── Tipos ────────────────────────────────────────────────────────────────────
 interface User {
   id: string;
   name: string;
@@ -17,14 +21,10 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  // 👇 Ahora login devuelve { user, token }
+  loading: boolean;
   login: (email: string, password: string) => Promise<{ user: User; token: string }>;
-  register: (
-    name: string,
-    email: string,
-    password: string,
-    role: 'customer' | 'artisan'
-  ) => Promise<void>;
+  loginWithGoogle: (googleUser: User) => void;
+  register: (name: string, email: string, password: string, role: 'customer' | 'artisan') => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   updateProfile: (data: Partial<User>) => Promise<void>;
@@ -33,33 +33,36 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// ── Mapea la respuesta de Django al tipo User del frontend ───────────────────
-function mapDjangoUser(data: any): User {
+function mapDjangoUser(data: any, email?: string): User {
   const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
   return {
     id:           String(data.id),
     name:         data.nombre,
-    email:        data.correo,
+    email:        email || data.correo || savedUser.email || '',
     role:         data.tipo === 'artesano' ? 'artisan' : 'customer',
-    phone:        data.telefono   ?? '',
+    phone:        data.telefono ?? '',
     address:      '',
-    bio:          data.biografia  ?? '',
+    bio:          data.biografia ?? '',
     specialty:    data.especialidad ?? '',
     profileImage: savedUser.profileImage || '',
   };
 }
 
-// ── Provider ─────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser]       = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Restaurar sesión al recargar
   useEffect(() => {
-    const saved = localStorage.getItem('user');
-    if (saved) setUser(JSON.parse(saved));
+    try {
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) setUser(JSON.parse(savedUser));
+    } catch (error) {
+      console.error('Error recuperando sesión:', error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // ── LOGIN — llama a Django ──────────────────────────────────────────────
   const login = async (email: string, password: string): Promise<{ user: User; token: string }> => {
     const res = await fetch(`${BASE}/login/`, {
       method: 'POST',
@@ -68,27 +71,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (!res.ok) throw new Error('Error de conexión con el servidor');
+
     const data = await res.json();
     if (!data.success) throw new Error(data.mensaje || 'Credenciales incorrectas');
 
-    // Recuperar foto guardada por correo
-    const savedPhoto = localStorage.getItem(`profileImage_${email}`) || localStorage.getItem('profileImage_undefined') || '';
-    const loggedUser = {
-      ...mapDjangoUser(data),
+    const savedPhoto =
+      localStorage.getItem(`profileImage_${email}`) ||
+      localStorage.getItem('profileImage_undefined') ||
+      '';
+
+    const loggedUser: User = {
+      ...mapDjangoUser(data, email), // ← email pasado explícitamente
       profileImage: savedPhoto,
+      email, // ← garantiza que siempre esté
     };
 
-    // Guardar en estado y localStorage
     setUser(loggedUser);
     localStorage.setItem('user', JSON.stringify(loggedUser));
     localStorage.setItem('usuario_id', String(data.id));
     localStorage.setItem('usuario_nombre', data.nombre);
+    if (data.token) localStorage.setItem('token', data.token);
 
-    // ⚠️ IMPORTANTE: Retornar el objeto esperado
     return { user: loggedUser, token: data.token };
   };
 
-  // ── REGISTRO — crea usuario en Django ──────────────────────────────────
+  const loginWithGoogle = (googleUser: User) => {
+    setUser(googleUser);
+    localStorage.setItem('user', JSON.stringify(googleUser));
+    localStorage.setItem('usuario_id', googleUser.id);
+    localStorage.setItem('usuario_nombre', googleUser.name);
+  };
+
   const register = async (
     name: string,
     email: string,
@@ -99,13 +112,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        nombre:      name,
-        correo:      email,
-        password:    password,
-        tipo:        role === 'artisan' ? 'artesano' : 'cliente',
-        telefono:    '',
+        nombre:       name,
+        correo:       email,
+        password,
+        tipo:         role === 'artisan' ? 'artesano' : 'cliente',
+        telefono:     '',
         especialidad: '',
-        biografia:   '',
+        biografia:    '',
       }),
     });
 
@@ -116,16 +129,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const data = await res.json();
+    const newUser: User = { ...mapDjangoUser(data, email), email };
 
-    // Login automático tras registro
-    const newUser = mapDjangoUser(data);
     setUser(newUser);
-    localStorage.setItem('user',           JSON.stringify(newUser));
-    localStorage.setItem('usuario_id',     String(data.id));
+    localStorage.setItem('user', JSON.stringify(newUser));
+    localStorage.setItem('usuario_id', String(data.id));
     localStorage.setItem('usuario_nombre', data.nombre);
   };
 
-  // ── LOGOUT ──────────────────────────────────────────────────────────────
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
@@ -134,49 +145,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('token');
   };
 
-  // ── UPDATE PROFILE ──────────────────────────────────────────────────────
   const updateProfile = async (data: Partial<User>) => {
     if (!user) return;
-
     const updatedUser = { ...user, ...data };
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
-
-    // Sincroniza con Django
     await fetch(`${BASE}/usuarios/${user.id}/`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        nombre:      data.name       ?? user.name,
-        telefono:    data.phone      ?? user.phone,
-        biografia:   data.bio        ?? user.bio,
+        nombre:       data.name      ?? user.name,
+        telefono:     data.phone     ?? user.phone,
+        biografia:    data.bio       ?? user.bio,
         especialidad: data.specialty ?? user.specialty,
       }),
     });
   };
 
-  // ── RESET PASSWORD (simulado) ────────────────────────────────────────────
   const resetPassword = async (email: string) => {
-    const res = await fetch(`${BASE}/usuarios/?correo=${email}`);
+    const res  = await fetch(`${BASE}/usuarios/?correo=${email}`);
     const data = await res.json();
-    if (!data || data.length === 0) {
-      throw new Error('No se encontró una cuenta con ese correo');
-    }
+    if (!data || data.length === 0) throw new Error('No se encontró una cuenta con ese correo');
     console.log('Enlace de recuperación enviado a:', email);
   };
 
+  if (loading) return null;
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        register,
-        logout,
-        isAuthenticated: !!user,
-        updateProfile,
-        resetPassword,
-      }}
-    >
+    <AuthContext.Provider value={{
+      user, loading, login, loginWithGoogle,
+      register, logout, isAuthenticated: !!user,
+      updateProfile, resetPassword,
+    }}>
       {children}
     </AuthContext.Provider>
   );
@@ -184,8 +184,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }
