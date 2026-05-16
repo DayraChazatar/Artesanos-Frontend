@@ -18,15 +18,19 @@ export function Checkout() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: '',
-    address: '',
-    city: '',
-    postalCode: '',
-    notes: '',
-  });
+const savedAddress = JSON.parse(
+  localStorage.getItem(`direccion_${user?.email}`) || '{}'
+);
+
+const [formData, setFormData] = useState({
+  name: user?.name || '',
+  email: user?.email || '',
+  phone: savedAddress.phone || '',
+  address: savedAddress.address || '',
+  city: savedAddress.city || '',
+  postalCode: savedAddress.postalCode || '',
+  notes: savedAddress.notes || '',
+});
 
   const [formValid, setFormValid] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
@@ -45,9 +49,28 @@ export function Checkout() {
     return null;
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+const handleInputChange = (
+  e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+) => {
+  const updatedData = {
+    ...formData,
+    [e.target.name]: e.target.value,
   };
+
+  setFormData(updatedData);
+
+  // Guardar automáticamente dirección
+  localStorage.setItem(
+    `direccion_${user?.email}`,
+    JSON.stringify({
+      phone: updatedData.phone,
+      address: updatedData.address,
+      city: updatedData.city,
+      postalCode: updatedData.postalCode,
+      notes: updatedData.notes,
+    })
+  );
+};
 
   const handleWompiPayment = () => {
     if (!formValid) {

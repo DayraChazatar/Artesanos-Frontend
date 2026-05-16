@@ -13,18 +13,19 @@ export function Home() {
     <div>
       {/* Hero Section */}
       <section
-        className="relative h-[600px] bg-cover bg-center"
+        className="relative h-[700px] bg-cover"
         style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1761124739063-8a1464438cdf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxoYW5kbWFkZSUyMGFydGlzYW4lMjBjcmFmdHMlMjBjb2xvcmZ1bHxlbnwxfHx8fDE3NzEyMDMwNzd8MA&ixlib=rb-4.1.0&q=80&w=1080')`,
+          backgroundImage: `url('/hero.jpg')`,
+          backgroundPosition: 'center 30%',
         }}
       >
-        <div className="absolute inset-0 bg-black/50" />
-        <div className="relative container mx-auto px-4 h-full flex items-center">
-          <div className="max-w-2xl text-white">
-            <h1 className="text-5xl md:text-6xl mb-6">
+        <div className="absolute inset-0 bg-gradient-to-tr from-black/75 via-black/20 to-transparent" />
+        <div className="relative container mx-auto px-4 h-full flex items-end justify-start pb-14">
+          <div className="max-w-md">
+            <h1 className="text-5xl md:text-6xl font-bold mb-4 text-white drop-shadow-lg leading-tight">
               Descubre el Arte Hecho a Mano
             </h1>
-            <p className="text-xl mb-8">
+            <p className="text-lg mb-6 text-white/90 drop-shadow">
               Productos únicos creados por artesanos talentosos. Cada pieza cuenta una historia.
             </p>
             <div className="flex gap-4">
@@ -47,28 +48,51 @@ export function Home() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <Card>
               <CardContent className="pt-6 text-center">
-                <Heart className="h-12 w-12 mx-auto mb-4 text-orange-600" />
+                <div className="relative group inline-block">
+                  <Heart className="h-12 w-12 mx-auto mb-4 text-orange-600 cursor-pointer" />
+                  <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    Productos hechos con amor y dedicación
+                  </span>
+                </div>
                 <h3 className="font-semibold mb-2">Hecho con Amor</h3>
                 <p className="text-sm text-gray-600">Cada producto es creado con dedicación y pasión</p>
               </CardContent>
             </Card>
+
             <Card>
               <CardContent className="pt-6 text-center">
-                <Star className="h-12 w-12 mx-auto mb-4 text-orange-600" />
+                <div className="relative group inline-block">
+                  <Star className="h-12 w-12 mx-auto mb-4 text-orange-600 cursor-pointer" />
+                  <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    Artesanía de la más alta calidad
+                  </span>
+                </div>
                 <h3 className="font-semibold mb-2">Calidad Premium</h3>
                 <p className="text-sm text-gray-600">Productos de la más alta calidad artesanal</p>
               </CardContent>
             </Card>
+
             <Card>
               <CardContent className="pt-6 text-center">
-                <Truck className="h-12 w-12 mx-auto mb-4 text-orange-600" />
+                <div className="relative group inline-block">
+                  <Truck className="h-12 w-12 mx-auto mb-4 text-orange-600 cursor-pointer" />
+                  <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    Entrega confiable a todo el país
+                  </span>
+                </div>
                 <h3 className="font-semibold mb-2">Envío Seguro</h3>
                 <p className="text-sm text-gray-600">Entrega confiable a todo el país</p>
               </CardContent>
             </Card>
+
             <Card>
               <CardContent className="pt-6 text-center">
-                <Shield className="h-12 w-12 mx-auto mb-4 text-orange-600" />
+                <div className="relative group inline-block">
+                  <Shield className="h-12 w-12 mx-auto mb-4 text-orange-600 cursor-pointer" />
+                  <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    Tus datos y pagos siempre protegidos
+                  </span>
+                </div>
                 <h3 className="font-semibold mb-2">Compra Segura</h3>
                 <p className="text-sm text-gray-600">Protegemos tus datos y tu inversión</p>
               </CardContent>
