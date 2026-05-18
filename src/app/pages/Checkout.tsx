@@ -14,7 +14,7 @@ import { generarFacturaPDF } from '../utils/facturas';
 const WOMPI_PUBLIC_KEY = 'pub_test_6jhHtUtNNHZ6HkikZE9139oIbmtsVXPk';
 
 export function Checkout() {
-  const { cart, totalPrice, clearCart } = useCart();
+  const { cart, totalPrice, clearCart, checkout } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -72,39 +72,57 @@ const handleInputChange = (
   );
 };
 
-  const handleWompiPayment = () => {
-    if (!formValid) {
-      toast.error('Por favor completa todos los campos obligatorios');
-      return;
-    }
+  const handleWompiPayment = async () => {
+  if (!formValid) {
+    toast.error('Por favor completa todos los campos obligatorios');
+    return;
+  }
 
-    const orders = JSON.parse(localStorage.getItem('orders') || '[]');
-    const newOrder = {
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      items: cart,
-      total: totalWithShipping,
-      customer: { name: formData.name, email: formData.email, phone: formData.phone },
-      status: 'Pendiente',
-    };
-    localStorage.setItem('orders', JSON.stringify([...orders, newOrder]));
-    clearCart();
+  if (!user?.id) {
+    toast.error('Debes iniciar sesión para continuar');
+    return;
+  }
 
-    const params = new URLSearchParams({
-      'public-key': WOMPI_PUBLIC_KEY,
-      'currency': 'COP',
-      'amount-in-cents': String(totalWithShipping * 100),
-      'reference': newOrder.id,
-      'redirect-url': 'http://localhost:5173/',
-      'customer-data:email': formData.email,
-      'customer-data:full-name': formData.name,
-      'customer-data:phone-number': formData.phone,
-    });
+  // ── Crear pedido en el backend ──────────────────────────────────────
+  const result = await checkout({
+    clienteId:  Number(user.id),
+    direccion:  `${formData.address}, ${formData.city} ${formData.postalCode}`,
+    telefono:   formData.phone,
+  });
 
-    setCurrentOrder(newOrder);
-    setWompiUrl(`https://checkout.wompi.co/p/?${params.toString()}`);
-    setOrderConfirmed(true);
+  if (!result.ok) {
+    toast.error(result.error ?? 'Error al crear el pedido');
+    return;
+  }
+
+  const pedido = result.pedido;
+
+  // ── Construir el objeto local para la pantalla de confirmación ──────
+  const newOrder = {
+    id:       String(pedido.id),
+    date:     pedido.fecha,
+    items:    cart,
+    total:    totalWithShipping,
+    customer: { name: formData.name, email: formData.email, phone: formData.phone },
+    status:   'Pendiente',
   };
+
+  // ── Redirigir a Wompi ───────────────────────────────────────────────
+  const params = new URLSearchParams({
+    'public-key':               WOMPI_PUBLIC_KEY,
+    'currency':                 'COP',
+    'amount-in-cents':          String(totalWithShipping * 100),
+    'reference':                String(pedido.id),
+    'redirect-url':             'http://localhost:5173/',
+    'customer-data:email':      formData.email,
+    'customer-data:full-name':  formData.name,
+    'customer-data:phone-number': formData.phone,
+  });
+
+  setCurrentOrder(newOrder);
+  setWompiUrl(`https://checkout.wompi.co/p/?${params.toString()}`);
+  setOrderConfirmed(true);
+};
 
   const handleDescargarFactura = () => {
     try {

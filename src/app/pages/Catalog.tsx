@@ -1,22 +1,42 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Search, Edit, X, Heart } from 'lucide-react';
-import { products, categories } from '../data/products';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
 export function Catalog() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery]               = useState('');
-  const [sortBy, setSortBy]                         = useState('default');
-  const [showOffers, setShowOffers]                 = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('default');
+  const [showOffers, setShowOffers] = useState(false);
+  const [productos, setProductos] = useState<any[]>([]);
   const { user } = useAuth();
+  useEffect(() => {
+    obtenerProductos();
+  }, []);
 
-  const customProducts = JSON.parse(localStorage.getItem('customProducts') || '[]');
-  const allProducts = [...products, ...customProducts];
+  const obtenerProductos = async () => {
+    try {
+      const response = await fetch('http://localhost:8000/api/catalogo/');
+      const data = await response.json();
+      setProductos(data);
+    } catch (error) {
+      console.error(
+        'Error obteniendo productos:',
+        error
+      );
+
+    }
+  };
+  const allProducts = productos;
+  const categories = [
+    ...new Set(
+      allProducts.map((p: any) => p.categoria_nombre)
+    )
+  ];
 
   const prices = allProducts.map(p => p.price);
   const rawMaxPrice = prices.length > 0 ? Math.max(...prices) : 1000000;
@@ -46,12 +66,12 @@ export function Catalog() {
       toast.success('Eliminado de favoritos');
     } else {
       const newFav = {
-        id:      product.id,
-        name:    product.name,
-        price:   product.discount
-                   ? Math.round(product.price * (1 - product.discount / 100))
-                   : product.price,
-        image:   product.image,
+        id: product.id,
+        name: product.nombre,
+        price: product.discount
+          ? Math.round(product.precio_final * (1 - product.discount / 100))
+          : product.precio_final,
+        image: product.image,
         artisan: product.artisan,
       };
       localStorage.setItem(favKey, JSON.stringify([...saved, newFav]));
@@ -63,31 +83,31 @@ export function Catalog() {
 
   const filteredProducts = allProducts
     .filter(product => {
-      const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(product.category);
-      const matchesSearch   = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                              product.artisan.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesPrice    = product.price >= priceRange[0] && product.price <= priceRange[1];
-      const matchesOffers   = !showOffers || product.discount;
+      const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(product.categoria_nombre);
+      const matchesSearch = product.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (product.artesano_nombre ?? '').toLowerCase().includes(searchQuery.toLowerCase())
+      const matchesPrice = product.precio_final >= priceRange[0] && product.precio_final <= priceRange[1];
+      const matchesOffers = !showOffers || product.discount;
       return matchesCategory && matchesSearch && matchesPrice && matchesOffers;
     })
     .sort((a, b) => {
-      const finalPriceA = a.discount ? a.price - (a.price * a.discount / 100) : a.price;
-      const finalPriceB = b.discount ? b.price - (b.price * b.discount / 100) : b.price;
-      if (sortBy === 'price-asc')  return finalPriceA - finalPriceB;
+      const finalPriceA = a.precio_final ?? 0;
+      const finalPriceB = b.precio_final ?? 0;
+
       if (sortBy === 'price-desc') return finalPriceB - finalPriceA;
-      if (sortBy === 'name')       return a.name.localeCompare(b.name);
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
       return 0;
     });
 
-  const isArtisan      = user?.role === 'artisan';
-  const isCustomer     = user?.role === 'customer';
+  const isArtisan = user?.role === 'artisan';
+  const isCustomer = user?.role === 'customer';
   const canEditProduct = (product: any) => isArtisan && product.createdBy === user?.id;
 
   const getStockLabel = (stock: number) => {
-    if (stock === 0)  return { label: 'Agotado',       color: 'bg-red-100 text-red-700' };
-    if (stock <= 3)   return { label: `¡Solo ${stock}!`, color: 'bg-red-100 text-red-700' };
-    if (stock <= 10)  return { label: 'Poco stock',    color: 'bg-yellow-100 text-yellow-700' };
+    if (stock === 0) return { label: 'Agotado', color: 'bg-red-100 text-red-700' };
+    if (stock <= 3) return { label: `¡Solo ${stock}!`, color: 'bg-red-100 text-red-700' };
+    if (stock <= 10) return { label: 'Poco stock', color: 'bg-yellow-100 text-yellow-700' };
     return null;
   };
 
@@ -182,9 +202,8 @@ export function Catalog() {
                 Encuentra productos con promociones y precios especiales.
               </p>
               <button onClick={() => setShowOffers(!showOffers)}
-                className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-all flex items-center gap-2 ${
-                  showOffers ? 'bg-orange-100 text-orange-700 font-semibold' : 'hover:bg-gray-100 text-gray-600'
-                }`}>
+                className={`w-full text-left px-4 py-3 rounded-xl text-sm transition-all flex items-center gap-2 ${showOffers ? 'bg-orange-100 text-orange-700 font-semibold' : 'hover:bg-gray-100 text-gray-600'
+                  }`}>
                 🔥 Ver productos con descuento
               </button>
             </div>
@@ -213,9 +232,9 @@ export function Catalog() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
                 {filteredProducts.map(product => {
-                  const stockLabel     = getStockLabel(product.stock);
+                  const stockLabel = getStockLabel(product.cantidad_disponible);
                   const discountedPrice = product.discount
-                    ? Math.round(product.price * (1 - product.discount / 100))
+                    ? Math.round(product.precio_final * (1 - product.discount / 100))
                     : null;
                   const isFav = favorites.includes(product.id);
 
@@ -225,9 +244,12 @@ export function Catalog() {
                         <Card className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 rounded-3xl bg-white">
 
                           <div className="relative overflow-hidden">
-                            <img src={product.image} alt={product.name}
-                              className="w-full h-60 object-cover group-hover:scale-105 transition-transform duration-500" />
-
+                            {/* Imagen — reemplaza el img hardcodeado */}
+                            <img
+                              src={product.imagen_url || 'https://via.placeholder.com/400x300'}
+                              alt={product.nombre}
+                              className="w-full h-60 object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
                             {/* Badge oferta / stock */}
                             {product.discount ? (
                               <span className="absolute top-3 left-3 text-xs px-3 py-1 rounded-full font-semibold backdrop-blur-sm bg-orange-100 text-orange-700">
@@ -265,17 +287,17 @@ export function Catalog() {
                           <CardContent className="p-5">
                             <div className="mb-3">
                               <span className="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-medium">
-                                {product.category}
+                                {product.categoria_nombre}
                               </span>
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">{product.name}</h3>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">{product.nombre}</h3>
                             <p className="text-sm text-gray-600 mb-5 line-clamp-2 leading-relaxed">{product.description}</p>
                             <div className="flex justify-between items-end">
                               <div className="flex flex-col">
                                 {discountedPrice ? (
                                   <>
                                     <span className="text-gray-400 line-through text-lg font-medium">
-                                      ${product.price.toLocaleString('es-CO')}
+                                      ${Number(product.precio_final).toLocaleString('es-CO')}
                                     </span>
                                     <span className="text-red-600 font-black text-3xl leading-none">
                                       ${discountedPrice.toLocaleString('es-CO')}
@@ -283,17 +305,18 @@ export function Catalog() {
                                   </>
                                 ) : (
                                   <span className="text-orange-600 font-black text-3xl leading-none">
-                                    ${product.price.toLocaleString('es-CO')}
+                                    ${Number(product.precio_final).toLocaleString('es-CO')}
                                   </span>
                                 )}
                               </div>
-                              {product.stock === 0 && (
+                              {product.cantidad_disponible === 0 && (
                                 <span className="text-xs text-red-600 font-semibold bg-red-100 px-3 py-1 rounded-full">
                                   Agotado
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm text-gray-500 mt-4">Por {product.artisan}</p>
+                            {/* Artesano — usar artesano_nombre del backend */}
+                              <p className="text-sm text-gray-500 mt-4">Por {product.artesano_nombre}</p>
                           </CardContent>
                         </Card>
                       </Link>

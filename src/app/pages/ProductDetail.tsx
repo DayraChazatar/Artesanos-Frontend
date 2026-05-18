@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -192,45 +192,69 @@ function ProductReviews({ productId, productName }: { productId: string; product
 }
 
 // ── Componente Principal ──────────────────────────────────────────────────────
+
 export function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { user } = useAuth();
   const [quantity, setQuantity] = useState(1);
-
-  const customProducts = JSON.parse(localStorage.getItem('customProducts') || '[]');
-  const allProducts = [...products, ...customProducts];
-  const product = allProducts.find((p) => p.id === id);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const favKey = `favorites_${user?.email}`;
-  const [isFav, setIsFav] = useState(() => {
-    if (!user?.email || !product) return false;
-    const saved: any[] = JSON.parse(localStorage.getItem(favKey) || '[]');
-    return saved.some((f: any) => f.id === product.id);
-  });
+  const [isFav, setIsFav] = useState(false);
+
+  // ── Cargar producto desde el backend ──────────────────────────────────
+  useEffect(() => {
+    const fetchProducto = async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/api/productos/${id}/`);
+        if (!res.ok) throw new Error('No encontrado');
+        const data = await res.json();
+        setProduct(data);
+        // Verificar si está en favoritos
+        if (user?.email) {
+          const saved: any[] = JSON.parse(localStorage.getItem(favKey) || '[]');
+          setIsFav(saved.some((f: any) => String(f.id) === String(data.id)));
+        }
+      } catch {
+        setProduct(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducto();
+  }, [id]);
 
   const toggleFavorite = () => {
     if (!user) { toast.error('Inicia sesión para guardar favoritos'); return; }
     const saved: any[] = JSON.parse(localStorage.getItem(favKey) || '[]');
     if (isFav) {
-      const updated = saved.filter((f: any) => f.id !== product!.id);
-      localStorage.setItem(favKey, JSON.stringify(updated));
+      localStorage.setItem(favKey, JSON.stringify(saved.filter((f: any) => String(f.id) !== String(product.id))));
       setIsFav(false);
       toast.success('Eliminado de favoritos');
     } else {
-      const newFav = {
-        id:      product!.id,
-        name:    product!.name,
-        price:   discountedPrice ?? product!.price,
-        image:   product!.image,
-        artisan: product!.artisan,
-      };
-      localStorage.setItem(favKey, JSON.stringify([...saved, newFav]));
+      localStorage.setItem(favKey, JSON.stringify([...saved, {
+        id:      product.id,
+        name:    product.nombre,
+        price:   product.precio_final,
+        image:   product.imagen_url ?? '',
+        artisan: product.artesano_nombre ?? '',
+      }]));
       setIsFav(true);
       toast.success('Guardado en favoritos ❤️');
     }
   };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-20 text-center text-amber-700">
+        <span className="animate-spin text-3xl inline-block">⏳</span>
+        <p className="mt-4 text-sm">Cargando producto...</p>
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -243,17 +267,30 @@ export function ProductDetail() {
     );
   }
 
-  const discountedPrice = product.discount
-    ? Math.round(product.price * (1 - product.discount / 100))
+  // Mapear campos del backend al formato que usa el resto del componente
+  const precio     = Number(product.precio_final ?? product.precio_neto ?? 0);
+  const descuento  = product.descuento ? product.valor_descuento : 0;
+  const precioFinal = descuento
+    ? Math.round(precio * (1 - descuento / 100))
     : null;
+  const stock = product.cantidad_disponible ?? product.cantidad ?? 0;
 
   const handleAddToCart = () => {
-    if (quantity > product.stock) {
+    if (quantity > stock) {
       toast.error('No hay suficiente stock disponible');
       return;
     }
-    addToCart(product, quantity);
-    toast.success(`${product.name} agregado al carrito`);
+    addToCart({
+      id:          String(product.id),
+      name:        product.nombre,
+      description: product.categoria_nombre ?? '',
+      price:       precioFinal ?? precio,
+      image:       product.imagen_url ?? '',
+      category:    product.categoria_nombre ?? '',
+      artisan:     product.artesano_nombre ?? '',
+      stock:       stock,
+    }, quantity);
+    toast.success(`${product.nombre} agregado al carrito`);
   };
 
   const handleBuyNow = () => {
@@ -262,7 +299,7 @@ export function ProductDetail() {
   };
 
   const handleContactArtisan = () => {
-    const message = encodeURIComponent(`Hola, estoy interesado en el producto: ${product.name}`);
+    const message = encodeURIComponent(`Hola, estoy interesado en el producto: ${product.nombre}`);
     window.open(`https://wa.me/573001234567?text=${message}`, '_blank');
   };
 
@@ -280,18 +317,20 @@ export function ProductDetail() {
 
           {/* Imagen */}
           <div className="relative">
-            <img src={product.image} alt={product.name} className="w-full rounded-lg shadow-lg" />
-            {product.discount && (
+            <img
+              src={product.imagen_url || 'https://via.placeholder.com/600x400'}
+              alt={product.nombre}
+              className="w-full rounded-lg shadow-lg object-cover max-h-[500px]"
+            />
+            {descuento > 0 && (
               <span className="absolute top-4 right-4 bg-gradient-to-r from-red-500 to-red-700 text-white text-sm font-bold px-4 py-2 rounded-full shadow-lg">
-                🏷️ -{product.discount}% descuento
+                🏷️ -{descuento}% descuento
               </span>
             )}
             {user?.role === 'customer' && (
-              <button
-                onClick={toggleFavorite}
+              <button onClick={toggleFavorite}
                 className={`absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg font-medium text-sm transition-all duration-200
-                  ${isFav ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-white text-gray-500 hover:text-red-500 hover:border-red-300 border border-gray-200'}`}
-              >
+                  ${isFav ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-white text-gray-500 hover:text-red-500 border border-gray-200'}`}>
                 <Heart className={`h-4 w-4 ${isFav ? 'fill-white' : ''}`} />
                 {isFav ? 'Guardado en favoritos' : 'Guardar en favoritos'}
               </button>
@@ -301,43 +340,61 @@ export function ProductDetail() {
           {/* Info */}
           <div>
             <div className="mb-4 flex items-center gap-2 flex-wrap">
-              <span className="text-sm bg-orange-100 text-orange-700 px-3 py-1 rounded">{product.category}</span>
-              {product.discount && (
+              <span className="text-sm bg-orange-100 text-orange-700 px-3 py-1 rounded">
+                {product.categoria_nombre ?? '—'}
+              </span>
+              {descuento > 0 && (
                 <span className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded font-medium">¡En oferta!</span>
               )}
             </div>
 
-            <h1 className="text-3xl md:text-4xl mb-4">{product.name}</h1>
-            <p className="text-gray-600 mb-6">{product.description}</p>
+            <h1 className="text-3xl md:text-4xl mb-4">{product.nombre}</h1>
 
             <Card className="mb-6">
               <CardContent className="p-4">
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex flex-col">
-                    {discountedPrice ? (
+                    {precioFinal ? (
                       <>
-                        <span className="text-gray-400 line-through text-lg font-medium">${product.price.toLocaleString('es-CO')}</span>
-                        <span className="text-3xl text-red-600 font-bold">${discountedPrice.toLocaleString('es-CO')}</span>
+                        <span className="text-gray-400 line-through text-lg font-medium">
+                          ${precio.toLocaleString('es-CO')}
+                        </span>
+                        <span className="text-3xl text-red-600 font-bold">
+                          ${precioFinal.toLocaleString('es-CO')}
+                        </span>
                       </>
                     ) : (
-                      <span className="text-3xl text-orange-600 font-semibold">${product.price.toLocaleString('es-CO')}</span>
+                      <span className="text-3xl text-orange-600 font-semibold">
+                        ${precio.toLocaleString('es-CO')}
+                      </span>
                     )}
                   </div>
-                  <span className="text-sm text-gray-500">Stock: {product.stock} unidades</span>
+                  <span className={`text-sm font-medium px-3 py-1 rounded-full ${
+                    stock === 0 ? 'bg-red-100 text-red-700'
+                    : stock <= 5 ? 'bg-yellow-100 text-yellow-700'
+                    : 'bg-green-100 text-green-700'
+                  }`}>
+                    {stock === 0 ? 'Agotado' : `${stock} disponibles`}
+                  </span>
                 </div>
 
                 <div className="space-y-4">
                   <div>
                     <Label htmlFor="quantity">Cantidad</Label>
-                    <Input id="quantity" type="number" min="1" max={product.stock} value={quantity}
+                    <Input id="quantity" type="number" min="1" max={stock}
+                      value={quantity}
                       onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                       className="w-24" />
                   </div>
                   <div className="flex gap-3">
-                    <Button onClick={handleAddToCart} className="flex-1 bg-orange-600 hover:bg-orange-700">
+                    <Button onClick={handleAddToCart} disabled={stock === 0}
+                      className="flex-1 bg-orange-600 hover:bg-orange-700">
                       <ShoppingCart className="mr-2 h-4 w-4" /> Agregar al Carrito
                     </Button>
-                    <Button onClick={handleBuyNow} variant="outline" className="flex-1">Comprar Ahora</Button>
+                    <Button onClick={handleBuyNow} disabled={stock === 0}
+                      variant="outline" className="flex-1">
+                      Comprar Ahora
+                    </Button>
                   </div>
                   <Button onClick={handleContactArtisan} variant="outline" className="w-full">
                     <MessageCircle className="mr-2 h-4 w-4" /> Contactar al Artesano
@@ -349,36 +406,17 @@ export function ProductDetail() {
             <Card>
               <CardContent className="p-4">
                 <h3 className="font-semibold mb-2">Artesano</h3>
-                <p className="text-gray-600">{product.artisan}</p>
-                <p className="text-sm text-gray-500 mt-2">Cada producto es hecho a mano con dedicación y técnicas tradicionales.</p>
+                <p className="text-gray-600">{product.artesano_nombre ?? '—'}</p>
+                <p className="text-sm text-gray-500 mt-2">
+                  Cada producto es hecho a mano con dedicación y técnicas tradicionales.
+                </p>
               </CardContent>
             </Card>
           </div>
         </div>
 
-        {/* ── Reseñas ── */}
-        <ProductReviews productId={product.id} productName={product.name} />
-
-        {/* Productos relacionados */}
-        <div className="mt-12">
-          <h2 className="text-2xl mb-6">Productos Relacionados</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {products
-              .filter(p => p.category === product.category && p.id !== product.id)
-              .slice(0, 4)
-              .map(relatedProduct => (
-                <Link to={`/producto/${relatedProduct.id}`} key={relatedProduct.id}>
-                  <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-                    <img src={relatedProduct.image} alt={relatedProduct.name} className="w-full h-48 object-cover" />
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold mb-2 line-clamp-1">{relatedProduct.name}</h3>
-                      <span className="text-orange-600 font-semibold">${relatedProduct.price.toLocaleString('es-CO')}</span>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-          </div>
-        </div>
+        {/* Reseñas */}
+        <ProductReviews productId={String(product.id)} productName={product.nombre} />
 
       </div>
     </div>

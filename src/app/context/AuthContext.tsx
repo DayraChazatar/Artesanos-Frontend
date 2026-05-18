@@ -64,36 +64,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<{ user: User; token: string }> => {
-    const res = await fetch(`${BASE}/login/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ correo: email, password }),
-    });
-
-    if (!res.ok) throw new Error('Error de conexión con el servidor');
-
-    const data = await res.json();
-    if (!data.success) throw new Error(data.mensaje || 'Credenciales incorrectas');
-
-    const savedPhoto =
-      localStorage.getItem(`profileImage_${email}`) ||
-      localStorage.getItem('profileImage_undefined') ||
-      '';
-
-    const loggedUser: User = {
-      ...mapDjangoUser(data, email), // ← email pasado explícitamente
-      profileImage: savedPhoto,
-      email, // ← garantiza que siempre esté
+  const data = await new Promise<any>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${BASE}/login/`);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText));
+      } else {
+        reject(new Error('Error de conexión con el servidor'));
+      }
     };
+    xhr.onerror = () => reject(new Error('Error de conexión con el servidor'));
+    xhr.send(JSON.stringify({ correo: email, password }));
+  });
 
-    setUser(loggedUser);
-    localStorage.setItem('user', JSON.stringify(loggedUser));
-    localStorage.setItem('usuario_id', String(data.id));
-    localStorage.setItem('usuario_nombre', data.nombre);
-    if (data.token) localStorage.setItem('token', data.token);
+  if (!data.success) throw new Error(data.mensaje || 'Credenciales incorrectas');
 
-    return { user: loggedUser, token: data.token };
+  const savedPhoto =
+    localStorage.getItem(`profileImage_${email}`) ||
+    localStorage.getItem('profileImage_undefined') ||
+    '';
+
+  const loggedUser: User = {
+    ...mapDjangoUser(data, email),
+    profileImage: savedPhoto,
+    email,
   };
+
+  setUser(loggedUser);
+  localStorage.setItem('user', JSON.stringify(loggedUser));
+  localStorage.setItem('usuario_id', String(data.id));
+  localStorage.setItem('usuario_nombre', data.nombre);
+  if (data.token) localStorage.setItem('token', data.token);
+
+  return { user: loggedUser, token: data.token };
+};
 
   const loginWithGoogle = (googleUser: User) => {
     setUser(googleUser);
