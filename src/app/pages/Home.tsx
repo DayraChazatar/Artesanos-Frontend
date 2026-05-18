@@ -1,13 +1,60 @@
-import { Link } from 'react-router';
+import { useEffect, useState } from 'react'; // 1. Agregamos hooks de React
+import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
-import { Heart, Truck, Shield, Star } from 'lucide-react';
-import { products } from '../data/products';
+import { Heart, Truck, Shield, Star, Loader2 } from 'lucide-react'; // Agregamos Loader2 para la carga
 import { useAuth } from '../context/AuthContext';
+
+// 2. Definimos la estructura del Producto según tu base de datos/API
+interface Product {
+  id: string | number;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
+  artisan: string;
+}
 
 export function Home() {
   const { isAuthenticated } = useAuth();
-  const featuredProducts = products.slice(0, 3);
+
+  // 3. Declaramos los estados para manejar los productos dinámicos de la API
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 4. Efecto para consultar la API al cargar el componente
+  useEffect(() => {
+    // URL Corregida funcionando con tu puerto 8000 local
+    const API_URL = 'http://localhost:8000/api/productos/';
+    fetch(API_URL)
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('Error al conectar con el servidor');
+        }
+        return res.json();
+      })
+      .then((data) => {
+        console.log("Datos recibidos de la API:", data);
+        // Ajustamos para tomar los primeros 3 productos de la base de datos
+        if (Array.isArray(data)) {
+          setFeaturedProducts(data.slice(0, 3));
+        } else if (data && Array.isArray(data.products)) {
+          setFeaturedProducts(data.products.slice(0, 3));
+        } else if (data && Array.isArray(data.data)) {
+          setFeaturedProducts(data.data.slice(0, 3));
+        } else {
+          console.error("El formato de la API no es un arreglo válido");
+          setError('El formato de datos del servidor es incorrecto.');
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Error capturado en el fetch:', err);
+        setError('No se pudieron cargar los productos en este momento.');
+        setLoading(false);
+      });
+  }, []);
 
   return (
     <div>
@@ -26,7 +73,7 @@ export function Home() {
               Descubre el Arte Hecho a Mano
             </h1>
             <p className="text-lg mb-6 text-white/90 drop-shadow">
-              Productos únicos creados por artesanos talentosos. Cada pieza cuenta una historia.
+              Productos unicos creados por artesanos talentosos. Cada pieza cuenta una historia.
             </p>
             <div className="flex gap-4">
               <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
@@ -105,23 +152,92 @@ export function Home() {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-semibold mb-8 text-center">Productos Destacados</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {featuredProducts.map((product) => (
-              <Link to={`/producto/${product.id}`} key={product.id}>
-                <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-                  <img src={product.image} alt={product.name} className="w-full h-64 object-cover" />
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold mb-2">{product.name}</h3>
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-orange-600 font-semibold">${product.price.toLocaleString('es-CO')}</span>
-                      <span className="text-xs text-gray-500">Por {product.artisan}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+
+          {/* Muestra un spinner mientras carga los datos de la base de datos */}
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-12 gap-2 text-gray-500">
+              <Loader2 className="h-8 w-8 animate-spin text-orange-600" />
+              <p className="text-sm">Obteniendo creaciones de nuestros artesanos...</p>
+            </div>
+          )}
+
+          {/* Muestra un mensaje en caso de error en la API */}
+          {error && !loading && (
+            <p className="text-center text-red-500 font-medium py-8">{error}</p>
+          )}
+
+          {/* Renderizado Condicional Dinámico de las tarjetas */}
+          {!loading && !error && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {featuredProducts.length === 0 ? (
+                <p className="text-center text-gray-500 col-span-3 py-8">
+                  Aún no hay productos disponibles en el catálogo.
+                </p>
+              ) : (
+                featuredProducts.map((product) => {
+                  // Mapeamos los campos reales basándonos en la respuesta en español de tu API
+                  const id = product.id || (product as any)._id;
+                  const name = (product as any).nombre || product.name;
+                  const rawPrice = (product as any).precio_pvp || 0;
+                  const price = Math.round(Number(rawPrice));
+                  const description = `Categoría: ${(product as any).categoria_nombre || "Artesanías"}`;
+
+                  const image = (product as any).imagen || (product as any).foto || (product as any).imagen_url || product.image;
+                  const artisan = (product as any).nombre_artesano || (product as any).artesano_nombre || ((product as any).artesano && (product as any).artesano.nombre) || "Lizeth Melo";
+
+                   return (
+                    <Link to={`/producto/${id}`} key={id} className="block h-full">
+                      <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between border border-gray-100 bg-white">
+                        
+                        {/* CONTENEDOR EFECTO CINEMÁTICO: Rellena los espacios vacíos estéticamente */}
+                        <div className="relative w-full h-64 flex items-center justify-center overflow-hidden bg-gray-900">
+                          
+                          {/* 1. Imagen de fondo duplicada y difuminada */}
+                          <img 
+                            src={image || "/placeholder-product.png"} 
+                            alt=""
+                            className="absolute inset-0 w-full h-full object-cover blur-md scale-110 opacity-40 pointer-events-none"
+                          />
+
+                          {/* 2. Imagen del producto real flotando nítida encima */}
+                          <img
+                            src={image || "/placeholder-product.png"}
+                            alt={name}
+                            className="relative max-h-[90%] max-w-[90%] object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-300"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "/placeholder-product.png";
+                            }}
+                          />
+                        </div>
+
+                        {/* CONTENIDO TEXTUAL */}
+                        <CardContent className="p-5 flex-1 flex flex-col justify-between">
+                          <div className="space-y-1">
+                            <h3 className="font-semibold text-base text-gray-800 line-clamp-1">
+                              {name}
+                            </h3>
+                            <p className="text-xs text-orange-600 font-medium tracking-wide">
+                              {description}
+                            </p>
+                          </div>
+
+                          <div className="flex justify-between items-center mt-5 pt-3 border-t border-gray-100">
+                            <span className="text-gray-900 font-bold text-lg">
+                              {isNaN(Number(price)) ? "$ 0" : `$${Number(price).toLocaleString('es-CO')}`}
+                            </span>
+                            <span className="text-[11px] text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full font-medium">
+                              Por {artisan}
+                            </span>
+                          </div>
+                        </CardContent>
+
+                      </Card>
+                    </Link>
+                  );
+                })
+              )}
+            </div>
+          )}
           <div className="text-center mt-8">
             <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
               <Link to="/catalogo">Ver Todos los Productos</Link>
@@ -130,7 +246,7 @@ export function Home() {
         </div>
       </section>
 
-      {/* About Section */}
+            {/* About Section */}
       <section className="py-16 bg-orange-50">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -141,8 +257,9 @@ export function Home() {
                 que valoran el trabajo hecho a mano. Cada compra apoya a familias y preserva
                 tradiciones ancestrales.
               </p>
+              {/* CORRECCIÓN: "ciudad" corregido aquí */}
               <p className="text-gray-700 mb-6">
-                Trabajamos con más de 50 artesanos en todo el país, ofreciendo productos
+                Trabajamos con artesanos de la ciudad de Pasto, ofreciendo productos
                 únicos que no encontrarás en ningún otro lugar.
               </p>
               {!isAuthenticated && (
@@ -151,16 +268,19 @@ export function Home() {
                 </Button>
               )}
             </div>
-            <div>
+            {/* CONTENEDOR OPTIMIZADO: Ajustamos la altura a h-[350px] para equilibrar el texto */}
+            <div className="w-full h-[350px] rounded-xl overflow-hidden shadow-lg">
               <img
-                src="https://images.unsplash.com/photo-1707064892275-a3088e8240be?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcnRpc2FuJTIwd29ya3Nob3AlMjB0b29sc3xlbnwxfHx8fDE3NzExMjMxNjF8MA&ixlib=rb-4.1.0&q=80&w=1080"
-                alt="Artesano trabajando"
-                className="rounded-lg shadow-lg w-full"
+                src="/arte.jpg"
+                alt="Artesanias"
+                /* SOLUCIÓN: Cambiamos object-contain por object-cover y h-full w-full */
+                className="w-full h-full object-cover object-center hover:scale-102 transition-transform duration-500"
               />
             </div>
           </div>
         </div>
       </section>
+
     </div>
   );
 }

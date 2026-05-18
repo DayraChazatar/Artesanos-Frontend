@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ShoppingCart,
   User,
@@ -214,60 +214,59 @@ export function Navbar({
                   onClick={() =>
                     onTabChange(tab.id)
                   }
-                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap flex items-center gap-1.5 transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-orange-600 text-white shadow-sm'
-                      : 'text-gray-600 hover:bg-orange-50 hover:text-orange-600'
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap flex items-center gap-1.5 transition-colors ${activeTab === tab.id
+                    ? 'bg-orange-600 text-white shadow-sm'
+                    : 'text-gray-600 hover:bg-orange-50 hover:text-orange-600'
+                    }`}
                 >
                   {tab.icon} {tab.label}
                 </button>
               ))}
             </div>
           ) : (
-<div className="hidden md:flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
 
-  {/* INICIO */}
-  <Link
-    to="/"
-    className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
-  >
-    <House className="h-4 w-4" />
-    Inicio
-  </Link>
+              {/* INICIO */}
+              <Link
+                to="/"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
+              >
+                <House className="h-4 w-4" />
+                Inicio
+              </Link>
 
-  {/* PRODUCTOS */}
-  <Link
-    to="/catalogo"
-    className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
-  >
-    <Store className="h-4 w-4" />
-    Productos
-  </Link>
+              {/* PRODUCTOS */}
+              <Link
+                to="/catalogo"
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
+              >
+                <Store className="h-4 w-4" />
+                Productos
+              </Link>
 
-  {/* MIS PEDIDOS */}
-  {isAuthenticated && !isArtisan && (
-    <Link
-      to="/mis-pedidos"
-      className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
-    >
-      <Package className="h-4 w-4" />
-      Mis Pedidos
-    </Link>
-  )}
+              {/* MIS PEDIDOS */}
+              {isAuthenticated && !isArtisan && (
+                <Link
+                  to="/mis-pedidos"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
+                >
+                  <Package className="h-4 w-4" />
+                  Mis Pedidos
+                </Link>
+              )}
 
-  {/* DASHBOARD ADMIN */}
-  {user?.role === 'admin' && (
-    <Link
-      to="/dashboard"
-      className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
-    >
-      <BarChart3 className="h-4 w-4" />
-      Dashboard
-    </Link>
-  )}
+              {/* DASHBOARD ADMIN */}
+              {user?.role === 'admin' && (
+                <Link
+                  to="/dashboard"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Dashboard
+                </Link>
+              )}
 
-</div>
+            </div>
           )}
 
           {/* ACCIONES DERECHA */}
@@ -305,23 +304,43 @@ export function Navbar({
                 className="relative group"
                 ref={bellRef}
               >
-                <button
-                  onClick={() =>
-                    setBellOpen((prev) => !prev)
-                  }
-                  className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
-                >
-                  <Bell className="h-5 w-5 text-gray-600" />
 
-                  {unseenCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                      {unseenCount}
-                    </span>
-                  )}
-                </button>
+                {user?.role === 'artisan' ? (
+
+                  <Link
+                    to="/perfil-artesano#notificaciones"
+                    className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  >
+                    <Bell className="h-5 w-5 text-gray-600" />
+
+                    {unseenCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                        {unseenCount}
+                      </span>
+                    )}
+                  </Link>
+
+                ) : (
+
+                  <button
+                    onClick={() =>
+                      setBellOpen((prev) => !prev)
+                    }
+                    className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
+                  >
+                    <Bell className="h-5 w-5 text-gray-600" />
+
+                    {unseenCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                        {unseenCount}
+                      </span>
+                    )}
+                  </button>
+
+                )}
 
                 {/* PANEL */}
-                {bellOpen && (
+                {user?.role !== 'artisan' && bellOpen && (
                   <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 overflow-hidden">
 
                     <div className="px-4 py-3 border-b border-gray-100">
@@ -352,7 +371,7 @@ export function Navbar({
 
                             const icon =
                               STATUS_ICONS[
-                                status
+                              status
                               ] || '🕐';
 
                             return (
@@ -374,21 +393,19 @@ export function Navbar({
                                     {order.items
                                       ?.length >
                                       1 &&
-                                      ` + ${
-                                        order.items
-                                          .length - 1
+                                      ` + ${order.items
+                                        .length - 1
                                       } más`}
                                   </p>
 
                                   <span
-                                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLES[
+                                      status
+                                    ] ||
                                       STATUS_STYLES[
-                                        status
-                                      ] ||
-                                      STATUS_STYLES[
-                                        'Pendiente'
+                                      'Pendiente'
                                       ]
-                                    }`}
+                                      }`}
                                   >
                                     {icon}{' '}
                                     {status}
@@ -473,12 +490,12 @@ export function Navbar({
 
                       <span className="inline-block mt-1.5 text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
                         {user?.role ===
-                        'artisan'
+                          'artisan'
                           ? '🧵 Artesano'
                           : user?.role ===
                             'admin'
-                          ? '⚙️ Admin'
-                          : '🛍️ Cliente'}
+                            ? '⚙️ Admin'
+                            : '🛍️ Cliente'}
                       </span>
                     </div>
 
@@ -494,24 +511,24 @@ export function Navbar({
                       <UserCircle className="h-4 w-4 text-gray-500" />
 
                       {user?.role ===
-                      'artisan'
+                        'artisan'
                         ? 'Panel Artesano'
                         : 'Mi Perfil'}
                     </Link>
 
                     {user?.role ===
                       'admin' && (
-                      <Link
-                        to="/dashboard"
-                        onClick={() =>
-                          setOpen(false)
-                        }
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
-                      >
-                        <BarChart3 className="h-4 w-4 text-gray-500" />
-                        Dashboard
-                      </Link>
-                    )}
+                        <Link
+                          to="/dashboard"
+                          onClick={() =>
+                            setOpen(false)
+                          }
+                          className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
+                        >
+                          <BarChart3 className="h-4 w-4 text-gray-500" />
+                          Dashboard
+                        </Link>
+                      )}
 
                     <div className="border-t border-gray-100 mt-1" />
 
@@ -537,9 +554,10 @@ export function Navbar({
                 </Button>
               </Link>
             )}
+
           </div>
         </div>
       </div>
-    </nav>
+    </nav >
   );
 }
