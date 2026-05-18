@@ -66,14 +66,12 @@ export function Catalog() {
       toast.success('Eliminado de favoritos');
     } else {
       const newFav = {
-        id: product.id,
-        name: product.nombre,
-        price: product.discount
-          ? Math.round(product.precio_final * (1 - product.discount / 100))
-          : product.precio_final,
-        image: product.image,
-        artisan: product.artisan,
-      };
+  id: product.id,
+  name: product.nombre,
+  price: product.precio_final,
+  image: product.imagen_url,
+  artisan: product.artesano_nombre,
+};
       localStorage.setItem(favKey, JSON.stringify([...saved, newFav]));
       setFavorites(prev => [...prev, product.id]);
       toast.success('Guardado en favoritos ❤️');
@@ -88,7 +86,7 @@ export function Catalog() {
         product.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (product.artesano_nombre ?? '').toLowerCase().includes(searchQuery.toLowerCase())
       const matchesPrice = product.precio_final >= priceRange[0] && product.precio_final <= priceRange[1];
-      const matchesOffers = !showOffers || product.discount;
+      const matchesOffers = !showOffers || product.descuento;
       return matchesCategory && matchesSearch && matchesPrice && matchesOffers;
     })
     .sort((a, b) => {
@@ -233,9 +231,8 @@ export function Catalog() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
                 {filteredProducts.map(product => {
                   const stockLabel = getStockLabel(product.cantidad_disponible);
-                  const discountedPrice = product.discount
-                    ? Math.round(product.precio_final * (1 - product.discount / 100))
-                    : null;
+                  const tieneDescuento = product.descuento && product.valor_descuento > 0;  // ← agregar
+                  const discountedPrice = tieneDescuento ? product.precio_final : null;
                   const isFav = favorites.includes(product.id);
 
                   return (
@@ -251,7 +248,7 @@ export function Catalog() {
                               className="w-full h-60 object-cover group-hover:scale-105 transition-transform duration-500"
                             />
                             {/* Badge oferta / stock */}
-                            {product.discount ? (
+                            {tieneDescuento ? (
                               <span className="absolute top-3 left-3 text-xs px-3 py-1 rounded-full font-semibold backdrop-blur-sm bg-orange-100 text-orange-700">
                                 ¡En oferta!
                               </span>
@@ -261,10 +258,9 @@ export function Catalog() {
                               </span>
                             )}
 
-                            {/* Badge % descuento */}
-                            {product.discount && (
+                            {tieneDescuento && (
                               <span className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-red-700 text-white text-sm font-bold px-3 py-1 rounded-full shadow-lg">
-                                -{product.discount}%
+                                -{product.valor_descuento}%
                               </span>
                             )}
 
@@ -316,7 +312,7 @@ export function Catalog() {
                               )}
                             </div>
                             {/* Artesano — usar artesano_nombre del backend */}
-                              <p className="text-sm text-gray-500 mt-4">Por {product.artesano_nombre}</p>
+                            <p className="text-sm text-gray-500 mt-4">Por {product.artesano_nombre}</p>
                           </CardContent>
                         </Card>
                       </Link>
