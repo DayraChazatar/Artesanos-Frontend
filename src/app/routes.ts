@@ -14,7 +14,6 @@ import { Dashboard } from "./pages/Dashboard";
 import { NotFound } from "./pages/NotFound";
 import PerfilArtesano from "./pages/PerfilArtesano";
 import { MisPedidos } from "./pages/MisPedidos";
-import { MisDirecciones } from "./pages/MisDirecciones";
 
 export const router = createBrowserRouter([
   {
@@ -33,7 +32,6 @@ export const router = createBrowserRouter([
       { path: "carrito", Component: Cart },
       { path: "checkout", Component: Checkout },
       { path: "mis-pedidos", Component: MisPedidos },
-      { path: "mis-direcciones", Component: MisDirecciones },
       { path: "dashboard", Component: Dashboard },
       { path: "*", Component: NotFound },
     ],
