@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { RefreshCw } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { RefreshCw, Bell, User, House } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
 import {
@@ -123,7 +123,8 @@ export function useNotificaciones() {
 function Topbar({ noLeidas }: { noLeidas: number }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const handleLogout = () => { logout(); navigate('/'); };
+  const handleLogout = () => { 
+    logout(); navigate('/'); };
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -136,58 +137,115 @@ function Topbar({ noLeidas }: { noLeidas: number }) {
   }, []);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-30 h-16 bg-white border-b border-amber-100 flex items-center justify-between px-6 shadow-sm">
-      <div className="flex items-center gap-1.5">
-        <span className="font-serif text-lg font-bold text-amber-700">Pakari Shop</span>
-      </div>
-      <nav>
-        <a href="/" className="text-sm text-stone-500 hover:text-amber-700 font-medium transition px-3 py-1.5 rounded-lg hover:bg-amber-50">
+  <nav className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-sm">
+
+    <div className="max-w-7xl mx-auto h-16 px-6 flex items-center justify-between">
+
+      {/* LOGO */}
+      <Link to="/" className="flex items-center gap-2">
+        <img
+          src="/logo.png"
+          alt="Pakari Shop"
+          className="w-10 h-10 object-contain"
+        />
+
+        <span className="font-serif text-2xl font-bold text-orange-600">
+          Pakari Shop
+        </span>
+      </Link>
+
+      {/* MENÚ */}
+      <div className="hidden md:flex items-center gap-2">
+        <Link
+          to="/"
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
+        >
+          <House className="h-4 w-4" />
           Inicio
-        </a>
-      </nav>
+        </Link>
+      </div>
+
+      {/* NOTIFICACIONES Y PERFIL */}
       <div className="flex items-center gap-3">
-        <div className="relative">
-          <div className="relative w-10 h-10 flex items-center justify-center rounded-xl border border-amber-100 bg-amber-50">
-            <span className="text-xl">🔔</span>
-            {noLeidas > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
-                {noLeidas}
-              </span>
-            )}
-          </div>
-        </div>
+
+        {/* NOTIFICACIONES */}
+<Link
+  to="/perfil-artesano#notificaciones"
+  className="relative"
+>
+
+  <div className="relative w-10 h-10 flex items-center justify-center rounded-xl border border-amber-100 bg-amber-50">
+
+    <span className="text-xl">🔔</span>
+
+    {noLeidas > 0 && (
+      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
+        {noLeidas}
+      </span>
+    )}
+
+  </div>
+
+</Link>
+
+        {/* PERFIL */}
         <div className="relative" ref={menuRef}>
+
           <button
             onClick={() => setOpen(prev => !prev)}
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-100 bg-amber-50 hover:bg-amber-100 transition"
           >
+
             <div className="w-7 h-7 rounded-full bg-amber-600 flex items-center justify-center text-white text-xs font-bold">
               {user?.name?.slice(0, 2).toUpperCase()}
             </div>
-            <span className="text-sm text-stone-700 font-medium hidden sm:block">{user?.name}</span>
+
+            <span className="text-sm text-stone-700 font-medium hidden sm:block">
+              {user?.name}
+            </span>
+
             <span className="w-2 h-2 rounded-full bg-green-400" />
+
           </button>
+
           {open && (
             <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+
               <div className="px-4 py-3 border-b border-gray-100">
-                <p className="font-semibold text-sm truncate">{user?.name}</p>
-                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+
+                <p className="font-semibold text-sm truncate">
+                  {user?.name}
+                </p>
+
+                <p className="text-xs text-gray-500 truncate">
+                  {user?.email}
+                </p>
+
                 <span className="inline-block mt-1.5 text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
                   🧵 Artesano
                 </span>
+
               </div>
+
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
               >
-                <span>↩</span> Cerrar Sesión
+                <span>↩</span>
+                Cerrar Sesión
               </button>
+
             </div>
           )}
+
         </div>
+
       </div>
-    </header>
-  );
+
+    </div>
+
+  </nav>
+);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1846,18 +1904,6 @@ function ModuloInventario({
                  />
                 </div>
             </div>
-          </div>
-
-          {/* Leyenda de flujo */}
-          <div className="bg-amber-50 rounded-xl border border-amber-100 px-5 py-3 text-xs text-amber-800 flex flex-wrap gap-3 items-center">
-            <span className="font-semibold">Flujo:</span>
-            <span>🕐 Pendiente → reserva stock</span>
-            <span>→</span>
-            <span>✅ Entregado → descuenta stock real</span>
-            <span>|</span>
-            <span>❌ Cancelado → libera reserva</span>
-            <span>|</span>
-            <span>↩️ Devolución → repone stock</span>
           </div>
 
           {/* Tabla */}

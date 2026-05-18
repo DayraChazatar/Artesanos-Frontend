@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -302,6 +302,7 @@ export function ProductDetail() {
     const message = encodeURIComponent(`Hola, estoy interesado en el producto: ${product.nombre}`);
     window.open(`https://wa.me/573001234567?text=${message}`, '_blank');
   };
+  
 
   return (
     <div className="py-8 bg-gray-50 min-h-[calc(100vh-4rem)]">
@@ -387,10 +388,24 @@ export function ProductDetail() {
                       className="w-24" />
                   </div>
                   <div className="flex gap-3">
-                    <Button onClick={handleAddToCart} disabled={stock === 0}
-                      className="flex-1 bg-orange-600 hover:bg-orange-700">
-                      <ShoppingCart className="mr-2 h-4 w-4" /> Agregar al Carrito
-                    </Button>
+                    {user?.role === 'artisan' ? (
+
+  <div className="flex-1 bg-orange-50 border border-orange-200 text-orange-700 px-4 py-3 rounded-xl text-sm text-center">
+    Los artesanos pueden explorar productos, pero no realizar compras.
+  </div>
+
+) : (
+
+  <Button
+    onClick={handleAddToCart}
+    disabled={stock === 0}
+    className="flex-1 bg-orange-600 hover:bg-orange-700"
+  >
+    <ShoppingCart className="mr-2 h-4 w-4" />
+    Agregar al Carrito
+  </Button>
+
+)}
                     <Button onClick={handleBuyNow} disabled={stock === 0}
                       variant="outline" className="flex-1">
                       Comprar Ahora
