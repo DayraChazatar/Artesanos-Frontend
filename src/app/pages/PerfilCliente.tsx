@@ -437,20 +437,30 @@ export function Profile() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        setPreviewImage(base64);
-        updateProfile({ profileImage: base64 });
-        localStorage.setItem(`profileImage_${user?.email}`, base64);
-        toast.success('Foto de perfil actualizada');
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setPreviewImage(base64);
+      
+      // Guardar en localStorage con la clave del email
+      localStorage.setItem(`profileImage_${user?.email}`, base64);
+      
+      // Actualizar el objeto user en localStorage
+      const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
+      savedUser.profileImage = base64;
+      localStorage.setItem('user', JSON.stringify(savedUser));
+      
+      // Actualizar en el contexto
+      updateProfile({ profileImage: base64 });
+      
+      toast.success('Foto de perfil actualizada');
+    };
+    reader.readAsDataURL(file);
+  }
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

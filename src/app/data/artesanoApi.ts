@@ -192,11 +192,27 @@ export const getResumenInventario = () =>
 // ── Reportes ──────────────────────────────────────────────────────────────────
 const REPORTES_BASE = 'http://localhost:8000/api/reportes';
 
-export const descargarReporte = (
+export const descargarReporte = async (
   tipo: string,
   formato: 'excel' | 'pdf',
   artesanoId: number
 ) => {
   const url = `${REPORTES_BASE}/${tipo}/${formato}/?artesano=${artesanoId}`;
-  window.open(url, '_blank');
+  const token = localStorage.getItem('token') ?? '';
+
+  const res = await fetch(url, {
+    headers: token ? { Authorization: `Token ${token}` } : {},
+  });
+
+  if (!res.ok) throw new Error('Error al descargar el reporte');
+
+  const blob = await res.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = `reporte_${tipo}_${formato === 'excel' ? '.xlsx' : '.pdf'}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(blobUrl);
 };

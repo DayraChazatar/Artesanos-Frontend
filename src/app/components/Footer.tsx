@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Twitter, Mail, Phone } from 'lucide-react';
+import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -7,7 +7,10 @@ export function Footer() {
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="font-semibold text-orange-600 mb-4">Pakari Shop ❤️</h3>
+            <div className="flex items-center gap-2 mb-4">
+              <img src="/logo.png" alt="Pakari Shop" className="h-8 w-8 object-contain" />
+              <h3 className="font-semibold text-orange-600">Pakari Shop</h3>
+            </div>
             <p className="text-sm text-gray-600">
               Conectando artesanos talentosos con personas que aprecian el trabajo hecho a mano.
             </p>
@@ -39,11 +42,15 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-gray-600">
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                info@artesanias.com
+                info@pakarishop.com
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4" />
                 +57 300 123 4567
+              </li>
+              <li className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Pasto, Nariño, Colombia
               </li>
             </ul>
           </div>
@@ -65,7 +72,7 @@ export function Footer() {
         </div>
 
         <div className="border-t mt-8 pt-8 text-center text-sm text-gray-600">
-          <p>&copy; 2026 Artesanías. Todos los derechos reservados.</p>
+          <p>&copy; 2026 Pakari Shop. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

@@ -38,12 +38,17 @@ export function Catalog() {
     )
   ];
 
-  const prices = allProducts.map(p => p.price);
-  const rawMaxPrice = prices.length > 0 ? Math.max(...prices) : 1000000;
-  const minProductPrice = 0;
-  const maxProductPrice = Math.ceil(rawMaxPrice / 50000) * 50000;
-  const [priceRange, setPriceRange] = useState<[number, number]>([minProductPrice, maxProductPrice]);
+const prices = allProducts.map(p => p.precio_final ?? 0);
+const rawMaxPrice = prices.length > 0 ? Math.max(...prices) : 1000000;
+const minProductPrice = 0;
+const maxProductPrice = Math.ceil(rawMaxPrice / 50000) * 50000;
+const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
 
+useEffect(() => {
+  if (maxProductPrice > 0) {
+    setPriceRange([0, maxProductPrice]);
+  }
+}, [maxProductPrice]);
   // ── Favoritos ──────────────────────────────────────────────────────────────
   const favKey = `favorites_${user?.email}`;
   const [favorites, setFavorites] = useState<string[]>(() => {

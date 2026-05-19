@@ -463,13 +463,13 @@ export function MisPedidos() {
   const [detailOrder,  setDetailOrder]  = useState<Order | null>(null);
 
   // ── Cargar pedidos desde el backend ────────────────────────────────────────
-  const fetchOrders = useCallback(async () => {
+const fetchOrders = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     try {
       const token = localStorage.getItem('token') ?? '';
       const res   = await fetch(`${BASE}/inventario/pedidos/cliente/${user.id}/`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: token ? { Authorization: `Token ${token}` } : {},
       });
       if (!res.ok) throw new Error('Error al cargar pedidos');
       const data: any[] = await res.json();
@@ -484,14 +484,14 @@ export function MisPedidos() {
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
 
   // ── Cancelar pedido ─────────────────────────────────────────────────────────
-  const handleCancelOrder = async (orderId: string) => {
+const handleCancelOrder = async (orderId: string) => {
     try {
       const token = localStorage.getItem('token') ?? '';
       const res   = await fetch(`${BASE}/inventario/pedido/estado/`, {
         method:  'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(token ? { Authorization: `Token ${token}` } : {}),
         },
         body: JSON.stringify({ pedido_id: Number(orderId), estado_nuevo: 'Cancelado' }),
       });
@@ -503,9 +503,8 @@ export function MisPedidos() {
       toast.error('Error de conexión');
     }
   };
-
   // ── Solicitar devolución ────────────────────────────────────────────────────
-  const handleReturnSubmit = async (reason: string, photos: string[]) => {
+const handleReturnSubmit = async (reason: string, photos: string[]) => {
     if (!returnOrder) return;
     try {
       const token = localStorage.getItem('token') ?? '';
@@ -513,17 +512,15 @@ export function MisPedidos() {
         method:  'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(token ? { Authorization: `Token ${token}` } : {}),
         },
         body: JSON.stringify({
-          pedido_id:  Number(returnOrder.id),
+          pedido_id:    Number(returnOrder.id),
           estado_nuevo: 'Devolucion solicitada',
         }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? 'Error al solicitar devolución'); return; }
-
-      // Actualizar local con la información de la solicitud
       setOrders(prev => prev.map(o =>
         o.id === returnOrder.id
           ? { ...o, status: 'Devolucion solicitada', returnRequest: { reason, photos, date: new Date().toISOString() } }
