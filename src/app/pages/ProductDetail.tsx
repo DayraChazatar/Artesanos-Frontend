@@ -273,7 +273,7 @@ export function ProductDetail() {
   const precioFinal = descuento
     ? Math.round(precio * (1 - descuento / 100))
     : null;
-  const stock = product.cantidad_disponible ?? product.cantidad ?? 0;
+  const stock = Math.max(0, product.cantidad_disponible ?? product.cantidad ?? 0);
 
   const handleAddToCart = () => {
     if (quantity > stock) {

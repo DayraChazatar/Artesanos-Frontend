@@ -1091,8 +1091,8 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias, i
                 <tbody>
                   {productos.map(p => (
                     <tr key={p.id} className={`border-t border-amber-50 transition ${(p.cantidad - (p.cantidad_reservada ?? 0)) <= p.stock_minimo
-                        ? 'bg-red-50/60 hover:bg-red-50'
-                        : 'hover:bg-amber-50/50'
+                      ? 'bg-red-50/60 hover:bg-red-50'
+                      : 'hover:bg-amber-50/50'
                       }`}>
                       <td className="px-3 py-3 font-mono text-xs">{p.codigo_barra || '—'}</td>
                       <td className="px-3 py-3 text-xs">{p.lote || '—'}</td>
@@ -1697,9 +1697,11 @@ const MENSAJES_ESTADO: Record<string, string> = {
 function ModuloPedidosArtesano({
   productos,
   setProductos,
+  setKardex,
 }: {
   productos: Producto[];
   setProductos: React.Dispatch<React.SetStateAction<Producto[]>>;
+  setKardex: React.Dispatch<React.SetStateAction<Kardex[]>>;
 }) {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1751,7 +1753,7 @@ function ModuloPedidosArtesano({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(token ? { Authorization: `Token ${token}` } : {}),
         },
         body: JSON.stringify({
           pedido_id: pedido.id,
@@ -1773,14 +1775,10 @@ function ModuloPedidosArtesano({
 
       // Actualizar stock de los productos afectados en el frontend
       if (data.stock_actual !== undefined) {
-        // El backend devuelve el stock del primer producto; actualizamos todos
-        // los productos del pedido de forma optimista usando los detalles
         const productosAfectados = new Set(pedido.detalles.map(d => d.producto));
         setProductos(prev =>
           prev.map(p => {
             if (!p.id || !productosAfectados.has(p.id)) return p;
-            // Si el backend devuelve el valor exacto (solo primer producto),
-            // lo usamos; si no, recalculamos de forma conservadora
             if (pedido.detalles.length === 1 || pedido.detalles[0].producto === p.id) {
               return {
                 ...p,
@@ -1794,6 +1792,13 @@ function ModuloPedidosArtesano({
       }
 
       showAlert(MENSAJES_ESTADO[estadoNuevo] ?? 'Estado actualizado');
+
+      // ← AGREGAR AQUÍ
+      try {
+        const kardexActualizado = await getKardex();
+        setKardex(kardexActualizado);
+      } catch { /* silencioso */ }
+
     } catch {
       showAlert('Error de conexión con el servidor', 'error');
     } finally {
@@ -1934,9 +1939,9 @@ function ModuloPedidosArtesano({
             <table className="w-full text-sm">
               <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
                 <tr>
-                  {['Código', 'Cliente', 'Productos', 'Total', 'Estado', 'Fecha'].map(h => (
-                    <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
-                  ))}
+                  {['Código', 'Cliente', 'Productos', 'Total', 'Fecha', 'Acciones'].map(h => (
+  <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
+))}
                 </tr>
               </thead>
               <tbody>
@@ -1951,6 +1956,132 @@ function ModuloPedidosArtesano({
                 ) : pedidosFiltrados.map(pedido => {
                   const siguientes = SIGUIENTES[pedido.estado] ?? [];
                   const isLoading = loadingId === pedido.id;
+
+                  const generarGuiaPDF = (pedido: Pedido) => {
+  import('jspdf').then(({ jsPDF }: any) => {
+    const doc = new jsPDF({ unit: 'mm', format: 'a5' });
+    const W = doc.internal.pageSize.getWidth();
+
+    // Encabezado
+    doc.setFillColor(180, 83, 9);
+    doc.rect(0, 0, W, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAKARI SHOP', W / 2, 14, { align: 'center' });
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Artesanías colombianas hechas a mano', W / 2, 21, { align: 'center' });
+    doc.text('www.pakarishop.com', W / 2, 27, { align: 'center' });
+
+    // Título
+    doc.setFillColor(254, 243, 199);
+    doc.rect(0, 35, W, 12, 'F');
+    doc.setTextColor(120, 53, 15);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('GUÍA DE ENVÍO', W / 2, 43, { align: 'center' });
+
+    // Info pedido
+    let y = 55;
+    const half = (W - 16) / 2;
+
+    const infoBox = (label: string, value: string, x: number, yPos: number, w: number) => {
+      doc.setFillColor(245, 245, 244);
+      doc.roundedRect(x, yPos, w, 11, 2, 2, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(120, 53, 15);
+      doc.text(label, x + 3, yPos + 4.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(40, 40, 40);
+      doc.text(value, x + 3, yPos + 9);
+    };
+
+    infoBox('CÓDIGO', pedido.codigo, 8, y, half);
+    infoBox('FECHA', new Date(pedido.fecha).toLocaleDateString('es-CO', {
+      day: '2-digit', month: 'short', year: 'numeric'
+    }), 8 + half + 2, y, half);
+    y += 14;
+    infoBox('ESTADO', pedido.estado, 8, y, W - 16);
+
+    // Destinatario
+    y += 15;
+    doc.setFillColor(180, 83, 9);
+    doc.rect(8, y, W - 16, 6, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('DESTINATARIO', 11, y + 4.2);
+
+    y += 7;
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(217, 119, 6);
+    doc.roundedRect(8, y, W - 16, 26, 2, 2, 'FD');
+    doc.setTextColor(40, 40, 40);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text(pedido.cliente_nombre, 12, y + 7);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text(`Tel: ${pedido.telefono || 'Sin telefono'}`, 12, y + 13);
+    doc.text(`Dir: ${pedido.direccion || 'Sin direccion'}`, 12, y + 19);
+
+    // Productos
+    y += 30;
+    doc.setFillColor(180, 83, 9);
+    doc.rect(8, y, W - 16, 6, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text('PRODUCTOS', 11, y + 4.2);
+
+    y += 7;
+    doc.setFillColor(254, 243, 199);
+    doc.rect(8, y, W - 16, 6, 'F');
+    doc.setTextColor(120, 53, 15);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.text('Producto', 11, y + 4.2);
+    doc.text('Cant.', W - 48, y + 4.2);
+    doc.text('Subtotal', W - 28, y + 4.2);
+
+    y += 6;
+    pedido.detalles.forEach((d, i) => {
+      if (i % 2 === 0) {
+        doc.setFillColor(250, 250, 249);
+        doc.rect(8, y, W - 16, 7, 'F');
+      }
+      doc.setTextColor(40, 40, 40);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.text(d.producto_nombre, 11, y + 4.8);
+      doc.text(String(d.cantidad), W - 46, y + 4.8);
+      doc.text(`$${Number(d.subtotal).toLocaleString('es-CO')}`, W - 28, y + 4.8);
+      y += 7;
+    });
+
+    // Total
+    y += 3;
+    doc.setFillColor(180, 83, 9);
+    doc.roundedRect(8, y, W - 16, 10, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('TOTAL:', 11, y + 6.8);
+    doc.text(`$${Number(pedido.total).toLocaleString('es-CO')}`, W - 10, y + 6.8, { align: 'right' });
+
+    // Pie
+    y += 16;
+    doc.setTextColor(160, 160, 160);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7);
+    doc.text('Gracias por apoyar a los artesanos locales de Colombia', W / 2, y, { align: 'center' });
+
+    doc.save(`guia-${pedido.codigo}.pdf`);
+  });
+};
 
                   return (
                     <tr key={pedido.id} className="border-t border-amber-50 hover:bg-amber-50/50 transition-colors">
@@ -1982,18 +2113,47 @@ function ModuloPedidosArtesano({
                         ${Number(pedido.total).toLocaleString('es-CO')}
                       </td>
 
-                      {/* Estado */}
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${ESTADO_COLOR[pedido.estado] ?? 'bg-gray-100 text-gray-700'}`}>
-                          {ESTADO_ICONO[pedido.estado] ?? '•'} {pedido.estado}
-                        </span>
-                      </td>
+                     
 
                       {/* Fecha */}
                       <td className="px-4 py-3 text-stone-400 text-xs whitespace-nowrap">
                         {new Date(pedido.fecha).toLocaleDateString('es-CO', {
                           day: '2-digit', month: 'short', year: 'numeric',
                         })}
+                      </td>
+                      {/* Acciones */}
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-2">
+
+                          {/* Botones cambio de estado */}
+                          <div className="flex flex-wrap gap-1">
+                            {(SIGUIENTES[pedido.estado] ?? []).length === 0 ? (
+                              <span className="text-xs text-stone-300 italic">Sin acciones</span>
+                            ) : (
+                              (SIGUIENTES[pedido.estado] ?? []).map(siguiente => (
+                                <button
+                                  key={siguiente}
+                                  disabled={isLoading}
+                                  onClick={() => actualizarEstado(pedido, siguiente)}
+                                  className={`px-2 py-1 rounded-lg text-xs font-semibold transition
+                                  ${BTN_COLOR[siguiente] ?? 'bg-gray-100 text-gray-600'}
+                                  disabled:opacity-50`}
+                                >
+                                  {isLoading ? '⏳' : `→ ${siguiente}`}
+                                </button>
+                              ))
+                            )}
+                          </div>
+
+                          {/* Botón guía PDF */}
+                          <button
+                            onClick={() => generarGuiaPDF(pedido)}
+                            className="px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition w-fit"
+                          >
+                            📄 Guía PDF
+                          </button>
+
+                        </div>
                       </td>
                     </tr>
                   );
@@ -2783,6 +2943,7 @@ export default function PerfilArtesano() {
                 <ModuloPedidosArtesano
                   productos={productos}
                   setProductos={setProductos}
+                  setKardex={setKardex}
                 />
               )}
               {tab === 'reportes' && <ModuloReportes productos={productos} kardex={kardex} />}
