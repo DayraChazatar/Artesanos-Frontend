@@ -1,7 +1,25 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { generarGuiaEnvio } from '../utils/guiaEnvio';
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  BarChart,
+  Bar,
+} from 'recharts';
 import { Link, useNavigate } from 'react-router-dom';
 import { RefreshCw, Bell, User, House } from 'lucide-react';
-import { generarGuiaEnvio } from '../utils/guiaEnvio';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart,
+  Line, PieChart, Pie, Cell
+} from 'recharts';
 
 import { useAuth } from '../context/AuthContext';
 import {
@@ -87,13 +105,23 @@ export interface Notificacion {
 }
 
 export function useNotificaciones() {
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>(() => {
+
+  const guardadas = localStorage.getItem('notificaciones');
+
+  return guardadas
+    ? JSON.parse(guardadas)
+    : [];
+
+});
 
   const cargar = useCallback(async () => {
     try {
       const res = await fetch(`${BASE}/notificaciones/`);
       const data = await res.json();
-      setNotificaciones(Array.isArray(data) ? data : []);
+
+      //setNotificaciones(Array.isArray(data) ? data : []);
+
     } catch (e) {
       console.error('Error cargando notificaciones', e);
     }
@@ -105,6 +133,15 @@ export function useNotificaciones() {
     return () => clearInterval(interval);
   }, [cargar]);
 
+  useEffect(() => {
+
+  localStorage.setItem(
+    'notificaciones',
+    JSON.stringify(notificaciones)
+  );
+
+}, [notificaciones]);
+
   const marcarLeida = async (id: number) => {
     await fetch(`${BASE}/notificaciones/${id}/leer/`, { method: 'PATCH' });
     setNotificaciones(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
@@ -115,7 +152,13 @@ export function useNotificaciones() {
     setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
   };
 
-  return { notificaciones, marcarLeida, marcarTodasLeidas, recargar: cargar };
+  return {
+  notificaciones,
+  setNotificaciones,
+  marcarLeida,
+  marcarTodasLeidas,
+  recargar: cargar
+};
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -181,7 +224,7 @@ function Topbar({ noLeidas, onVerPerfil }: { noLeidas: number; onVerPerfil: () =
               <span className="text-xl">🔔</span>
 
               {noLeidas > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 animate-pulse text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
                   {noLeidas}
                 </span>
               )}
@@ -303,6 +346,7 @@ function SidebarNotificaciones({
   onNavegar: (tab: Tab, productoId?: number) => void;
 }) {
   const [detalle, setDetalle] = useState<Notificacion | null>(null);
+  const [filtro, setFiltro] = useState<'todas' | 'pedido' | 'stock'>('todas');
   const iconoTipo = (tipo: string) =>
     tipo === 'stock' ? '📦' : tipo === 'pedido' ? '🛍️' : '🔔';
 
@@ -310,6 +354,12 @@ function SidebarNotificaciones({
     await marcarLeida(n.id);
     setDetalle(n);
   };
+  const filtradas =
+    filtro === 'todas'
+      ? notificaciones
+      : notificaciones.filter(n => n.tipo === filtro);
+
+    
 
   return (
     <aside className="fixed top-16 right-0 bottom-0 z-20 w-64 bg-white border-l border-amber-100 flex flex-col shadow-sm">
@@ -354,45 +404,124 @@ function SidebarNotificaciones({
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto py-3">
-          {notificaciones.length === 0 ? (
+
+          {/* FILTROS */}
+          <div className="flex gap-2 px-4 pb-3">
+
+            <button
+              onClick={() => setFiltro('todas')}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition
+      ${filtro === 'todas'
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-amber-50 text-amber-700'
+                }`}
+            >
+              Todas
+            </button>
+
+            <button
+              onClick={() => setFiltro('pedido')}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition
+      ${filtro === 'pedido'
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-amber-50 text-amber-700'
+                }`}
+            >
+              Pedidos
+            </button>
+
+            <button
+              onClick={() => setFiltro('stock')}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition
+      ${filtro === 'stock'
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-amber-50 text-amber-700'
+                }`}
+            >
+              Inventario
+            </button>
+
+          </div>
+
+          {/* SIN NOTIFICACIONES */}
+          {filtradas.length === 0 ? (
+
             <div className="flex flex-col items-center justify-center h-full gap-3 text-stone-300">
               <span className="text-5xl">🔕</span>
-              <span className="text-sm">Sin notificaciones</span>
+              <span className="text-sm">
+                Sin notificaciones
+              </span>
             </div>
+
           ) : (
+            
+
             <>
-              {notificaciones.filter(n => !n.leida).length > 0 && (
-                <button onClick={marcarTodasLeidas}
-                  className="w-full text-xs text-amber-600 hover:text-amber-800 font-semibold px-5 py-2 text-right transition">
+             <p className="text-red-500">
+      Total: {filtradas.length}
+    </p>
+              {filtradas.filter(n => !n.leida).length > 0 && (
+                <button
+                  onClick={marcarTodasLeidas}
+                  className="w-full text-xs text-amber-600 hover:text-amber-800 font-semibold px-5 py-2 text-right transition"
+                >
                   Marcar todas como leídas
                 </button>
               )}
-              {notificaciones.map(n => (
-                <button key={n.id} onClick={() => handleClick(n)}
-                  className={`w-full text-left px-5 py-4 flex items-start gap-3 hover:bg-amber-50 transition border-b border-amber-50 last:border-0 ${!n.leida ? 'bg-amber-50/60' : ''}`}>
-                  <span className="text-2xl mt-0.5 leading-none">{iconoTipo(n.tipo)}</span>
+
+              {filtradas.map(n => (
+
+                <button
+                  key={n.id}
+                  onClick={() => handleClick(n)}
+                  className={`w-full text-left px-5 py-4 flex items-start gap-3 hover:bg-amber-50 transition border-b border-amber-50 last:border-0 ${!n.leida ? 'bg-amber-50/60' : ''
+                    }`}
+                >
+
+                  <span className="text-2xl mt-0.5 leading-none">
+                    {iconoTipo(n.tipo)}
+                  </span>
+
                   <div className="flex-1 min-w-0">
+
                     <div className="flex items-center justify-between gap-1 mb-1">
-                      <span className={`text-sm font-semibold truncate ${!n.leida ? 'text-stone-800' : 'text-stone-400'}`}>
+
+                      <span
+                        className={`text-sm font-semibold truncate ${!n.leida
+                            ? 'text-stone-800'
+                            : 'text-stone-400'
+                          }`}
+                      >
                         {n.titulo}
                       </span>
-                      {!n.leida && <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />}
+
+                      {!n.leida && (
+                        <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
+                      )}
+
                     </div>
-                    <p className="text-xs text-stone-400 line-clamp-2 leading-relaxed">{n.detalle}</p>
+
+                    <p className="text-xs text-stone-400 line-clamp-2 leading-relaxed">
+                      {n.detalle}
+                    </p>
+
                     {n.ruta && (
                       <span className="text-xs text-amber-500 font-semibold mt-1 inline-block">
-                        Toca para {n.tipo === 'pedido' ? 'ver el pedido' : 'ver inventario'} →
+                        Toca para ver →
                       </span>
                     )}
-                    <p className="text-xs text-stone-300 mt-1">{n.fecha}</p>
+
+                    <p className="text-xs text-stone-300 mt-1">
+                      {n.fecha}
+                    </p>
                   </div>
                 </button>
               ))}
             </>
           )}
-        </div>
+         </div>
       )}
-    </aside>
+      </aside>
   );
 }
 
@@ -575,10 +704,12 @@ function ModalReposicion({
 }: {
   producto: Producto;
   onClose: () => void;
-  onConfirm: (cantidad: number, nota: string) => Promise<void>;
+  onConfirm: (cantidad: number, nota: string, fecha: string) => Promise<void>;
 }) {
   const [cantidad, setCantidad] = useState(0);
   const [nota, setNota] = useState('');
+  const hoy = new Date().toISOString().split('T')[0];
+  const [fecha, setFecha] = useState(hoy);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -588,9 +719,13 @@ function ModalReposicion({
   const handleConfirm = async () => {
     if (cantidad <= 0) return setError('La cantidad debe ser mayor a 0.');
     if (superaMaximo) return setError(`Superaría el stock máximo (${producto.stock_maximo}).`);
+    if (!fecha) return setError('La fecha es obligatoria.');
+    if (fecha > hoy) {
+      return setError('La fecha no puede ser mayor a la actual.');
+    }
     setLoading(true);
     try {
-      await onConfirm(cantidad, nota);
+      await onConfirm(cantidad, nota, fecha);
       onClose();
     } catch (e: any) {
       setError(e?.message ?? 'Error al registrar la reposición.');
@@ -632,6 +767,22 @@ function ModalReposicion({
             <textarea value={nota} onChange={e => setNota(e.target.value)}
               placeholder="Ej: Compra feria artesanal junio 2025" rows={2}
               className="px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-stone-800 focus:outline-none focus:border-amber-500 resize-none" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">
+              Fecha de ingreso *
+            </label>
+
+            <input
+              type="date"
+              value={fecha}
+              max={hoy}
+              onChange={e => {
+                setFecha(e.target.value);
+                setError('');
+              }}
+              className="px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+            />
           </div>
           {error && <p className="text-xs text-red-600 font-medium">{error}</p>}
           <div className="flex gap-3 pt-1">
@@ -1328,10 +1479,9 @@ function ModuloInventario({
 
   // ── Estilos de tabs — idénticos a ModuloProductos ────────────────────────
   const tabCls = (t: string) =>
-    `px-4 py-2 rounded-xl text-sm font-semibold transition ${
-      activeTab === t
-        ? 'bg-amber-700 text-white shadow'
-        : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+    `px-4 py-2 rounded-xl text-sm font-semibold transition ${activeTab === t
+      ? 'bg-amber-700 text-white shadow'
+      : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
     }`;
 
   return (
@@ -1567,12 +1717,11 @@ function ModuloInventario({
                       <td className="px-3 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
                       <td className="px-3 py-3 font-semibold text-stone-800">{k.producto_nombre}</td>
                       <td className="px-3 py-3">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                          (k.tipo as string).toLowerCase() === 'entrada' ? 'bg-green-100 text-green-700' :
-                          (k.tipo as string).toLowerCase() === 'salida'  ? 'bg-red-100 text-red-600'   :
-                          (k.tipo as string).toLowerCase() === 'devolucion' ? 'bg-blue-100 text-blue-600' :
-                          'bg-stone-100 text-stone-500'
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${(k.tipo as string).toLowerCase() === 'entrada' ? 'bg-green-100 text-green-700' :
+                          (k.tipo as string).toLowerCase() === 'salida' ? 'bg-red-100 text-red-600' :
+                            (k.tipo as string).toLowerCase() === 'devolucion' ? 'bg-blue-100 text-blue-600' :
+                              'bg-stone-100 text-stone-500'
+                          }`}>
                           {k.tipo}
                         </span>
                       </td>
@@ -1582,11 +1731,10 @@ function ModuloInventario({
                         </span>
                       </td>
                       <td className="px-3 py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          (k as any).origen === 'automatico'
-                            ? 'bg-purple-50 text-purple-600'
-                            : 'bg-amber-50 text-amber-600'
-                        }`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${(k as any).origen === 'automatico'
+                          ? 'bg-purple-50 text-purple-600'
+                          : 'bg-amber-50 text-amber-600'
+                          }`}>
                           {(k as any).origen === 'automatico' ? '⚡ auto' : '✍️ manual'}
                         </span>
                       </td>
@@ -1967,8 +2115,8 @@ const resumen = {
               <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
                 <tr>
                   {['Código', 'Cliente', 'Productos', 'Total', 'Fecha', 'Acciones'].map(h => (
-  <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
-))}
+                    <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -1983,6 +2131,132 @@ const resumen = {
                 ) : pedidosFiltrados.map(pedido => {
                 (ACCIONES_ARTESANO[pedido.estado] ?? [])
                   const isLoading = loadingId === pedido.id;
+
+                  const generarGuiaPDF = (pedido: Pedido) => {
+                    import('jspdf').then(({ jsPDF }: any) => {
+                      const doc = new jsPDF({ unit: 'mm', format: 'a5' });
+                      const W = doc.internal.pageSize.getWidth();
+
+                      // Encabezado
+                      doc.setFillColor(180, 83, 9);
+                      doc.rect(0, 0, W, 35, 'F');
+                      doc.setTextColor(255, 255, 255);
+                      doc.setFontSize(18);
+                      doc.setFont('helvetica', 'bold');
+                      doc.text('PAKARI SHOP', W / 2, 14, { align: 'center' });
+                      doc.setFontSize(9);
+                      doc.setFont('helvetica', 'normal');
+                      doc.text('Artesanías colombianas hechas a mano', W / 2, 21, { align: 'center' });
+                      doc.text('www.pakarishop.com', W / 2, 27, { align: 'center' });
+
+                      // Título
+                      doc.setFillColor(254, 243, 199);
+                      doc.rect(0, 35, W, 12, 'F');
+                      doc.setTextColor(120, 53, 15);
+                      doc.setFontSize(11);
+                      doc.setFont('helvetica', 'bold');
+                      doc.text('GUÍA DE ENVÍO', W / 2, 43, { align: 'center' });
+
+                      // Info pedido
+                      let y = 55;
+                      const half = (W - 16) / 2;
+
+                      const infoBox = (label: string, value: string, x: number, yPos: number, w: number) => {
+                        doc.setFillColor(245, 245, 244);
+                        doc.roundedRect(x, yPos, w, 11, 2, 2, 'F');
+                        doc.setFont('helvetica', 'bold');
+                        doc.setFontSize(7);
+                        doc.setTextColor(120, 53, 15);
+                        doc.text(label, x + 3, yPos + 4.5);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(8.5);
+                        doc.setTextColor(40, 40, 40);
+                        doc.text(value, x + 3, yPos + 9);
+                      };
+
+                      infoBox('CÓDIGO', pedido.codigo, 8, y, half);
+                      infoBox('FECHA', new Date(pedido.fecha).toLocaleDateString('es-CO', {
+                        day: '2-digit', month: 'short', year: 'numeric'
+                      }), 8 + half + 2, y, half);
+                      y += 14;
+                      infoBox('ESTADO', pedido.estado, 8, y, W - 16);
+
+                      // Destinatario
+                      y += 15;
+                      doc.setFillColor(180, 83, 9);
+                      doc.rect(8, y, W - 16, 6, 'F');
+                      doc.setTextColor(255, 255, 255);
+                      doc.setFont('helvetica', 'bold');
+                      doc.setFontSize(8);
+                      doc.text('DESTINATARIO', 11, y + 4.2);
+
+                      y += 7;
+                      doc.setFillColor(255, 255, 255);
+                      doc.setDrawColor(217, 119, 6);
+                      doc.roundedRect(8, y, W - 16, 26, 2, 2, 'FD');
+                      doc.setTextColor(40, 40, 40);
+                      doc.setFont('helvetica', 'bold');
+                      doc.setFontSize(9);
+                      doc.text(pedido.cliente_nombre, 12, y + 7);
+                      doc.setFont('helvetica', 'normal');
+                      doc.setFontSize(8);
+                      doc.text(`Tel: ${pedido.telefono || 'Sin telefono'}`, 12, y + 13);
+                      doc.text(`Dir: ${pedido.direccion || 'Sin direccion'}`, 12, y + 19);
+
+                      // Productos
+                      y += 30;
+                      doc.setFillColor(180, 83, 9);
+                      doc.rect(8, y, W - 16, 6, 'F');
+                      doc.setTextColor(255, 255, 255);
+                      doc.setFont('helvetica', 'bold');
+                      doc.setFontSize(8);
+                      doc.text('PRODUCTOS', 11, y + 4.2);
+
+                      y += 7;
+                      doc.setFillColor(254, 243, 199);
+                      doc.rect(8, y, W - 16, 6, 'F');
+                      doc.setTextColor(120, 53, 15);
+                      doc.setFont('helvetica', 'bold');
+                      doc.setFontSize(7.5);
+                      doc.text('Producto', 11, y + 4.2);
+                      doc.text('Cant.', W - 48, y + 4.2);
+                      doc.text('Subtotal', W - 28, y + 4.2);
+
+                      y += 6;
+                      pedido.detalles.forEach((d, i) => {
+                        if (i % 2 === 0) {
+                          doc.setFillColor(250, 250, 249);
+                          doc.rect(8, y, W - 16, 7, 'F');
+                        }
+                        doc.setTextColor(40, 40, 40);
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(8);
+                        doc.text(d.producto_nombre, 11, y + 4.8);
+                        doc.text(String(d.cantidad), W - 46, y + 4.8);
+                        doc.text(`$${Number(d.subtotal).toLocaleString('es-CO')}`, W - 28, y + 4.8);
+                        y += 7;
+                      });
+
+                      // Total
+                      y += 3;
+                      doc.setFillColor(180, 83, 9);
+                      doc.roundedRect(8, y, W - 16, 10, 2, 2, 'F');
+                      doc.setTextColor(255, 255, 255);
+                      doc.setFont('helvetica', 'bold');
+                      doc.setFontSize(10);
+                      doc.text('TOTAL:', 11, y + 6.8);
+                      doc.text(`$${Number(pedido.total).toLocaleString('es-CO')}`, W - 10, y + 6.8, { align: 'right' });
+
+                      // Pie
+                      y += 16;
+                      doc.setTextColor(160, 160, 160);
+                      doc.setFont('helvetica', 'italic');
+                      doc.setFontSize(7);
+                      doc.text('Gracias por apoyar a los artesanos locales de Colombia', W / 2, y, { align: 'center' });
+
+                      doc.save(`guia-${pedido.codigo}.pdf`);
+                    });
+                  };
 
                   return (
                     <tr key={pedido.id} className="border-t border-amber-50 hover:bg-amber-50/50 transition-colors">
@@ -2013,45 +2287,15 @@ const resumen = {
                       <td className="px-4 py-3 font-semibold text-green-700 whitespace-nowrap">
                         ${Number(pedido.total).toLocaleString('es-CO')}
                       </td>
-  
-                      {/* Fecha y guía */}
-                        <td className="px-4 py-3 text-xs whitespace-nowrap">
 
-                          <div className="text-stone-500">
-                            {new Date(pedido.fecha).toLocaleDateString('es-CO', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })}
-                          </div>
 
-                          {pedido.fecha_envio && (
-                            <div className="text-blue-600 mt-1">
-                              🚚 Enviado:
-                              {' '}
-                              {new Date(pedido.fecha_envio).toLocaleDateString('es-CO')}
-                            </div>
-                          )}
 
-                          {pedido.fecha_entrega && (
-                            <div className="text-green-600 mt-1">
-                              ✅ Entregado:
-                              {' '}
-                              {new Date(pedido.fecha_entrega).toLocaleDateString('es-CO')}
-                            </div>
-                          )}
-
-                          {pedido.numero_guia && (
-                            <div className="text-[11px] text-purple-600 font-semibold mt-1">
-                              📦 {pedido.transportadora}
-                              <br />
-                              Guía:
-                              {' '}
-                              {pedido.numero_guia}
-                            </div>
-                          )}
-
-                        </td>
+                      {/* Fecha */}
+                      <td className="px-4 py-3 text-stone-400 text-xs whitespace-nowrap">
+                        {new Date(pedido.fecha).toLocaleDateString('es-CO', {
+                          day: '2-digit', month: 'short', year: 'numeric',
+                        })}
+                      </td>
                       {/* Acciones */}
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-2">
@@ -2108,41 +2352,32 @@ function ModuloReportes({
   productos: Producto[];
   kardex: Kardex[];
 }) {
-  const [tabReporte, setTabReporte] = useState<
-    'ventas' | 'inventario' | 'productos' | 'contable'
-  >('ventas');
+  const [tabReporte, setTabReporte] = useState<'ventas' | 'inventario' | 'productos' | 'contable'>('ventas');
 
-  // ── Estado de filtros por pestaña ──────────────────────────────────────────
+  // ── Vista por tab: 'tabla' | 'dashboard' ─────────────────────────────────
+  const [vista, setVista] = useState<Record<string, 'tabla' | 'dashboard'>>({
+    ventas: 'tabla', inventario: 'tabla', productos: 'tabla', contable: 'tabla',
+  });
+  const toggleVista = (tab: string) =>
+    setVista(prev => ({ ...prev, [tab]: prev[tab] === 'tabla' ? 'dashboard' : 'tabla' }));
+
   const hoy = new Date().toISOString().split('T')[0];
-
-  const filtroVacio = {
-    categoria: '',
-    producto: '',
-    desde: '',
-    hasta: '',
-  };
+  const filtroVacio = { categoria: '', producto: '', desde: '', hasta: '' };
 
   const [fVentas, setFVentas] = useState({ ...filtroVacio });
   const [fInventario, setFInventario] = useState({ ...filtroVacio });
   const [fProductos, setFProductos] = useState({ ...filtroVacio });
   const [fContable, setFContable] = useState({ ...filtroVacio });
-
   const [errVentas, setErrVentas] = useState({ desde: '', hasta: '' });
   const [errInventario, setErrInventario] = useState({ desde: '', hasta: '' });
   const [errProductos, setErrProductos] = useState({ desde: '', hasta: '' });
   const [errContable, setErrContable] = useState({ desde: '', hasta: '' });
 
-  // ── Categorías únicas derivadas de productos ───────────────────────────────
   const categorias = Array.from(
-    new Set(productos.map((p) => p.categoria_nombre).filter(Boolean))
+    new Set(productos.map(p => p.categoria_nombre).filter(Boolean))
   ) as string[];
 
-  // ── Validador de fechas ────────────────────────────────────────────────────
-  function validarFechas(
-    desde: string,
-    hasta: string,
-    setErr: React.Dispatch<React.SetStateAction<{ desde: string; hasta: string }>>
-  ): boolean {
+  function validarFechas(desde: string, hasta: string, setErr: React.Dispatch<React.SetStateAction<{ desde: string; hasta: string }>>): boolean {
     const err = { desde: '', hasta: '' };
     if (desde && desde > hoy) err.desde = 'No puede ser una fecha futura';
     if (hasta && hasta > hoy) err.hasta = 'No puede ser una fecha futura';
@@ -2151,7 +2386,6 @@ function ModuloReportes({
     return !err.desde && !err.hasta;
   }
 
-  // ── Helper: filtrar por rango de fecha ────────────────────────────────────
   function enRango(fecha: string, desde: string, hasta: string) {
     const f = fecha.split('T')[0];
     if (desde && f < desde) return false;
@@ -2160,203 +2394,248 @@ function ModuloReportes({
   }
 
   // ── Datos derivados ────────────────────────────────────────────────────────
+  const kardexVentas = kardex.filter(k => String((k as any).subtipo ?? '').toLowerCase() === 'venta');
 
-  // VENTAS: pedidos entregados en el kardex (tipo Salida / subtipo venta)
-  const kardexVentas = kardex.filter((k) => {
-    const sub = String((k as any).subtipo ?? '').toLowerCase();
-    return sub === 'venta';
-  });
-
-  const ventasFiltradas = kardexVentas.filter((k) => {
+  const ventasFiltradas = kardexVentas.filter(k => {
     const { categoria, producto, desde, hasta } = fVentas;
     if (!enRango(k.fecha, desde, hasta)) return false;
-    const prod = productos.find((p) => p.id === k.producto);
+    const prod = productos.find(p => p.id === k.producto);
     if (categoria && prod?.categoria_nombre !== categoria) return false;
     if (producto && String(k.producto) !== producto) return false;
     return true;
   });
 
-  // INVENTARIO: todos los movimientos del kardex
-  const inventarioFiltrado = kardex.filter((k) => {
+  const inventarioFiltrado = kardex.filter(k => {
     const { categoria, producto, desde, hasta } = fInventario;
     if (!enRango(k.fecha, desde, hasta)) return false;
-    const prod = productos.find((p) => p.id === k.producto);
+    const prod = productos.find(p => p.id === k.producto);
     if (categoria && prod?.categoria_nombre !== categoria) return false;
     if (producto && String(k.producto) !== producto) return false;
     return true;
   });
 
-  // PRODUCTOS: lista de productos
-  const productosFiltrados = productos.filter((p) => {
+  const productosFiltrados = productos.filter(p => {
     const { categoria, producto, desde, hasta } = fProductos;
-    // productos no tienen fecha de creación expuesta en el tipo, usamos kardex
-    // para detectar primer movimiento; si no hay kardex, no filtramos por fecha
     if (categoria && p.categoria_nombre !== categoria) return false;
     if (producto && String(p.id) !== producto) return false;
-    // filtro de fecha sobre primer movimiento en kardex
     if (desde || hasta) {
-      const movs = kardex.filter((k) => k.producto === p.id);
+      const movs = kardex.filter(k => k.producto === p.id);
       if (movs.length > 0) {
-        const primero = movs.map((k) => k.fecha).sort()[0];
+        const primero = movs.map(k => k.fecha).sort()[0];
         if (!enRango(primero, desde, hasta)) return false;
       }
     }
     return true;
   });
 
-  // CONTABLE: entradas y salidas con precio unitario
-  const contableFiltrado = kardex.filter((k) => {
+  const contableFiltrado = kardex.filter(k => {
     const { categoria, producto, desde, hasta } = fContable;
     if (!enRango(k.fecha, desde, hasta)) return false;
-    const prod = productos.find((p) => p.id === k.producto);
+    const prod = productos.find(p => p.id === k.producto);
     if (categoria && prod?.categoria_nombre !== categoria) return false;
     if (producto && String(k.producto) !== producto) return false;
     const sub = String((k as any).subtipo ?? '').toLowerCase();
     return ['venta', 'reposicion', 'ajuste_manual', 'devolucion_cliente', 'stock_inicial'].includes(sub);
   });
 
-  // ── Métricas ───────────────────────────────────────────────────────────────
-  const totalVentas = ventasFiltradas.reduce(
-    (a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0
-  );
-  const totalEntradas = inventarioFiltrado
-    .filter((k) => k.tipo === 'Entrada' || k.tipo === 'Devolucion')
-    .reduce((a, k) => a + k.cantidad, 0);
-  const totalSalidas = inventarioFiltrado
-    .filter((k) => k.tipo === 'Salida')
-    .reduce((a, k) => a + k.cantidad, 0);
-  const valorContable = contableFiltrado.reduce(
-    (a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0
-  );
+  const totalVentas = ventasFiltradas.reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0);
+  const totalEntradas = inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'entrada').reduce((a, k) => a + k.cantidad, 0);
+  const totalSalidas = inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'salida').reduce((a, k) => a + k.cantidad, 0);
+  const valorContable = contableFiltrado.reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0);
 
-  // ── Estilos reutilizables ──────────────────────────────────────────────────
+  const COLORS = ['#b45309', '#d97706', '#f59e0b', '#fbbf24', '#92400e', '#78350f', '#fde68a'];
+  const tooltipStyle = { backgroundColor: '#fff', border: '1px solid #fde68a', borderRadius: 8, fontSize: 12 };
+
+  // ── Datos gráficas VENTAS ──────────────────────────────────────────────────
+  const ventasPorProducto = Object.values(
+    ventasFiltradas.reduce((acc: Record<string, { nombre: string; ingresos: number }>, k) => {
+      const id = String(k.producto);
+      if (!acc[id]) acc[id] = { nombre: k.producto_nombre ?? '?', ingresos: 0 };
+      acc[id].ingresos += k.cantidad * Number((k as any).precio_unitario ?? 0);
+      return acc;
+    }, {})
+  ).sort((a, b) => b.ingresos - a.ingresos).slice(0, 6);
+
+  const ventasPorFecha = Object.entries(
+    ventasFiltradas.reduce((acc: Record<string, number>, k) => {
+      const f = k.fecha.split('T')[0];
+      acc[f] = (acc[f] ?? 0) + k.cantidad * Number((k as any).precio_unitario ?? 0);
+      return acc;
+    }, {})
+  ).sort(([a], [b]) => a.localeCompare(b)).slice(-10)
+    .map(([fecha, total]) => ({ fecha: fecha.slice(5), total }));
+
+  const ventasPorCategoria = Object.entries(
+    ventasFiltradas.reduce((acc: Record<string, number>, k) => {
+      const prod = productos.find(p => p.id === k.producto);
+      const cat = prod?.categoria_nombre ?? 'Sin categoría';
+      acc[cat] = (acc[cat] ?? 0) + k.cantidad * Number((k as any).precio_unitario ?? 0);
+      return acc;
+    }, {})
+  ).map(([name, value]) => ({ name, value }));
+
+  // ── Datos gráficas INVENTARIO ──────────────────────────────────────────────
+  const movPorTipo = [
+    { name: 'Entrada', value: inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'entrada').reduce((a, k) => a + k.cantidad, 0) },
+    { name: 'Salida', value: inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'salida').reduce((a, k) => a + k.cantidad, 0) },
+    { name: 'Devolución', value: inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'devolucion').reduce((a, k) => a + k.cantidad, 0) },
+  ].filter(d => d.value > 0);
+
+  const stockActual = productos
+    .map(p => ({
+      nombre: p.nombre.length > 13 ? p.nombre.slice(0, 13) + '…' : p.nombre,
+      stock: p.cantidad - (p.cantidad_reservada ?? 0),
+      minimo: p.stock_minimo,
+    }))
+    .sort((a, b) => b.stock - a.stock).slice(0, 8);
+
+  const movPorFecha = Object.entries(
+    inventarioFiltrado.reduce((acc: Record<string, number>, k) => {
+      const f = k.fecha.split('T')[0];
+      acc[f] = (acc[f] ?? 0) + k.cantidad;
+      return acc;
+    }, {})
+  ).sort(([a], [b]) => a.localeCompare(b)).slice(-10)
+    .map(([fecha, total]) => ({ fecha: fecha.slice(5), total }));
+
+  // ── Datos gráficas PRODUCTOS ───────────────────────────────────────────────
+  const prodsPorCategoria = Object.entries(
+    productosFiltrados.reduce((acc: Record<string, number>, p) => {
+      const cat = p.categoria_nombre ?? 'Sin categoría';
+      acc[cat] = (acc[cat] ?? 0) + 1;
+      return acc;
+    }, {})
+  ).map(([name, value]) => ({ name, value }));
+
+  const stockDisponible = productosFiltrados
+    .map(p => ({
+      nombre: p.nombre.length > 13 ? p.nombre.slice(0, 13) + '…' : p.nombre,
+      disponible: p.cantidad - (p.cantidad_reservada ?? 0),
+      bajo: (p.cantidad - (p.cantidad_reservada ?? 0)) <= p.stock_minimo,
+    }))
+    .sort((a, b) => a.disponible - b.disponible).slice(0, 8);
+
+  // ── Datos gráficas CONTABLE ────────────────────────────────────────────────
+  const contablePorFecha = Object.entries(
+    contableFiltrado.reduce((acc: Record<string, { ingreso: number; egreso: number }>, k) => {
+      const f = k.fecha.split('T')[0];
+      if (!acc[f]) acc[f] = { ingreso: 0, egreso: 0 };
+      const monto = k.cantidad * Number((k as any).precio_unitario ?? 0);
+      if (String((k as any).subtipo ?? '').toLowerCase() === 'venta') acc[f].ingreso += monto;
+      else acc[f].egreso += monto;
+      return acc;
+    }, {})
+  ).sort(([a], [b]) => a.localeCompare(b)).slice(-10)
+    .map(([fecha, v]) => ({ fecha: fecha.slice(5), ...v }));
+
+  const contablePorSubtipo = Object.entries(
+    contableFiltrado.reduce((acc: Record<string, number>, k) => {
+      const sub = (k as any).subtipo ?? 'otro';
+      acc[sub] = (acc[sub] ?? 0) + k.cantidad * Number((k as any).precio_unitario ?? 0);
+      return acc;
+    }, {})
+  ).map(([name, value]) => ({ name, value })).filter(d => d.value > 0);
+
+  // ── Estilos ────────────────────────────────────────────────────────────────
   const tabCls = (t: string) =>
-    `px-5 py-2 rounded-xl text-sm font-semibold transition ${tabReporte === t
-      ? 'bg-amber-700 text-white shadow'
-      : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
-    }`;
+    `px-5 py-2 rounded-xl text-sm font-semibold transition ${tabReporte === t ? 'bg-amber-700 text-white shadow' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`;
 
-  const selCls =
-    'px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 text-sm text-stone-800 ' +
-    'focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition';
-
+  const selCls = 'px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 text-sm text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition';
   const dateCls = (err: string) =>
-    `px-3 py-2 rounded-xl border text-sm text-stone-800 bg-amber-50 ` +
-    `focus:outline-none focus:ring-2 transition ` +
-    (err
-      ? 'border-red-400 focus:ring-red-200'
-      : 'border-amber-200 focus:border-amber-500 focus:ring-amber-200');
+    `px-3 py-2 rounded-xl border text-sm text-stone-800 bg-amber-50 focus:outline-none focus:ring-2 transition ` +
+    (err ? 'border-red-400 focus:ring-red-200' : 'border-amber-200 focus:border-amber-500 focus:ring-amber-200');
 
-  // ── Bloque de filtros compartido ──────────────────────────────────────────
   type FiltroState = { categoria: string; producto: string; desde: string; hasta: string };
   type ErrState = { desde: string; hasta: string };
 
-  function Filtros({
-    f, setF, err, setErr, soloCategoria = false,
-  }: {
-    f: FiltroState;
-    setF: React.Dispatch<React.SetStateAction<FiltroState>>;
-    err: ErrState;
-    setErr: React.Dispatch<React.SetStateAction<ErrState>>;
+  // ── Componentes ────────────────────────────────────────────────────────────
+  function KPI({ label, value, sub, color = 'text-amber-900' }: { label: string; value: string | number; sub?: string; color?: string }) {
+    return (
+      <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-5 flex flex-col gap-1">
+        <p className="text-[10px] uppercase tracking-widest font-bold text-stone-400">{label}</p>
+        <p className={`text-2xl font-bold ${color}`}>{value}</p>
+        {sub && <p className="text-xs text-stone-400">{sub}</p>}
+      </div>
+    );
+  }
+
+  function Grafica({ title, children }: { title: string; children: React.ReactNode }) {
+    return (
+      <div className="bg-amber-50/50 rounded-xl border border-amber-100 p-4">
+        <p className="text-xs font-bold uppercase tracking-wider text-amber-800 mb-3">{title}</p>
+        {children}
+      </div>
+    );
+  }
+
+  const SinGrafica = () => (
+    <div className="h-48 flex items-center justify-center text-stone-400 text-sm">Sin datos suficientes</div>
+  );
+
+  // ── Pie chart con labels en leyenda externa (evita corte de texto) ─────────
+  function PieConLeyenda({ data }: { data: { name: string; value: number }[] }) {
+    return (
+      <div className="flex items-center gap-4">
+        <ResponsiveContainer width="55%" height={200}>
+          <PieChart>
+            <Pie data={data} cx="50%" cy="50%" outerRadius={80} dataKey="value" labelLine={false}>
+              {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+            </Pie>
+            <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [Number(v).toLocaleString('es-CO'), '']} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="flex flex-col gap-2 flex-1 min-w-0">
+          {data.map((entry, i) => (
+            <div key={entry.name} className="flex items-center gap-2 min-w-0">
+              <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
+              <span className="text-xs text-stone-600 truncate flex-1" title={entry.name}>{entry.name}</span>
+              <span className="text-xs font-semibold text-stone-700 flex-shrink-0">{Number(entry.value).toLocaleString('es-CO')}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function Filtros({ f, setF, err, setErr, soloCategoria = false }: {
+    f: FiltroState; setF: React.Dispatch<React.SetStateAction<FiltroState>>;
+    err: ErrState; setErr: React.Dispatch<React.SetStateAction<ErrState>>;
     soloCategoria?: boolean;
   }) {
-    const prodsFiltrados = f.categoria
-      ? productos.filter((p) => p.categoria_nombre === f.categoria)
-      : productos;
-
+    const prodsFiltrados = f.categoria ? productos.filter(p => p.categoria_nombre === f.categoria) : productos;
     return (
       <div className="flex flex-wrap items-end gap-3 mb-5 p-4 bg-amber-50 rounded-xl border border-amber-100">
-        {/* Categoría */}
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
-            Categoría
-          </label>
-          <select
-            className={selCls}
-            value={f.categoria}
-            onChange={(e) => setF({ ...f, categoria: e.target.value, producto: '' })}
-          >
+          <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Categoría</label>
+          <select className={selCls} value={f.categoria} onChange={e => setF({ ...f, categoria: e.target.value, producto: '' })}>
             <option value="">Todas</option>
-            {categorias.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
+            {categorias.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
-
-        {/* Producto */}
         {!soloCategoria && (
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
-              Producto
-            </label>
-            <select
-              className={selCls}
-              value={f.producto}
-              onChange={(e) => setF({ ...f, producto: e.target.value })}
-            >
+            <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Producto</label>
+            <select className={selCls} value={f.producto} onChange={e => setF({ ...f, producto: e.target.value })}>
               <option value="">Todos</option>
-              {prodsFiltrados.map((p) => (
-                <option key={p.id} value={String(p.id)}>
-                  {p.nombre}
-                </option>
-              ))}
+              {prodsFiltrados.map(p => <option key={p.id} value={String(p.id)}>{p.nombre}</option>)}
             </select>
           </div>
         )}
-
-        {/* Desde */}
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
-            Desde
-          </label>
-          <input
-            type="date"
-            max={hoy}
-            className={dateCls(err.desde)}
-            value={f.desde}
-            onChange={(e) => {
-              const val = e.target.value;
-              setF({ ...f, desde: val });
-              validarFechas(val, f.hasta, setErr);
-            }}
-          />
-          {err.desde && (
-            <span className="text-xs text-red-500 font-medium">{err.desde}</span>
-          )}
+          <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Desde</label>
+          <input type="date" max={hoy} className={dateCls(err.desde)} value={f.desde}
+            onChange={e => { setF({ ...f, desde: e.target.value }); validarFechas(e.target.value, f.hasta, setErr); }} />
+          {err.desde && <span className="text-xs text-red-500 font-medium">{err.desde}</span>}
         </div>
-
-        {/* Hasta */}
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">
-            Hasta
-          </label>
-          <input
-            type="date"
-            max={hoy}
-            className={dateCls(err.hasta)}
-            value={f.hasta}
-            onChange={(e) => {
-              const val = e.target.value;
-              setF({ ...f, hasta: val });
-              validarFechas(f.desde, val, setErr);
-            }}
-          />
-          {err.hasta && (
-            <span className="text-xs text-red-500 font-medium">{err.hasta}</span>
-          )}
+          <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Hasta</label>
+          <input type="date" max={hoy} className={dateCls(err.hasta)} value={f.hasta}
+            onChange={e => { setF({ ...f, hasta: e.target.value }); validarFechas(f.desde, e.target.value, setErr); }} />
+          {err.hasta && <span className="text-xs text-red-500 font-medium">{err.hasta}</span>}
         </div>
-
-        {/* Limpiar */}
         {(f.categoria || f.producto || f.desde || f.hasta) && (
-          <button
-            onClick={() => {
-              setF({ ...filtroVacio });
-              setErr({ desde: '', hasta: '' });
-            }}
-            className="px-3 py-2 rounded-xl bg-stone-100 text-stone-500 text-xs font-semibold hover:bg-stone-200 transition"
-          >
+          <button onClick={() => { setF({ ...filtroVacio }); setErr({ desde: '', hasta: '' }); }}
+            className="px-3 py-2 rounded-xl bg-stone-100 text-stone-500 text-xs font-semibold hover:bg-stone-200 transition">
             ✕ Limpiar
           </button>
         )}
@@ -2364,81 +2643,46 @@ function ModuloReportes({
     );
   }
 
-  // ── Botones de descarga ────────────────────────────────────────────────────
-  const BotonesDescarga = ({ tipo }: { tipo: string }) => (
-    <div className="flex gap-2">
-      <button
-        onClick={() => descargarReporte(tipo, 'excel', ARTESANO_ID)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-xs font-semibold hover:bg-green-100 transition"
-      >
-        📊 Excel
-      </button>
-      <button
-        onClick={() => descargarReporte(tipo, 'pdf', ARTESANO_ID)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-semibold hover:bg-red-100 transition"
-      >
-        📄 PDF
-      </button>
-    </div>
-  );
+  // ── Barra de acciones con vista toggle ────────────────────────────────────
+  function Acciones({ tipo, tab }: { tipo: string; tab: string }) {
+    const esDash = vista[tab] === 'dashboard';
+    return (
+      <div className="flex gap-2 flex-wrap">
+        <button onClick={() => toggleVista(tab)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${esDash ? 'bg-amber-600 text-white border-amber-600 shadow-sm' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+            }`}>
+          {esDash ? '📋 Ver tabla' : '📊 Dashboard'}
+        </button>
+        <button onClick={() => descargarReporte(tipo, 'excel', ARTESANO_ID)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-xs font-semibold hover:bg-green-100 transition">
+          📊 Excel
+        </button>
+        <button onClick={() => descargarReporte(tipo, 'pdf', ARTESANO_ID)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-semibold hover:bg-red-100 transition">
+          📄 PDF
+        </button>
+      </div>
+    );
+  }
 
-  // ── Tarjeta métrica ────────────────────────────────────────────────────────
-  const Metrica = ({
-    label,
-    value,
-    color = 'text-amber-900',
-    bg = 'bg-white',
-    border = 'border-amber-100',
-  }: {
-    label: string;
-    value: string | number;
-    color?: string;
-    bg?: string;
-    border?: string;
-  }) => (
-    <div className={`${bg} rounded-2xl shadow-sm p-5 border ${border}`}>
-      <p className="text-xs uppercase tracking-wider font-bold text-stone-400">{label}</p>
-      <h3 className={`text-2xl font-bold mt-2 ${color}`}>{value}</h3>
-    </div>
-  );
-
-  // ── Celda de tipo con color ────────────────────────────────────────────────
   const TipoBadge = ({ tipo }: { tipo: string | undefined }) => {
     const t = (tipo ?? '').toLowerCase();
-    const cls =
-      t === 'entrada'
-        ? 'bg-green-100 text-green-700'
-        : t === 'salida'
-          ? 'bg-red-100 text-red-600'
-          : t === 'devolucion'
-            ? 'bg-blue-100 text-blue-600'
-            : 'bg-stone-100 text-stone-500';
-    return (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cls}`}>{tipo}</span>
-    );
+    const cls = t === 'entrada' ? 'bg-green-100 text-green-700' : t === 'salida' ? 'bg-red-100 text-red-600' : t === 'devolucion' ? 'bg-blue-100 text-blue-600' : 'bg-stone-100 text-stone-500';
+    return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cls}`}>{tipo}</span>;
   };
 
-  // ── Mensaje de tabla vacía ─────────────────────────────────────────────────
   const SinDatos = ({ cols }: { cols: number }) => (
-    <tr>
-      <td colSpan={cols} className="px-4 py-8 text-center text-stone-400 text-sm">
-        Sin resultados para los filtros aplicados
-      </td>
-    </tr>
+    <tr><td colSpan={cols} className="px-4 py-8 text-center text-stone-400 text-sm">Sin resultados</td></tr>
   );
 
   // ── RENDER ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5">
-      {/* Encabezado */}
       <div className="bg-white rounded-2xl shadow-sm p-6">
         <h2 className="font-serif text-2xl text-amber-800 mb-1">📈 Reportería</h2>
-        <p className="text-stone-500 text-sm">
-          Visualiza estadísticas generales del sistema artesanal
-        </p>
+        <p className="text-stone-500 text-sm">Estadísticas y movimientos en tiempo real</p>
       </div>
 
-      {/* Tabs */}
       <div className="flex flex-wrap gap-3">
         <button className={tabCls('ventas')} onClick={() => setTabReporte('ventas')}>📈 Ventas</button>
         <button className={tabCls('inventario')} onClick={() => setTabReporte('inventario')}>📦 Inventario</button>
@@ -2446,341 +2690,360 @@ function ModuloReportes({
         <button className={tabCls('contable')} onClick={() => setTabReporte('contable')}>📒 Contable</button>
       </div>
 
-      {/* ── VENTAS ── */}
+      {/* ══════ TAB VENTAS ══════ */}
       {tabReporte === 'ventas' && (
-        <div className="space-y-5">
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-serif text-xl text-amber-800">📈 Reporte de Ventas</h3>
-              <BotonesDescarga tipo="kardex" />
+        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <h3 className="font-serif text-xl text-amber-800">📈 Reporte de Ventas</h3>
+            <Acciones tipo="kardex" tab="ventas" />
+          </div>
+
+          <Filtros f={fVentas} setF={setFVentas} err={errVentas} setErr={setErrVentas} />
+
+          {/* DASHBOARD */}
+          {vista['ventas'] === 'dashboard' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <KPI label="Ventas Totales" value={`$${totalVentas.toLocaleString('es-CO')}`} color="text-green-700" />
+                <KPI label="Productos vendidos" value={ventasFiltradas.reduce((a, k) => a + k.cantidad, 0)} color="text-amber-700" />
+                <KPI label="Pedidos realizados" value={ventasFiltradas.length} />
+                <KPI label="Promedio por pedido"
+                  value={ventasFiltradas.length > 0 ? `$${Math.round(totalVentas / ventasFiltradas.length).toLocaleString('es-CO')}` : '$0'}
+                  color="text-blue-700" />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Grafica title="Ingresos por fecha">
+                  {ventasPorFecha.length === 0 ? <SinGrafica /> : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={ventasPorFecha}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#fde68a" />
+                        <XAxis dataKey="fecha" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [`$${Number(v).toLocaleString('es-CO')}`, 'Ingresos']} />
+                        <Line type="monotone" dataKey="total" stroke="#b45309" strokeWidth={2} dot={{ fill: '#b45309', r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </Grafica>
+                <Grafica title="Ventas por categoría">
+                  {ventasPorCategoria.length === 0 ? <SinGrafica /> : <PieConLeyenda data={ventasPorCategoria} />}
+                </Grafica>
+                <Grafica title="Top productos por ingresos">
+                  {ventasPorProducto.length === 0 ? <SinGrafica /> : (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={ventasPorProducto} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke="#fde68a" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                        <YAxis type="category" dataKey="nombre" tick={{ fontSize: 10 }} width={130} />
+                        <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [`$${Number(v).toLocaleString('es-CO')}`, 'Ingresos']} />
+                        <Bar dataKey="ingresos" fill="#b45309" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </Grafica>
+              </div>
             </div>
+          )}
 
-            <Filtros f={fVentas} setF={setFVentas} err={errVentas} setErr={setErrVentas} />
-
-            {/* Métricas */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-5">
-              <Metrica label="Total vendido ($)" value={`$${totalVentas.toLocaleString('es-CO')}`} color="text-green-700" border="border-green-100" />
-              <Metrica label="Unidades vendidas" value={ventasFiltradas.reduce((a, k) => a + k.cantidad, 0)} color="text-amber-700" />
-              <Metrica label="Movimientos" value={ventasFiltradas.length} />
-            </div>
-
-            {/* Tabla */}
+          {/* TABLA */}
+          {vista['ventas'] === 'tabla' && (
             <div className="overflow-x-auto rounded-xl border border-amber-100">
               <table className="w-full text-sm">
                 <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
-                  <tr>
-                    {['Fecha', 'Producto', 'Categoría', 'Cantidad', 'PVP Unit.', 'Total', 'Pedido ref.', 'Registrado por'].map(
-                      (h) => <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
-                    )}
-                  </tr>
+                  <tr>{['Fecha', 'Producto', 'Categoría', 'Cantidad', 'PVP Unit.', 'Total', 'Pedido ref.', 'Registrado por'].map(
+                    h => <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
+                  )}</tr>
                 </thead>
                 <tbody>
-                  {ventasFiltradas.length === 0 ? (
-                    <SinDatos cols={8} />
-                  ) : (
-                    ventasFiltradas.map((k) => {
-                      const prod = productos.find((p) => p.id === k.producto);
-                      const pvp = Number((k as any).precio_unitario ?? 0);
-                      return (
-                        <tr key={k.id} className="border-t border-amber-50 hover:bg-amber-50/50">
-                          <td className="px-4 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
-                          <td className="px-4 py-3 font-semibold">{k.producto_nombre}</td>
-                          <td className="px-4 py-3">
-                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                              {prod?.categoria_nombre ?? '—'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 font-bold text-center">{k.cantidad}</td>
-                          <td className="px-4 py-3 text-stone-600">{pvp ? `$${pvp.toLocaleString('es-CO')}` : '—'}</td>
-                          <td className="px-4 py-3 font-semibold text-green-700">
-                            ${(pvp * k.cantidad).toLocaleString('es-CO')}
-                          </td>
-                          <td className="px-4 py-3 text-xs text-stone-400 font-mono">
-                            {(k as any).pedido_ref ?? '—'}
-                          </td>
-                          <td className="px-4 py-3 text-xs text-stone-400">
-                            {(k as any).creado_por ?? '—'}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
+                  {ventasFiltradas.length === 0 ? <SinDatos cols={8} /> : ventasFiltradas.map(k => {
+                    const prod = productos.find(p => p.id === k.producto);
+                    const pvp = Number((k as any).precio_unitario ?? 0);
+                    return (
+                      <tr key={k.id} className="border-t border-amber-50 hover:bg-amber-50/50">
+                        <td className="px-4 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
+                        <td className="px-4 py-3 font-semibold">{k.producto_nombre}</td>
+                        <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">{prod?.categoria_nombre ?? '—'}</span></td>
+                        <td className="px-4 py-3 font-bold text-center">{k.cantidad}</td>
+                        <td className="px-4 py-3 text-stone-600">{pvp ? `$${pvp.toLocaleString('es-CO')}` : '—'}</td>
+                        <td className="px-4 py-3 font-semibold text-green-700">${(pvp * k.cantidad).toLocaleString('es-CO')}</td>
+                        <td className="px-4 py-3 text-xs text-stone-400 font-mono">{(k as any).pedido_ref ?? '—'}</td>
+                        <td className="px-4 py-3 text-xs text-stone-400">{(k as any).creado_por ?? '—'}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              <p className="text-xs text-stone-400 p-3">{ventasFiltradas.length} registro{ventasFiltradas.length !== 1 ? 's' : ''}{ventasFiltradas.length !== kardexVentas.length && ` de ${kardexVentas.length} total`}</p>
             </div>
-            <p className="text-xs text-stone-400 mt-2">
-              {ventasFiltradas.length} registro{ventasFiltradas.length !== 1 ? 's' : ''}
-              {ventasFiltradas.length !== kardexVentas.length &&
-                ` de ${kardexVentas.length} total`}
-            </p>
-          </div>
+          )}
         </div>
       )}
 
-      {/* ── INVENTARIO ── */}
+      {/* ══════ TAB INVENTARIO ══════ */}
       {tabReporte === 'inventario' && (
-        <div className="space-y-5">
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-serif text-xl text-amber-800">📦 Reporte de Inventario</h3>
-              <BotonesDescarga tipo="inventario" />
+        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <h3 className="font-serif text-xl text-amber-800">📦 Reporte de Inventario</h3>
+            <Acciones tipo="inventario" tab="inventario" />
+          </div>
+
+          <Filtros f={fInventario} setF={setFInventario} err={errInventario} setErr={setErrInventario} />
+
+          {vista['inventario'] === 'dashboard' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <KPI label="Productos activos" value={productos.length} />
+                <KPI label="Stock bajo mínimo" value={productos.filter(p => (p.cantidad - (p.cantidad_reservada ?? 0)) <= p.stock_minimo).length} color="text-red-600" sub="requieren reposición" />
+                <KPI label="Entradas (uds)" value={`+${totalEntradas}`} color="text-green-700" />
+                <KPI label="Salidas (uds)" value={`-${totalSalidas}`} color="text-red-600" />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Grafica title="Stock disponible por producto">
+                  {stockActual.length === 0 ? <SinGrafica /> : (
+                    <ResponsiveContainer width="100%" height={240}>
+                      <BarChart data={stockActual}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#fde68a" />
+                        <XAxis dataKey="nombre" tick={{ fontSize: 10 }} angle={-30} textAnchor="end" height={60} />
+                        <YAxis tick={{ fontSize: 11 }} />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        <Bar dataKey="stock" name="Disponible" fill="#b45309" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="minimo" name="Mínimo" fill="#fde68a" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </Grafica>
+                <Grafica title="Movimientos por tipo">
+                  {movPorTipo.length === 0 ? <SinGrafica /> : <PieConLeyenda data={movPorTipo} />}
+                </Grafica>
+                <Grafica title="Movimientos por fecha">
+                  {movPorFecha.length === 0 ? <SinGrafica /> : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={movPorFecha}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#fde68a" />
+                        <XAxis dataKey="fecha" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        <Line type="monotone" dataKey="total" stroke="#b45309" strokeWidth={2} dot={{ fill: '#b45309', r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </Grafica>
+              </div>
             </div>
+          )}
 
-            <Filtros f={fInventario} setF={setFInventario} err={errInventario} setErr={setErrInventario} />
-
-            {/* Métricas */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
-              <Metrica label="Productos registrados" value={productos.length} />
-              <Metrica label="Stock bajo" value={productos.filter((p) => p.cantidad <= p.stock_minimo).length} color="text-red-600" border="border-red-100" />
-              <Metrica label="Entradas" value={`+${totalEntradas}`} color="text-green-700" border="border-green-100" />
-              <Metrica label="Salidas" value={`-${totalSalidas}`} color="text-red-600" border="border-red-100" />
-            </div>
-
-            {/* Tabla */}
+          {vista['inventario'] === 'tabla' && (
             <div className="overflow-x-auto rounded-xl border border-amber-100">
               <table className="w-full text-sm">
                 <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
-                  <tr>
-                    {['Fecha', 'Producto', 'Categoría', 'Tipo', 'Subtipo', 'Origen', 'Cant.', 'Stock result.', 'PVP Unit.', 'Pedido ref.', 'Registrado por', 'Nota'].map(
-                      (h) => <th key={h} className="px-3 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
-                    )}
-                  </tr>
+                  <tr>{['Fecha', 'Producto', 'Categoría', 'Tipo', 'Subtipo', 'Origen', 'Cant.', 'Stock result.', 'PVP Unit.', 'Pedido ref.', 'Registrado por', 'Nota'].map(
+                    h => <th key={h} className="px-3 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
+                  )}</tr>
                 </thead>
                 <tbody>
-                  {inventarioFiltrado.length === 0 ? (
-                    <SinDatos cols={12} />
-                  ) : (
-                    inventarioFiltrado.map((k) => {
-                      const prod = productos.find((p) => p.id === k.producto);
-                      return (
-                        <tr key={k.id} className="border-t border-amber-50 hover:bg-amber-50/50">
-                          <td className="px-3 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
-                          <td className="px-3 py-3 font-semibold">{k.producto_nombre}</td>
-                          <td className="px-3 py-3">
-                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                              {prod?.categoria_nombre ?? '—'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3"><TipoBadge tipo={k.tipo} /></td>
-                          <td className="px-3 py-3">
-                            <span className="text-xs bg-stone-50 border border-stone-100 px-2 py-0.5 rounded-full text-stone-500">
-                              {(k as any).subtipo ?? '—'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3">
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${(k as any).origen === 'automatico' ? 'bg-purple-50 text-purple-600' : 'bg-amber-50 text-amber-600'}`}>
-                              {(k as any).origen === 'automatico' ? '⚡ auto' : '✍️ manual'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 font-bold text-center">{k.cantidad}</td>
-                          <td className="px-3 py-3 font-semibold text-green-700 text-center">{k.stock_resultante}</td>
-                          <td className="px-3 py-3 text-stone-600">
-                            {(k as any).precio_unitario ? `$${Number((k as any).precio_unitario).toLocaleString('es-CO')}` : '—'}
-                          </td>
-                          <td className="px-3 py-3 text-xs text-stone-400 font-mono">{(k as any).pedido_ref ?? '—'}</td>
-                          <td className="px-3 py-3 text-xs text-stone-400">{(k as any).creado_por ?? '—'}</td>
-                          <td className="px-3 py-3 text-xs text-stone-400">{k.nota ?? '—'}</td>
-                        </tr>
-                      );
-                    })
-                  )}
+                  {inventarioFiltrado.length === 0 ? <SinDatos cols={12} /> : inventarioFiltrado.map(k => {
+                    const prod = productos.find(p => p.id === k.producto);
+                    return (
+                      <tr key={k.id} className="border-t border-amber-50 hover:bg-amber-50/50">
+                        <td className="px-3 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
+                        <td className="px-3 py-3 font-semibold">{k.producto_nombre}</td>
+                        <td className="px-3 py-3"><span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">{prod?.categoria_nombre ?? '—'}</span></td>
+                        <td className="px-3 py-3"><TipoBadge tipo={k.tipo} /></td>
+                        <td className="px-3 py-3"><span className="text-xs bg-stone-50 border border-stone-100 px-2 py-0.5 rounded-full text-stone-500">{(k as any).subtipo ?? '—'}</span></td>
+                        <td className="px-3 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${(k as any).origen === 'automatico' ? 'bg-purple-50 text-purple-600' : 'bg-amber-50 text-amber-600'}`}>{(k as any).origen === 'automatico' ? '⚡ auto' : '✍️ manual'}</span></td>
+                        <td className="px-3 py-3 font-bold text-center">{k.cantidad}</td>
+                        <td className="px-3 py-3 font-semibold text-green-700 text-center">{k.stock_resultante}</td>
+                        <td className="px-3 py-3 text-stone-600">{(k as any).precio_unitario ? `$${Number((k as any).precio_unitario).toLocaleString('es-CO')}` : '—'}</td>
+                        <td className="px-3 py-3 text-xs text-stone-400 font-mono">{(k as any).pedido_ref ?? '—'}</td>
+                        <td className="px-3 py-3 text-xs text-stone-400">{(k as any).creado_por ?? '—'}</td>
+                        <td className="px-3 py-3 text-xs text-stone-400">{k.nota ?? '—'}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              <p className="text-xs text-stone-400 p-3">{inventarioFiltrado.length} movimiento{inventarioFiltrado.length !== 1 ? 's' : ''}{inventarioFiltrado.length !== kardex.length && ` de ${kardex.length} total`}</p>
             </div>
-            <p className="text-xs text-stone-400 mt-2">
-              {inventarioFiltrado.length} movimiento{inventarioFiltrado.length !== 1 ? 's' : ''}
-              {inventarioFiltrado.length !== kardex.length && ` de ${kardex.length} total`}
-            </p>
-          </div>
+          )}
         </div>
       )}
 
-      {/* ── PRODUCTOS ── */}
+      {/* ══════ TAB PRODUCTOS ══════ */}
       {tabReporte === 'productos' && (
-        <div className="space-y-5">
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-serif text-xl text-amber-800">🛍️ Reporte de Productos</h3>
-              <BotonesDescarga tipo="productos" />
+        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <h3 className="font-serif text-xl text-amber-800">🛍️ Reporte de Productos</h3>
+            <Acciones tipo="productos" tab="productos" />
+          </div>
+
+          <Filtros f={fProductos} setF={setFProductos} err={errProductos} setErr={setErrProductos} />
+
+          {vista['productos'] === 'dashboard' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <KPI label="Total productos" value={productosFiltrados.length} />
+                <KPI label="Stock total (uds)" value={productosFiltrados.reduce((a, p) => a + p.cantidad, 0)} color="text-amber-700" />
+                <KPI label="Valor en stock" value={`$${productosFiltrados.reduce((a, p) => a + p.cantidad * Number(p.precio_neto), 0).toLocaleString('es-CO')}`} color="text-green-700" />
+                <KPI label="Con stock bajo" value={productosFiltrados.filter(p => (p.cantidad - (p.cantidad_reservada ?? 0)) <= p.stock_minimo).length} color="text-red-600" sub="bajo mínimo" />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Grafica title="Productos por categoría">
+                  {prodsPorCategoria.length === 0 ? <SinGrafica /> : <PieConLeyenda data={prodsPorCategoria} />}
+                </Grafica>
+                <Grafica title="Stock disponible (menor a mayor)">
+                  {stockDisponible.length === 0 ? <SinGrafica /> : (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={stockDisponible} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke="#fde68a" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 11 }} />
+                        <YAxis type="category" dataKey="nombre" tick={{ fontSize: 10 }} width={110} />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        <Bar dataKey="disponible" name="Disponible" radius={[0, 4, 4, 0]}>
+                          {stockDisponible.map((entry, i) => <Cell key={i} fill={entry.bajo ? '#dc2626' : '#b45309'} />)}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </Grafica>
+              </div>
             </div>
+          )}
 
-            <Filtros f={fProductos} setF={setFProductos} err={errProductos} setErr={setErrProductos} />
-
-            {/* Métricas */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-5">
-              <Metrica label="Productos" value={productosFiltrados.length} />
-              <Metrica
-                label="Stock total (uds.)"
-                value={productosFiltrados.reduce((a, p) => a + p.cantidad, 0)}
-                color="text-amber-700"
-              />
-              <Metrica
-                label="Valor en stock ($)"
-                value={`$${productosFiltrados
-                  .reduce((a, p) => a + p.cantidad * Number(p.precio_neto), 0)
-                  .toLocaleString('es-CO')}`}
-                color="text-green-700"
-                border="border-green-100"
-              />
-            </div>
-
-            {/* Tabla */}
+          {vista['productos'] === 'tabla' && (
             <div className="overflow-x-auto rounded-xl border border-amber-100">
               <table className="w-full text-sm">
                 <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
-                  <tr>
-                    {['Código', 'Lote', 'Producto', 'Categoría', 'Precio neto', 'PVP', 'IVA', 'Stock', 'Mín.', 'Máx.', 'Estado'].map(
-                      (h) => <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
-                    )}
-                  </tr>
+                  <tr>{['Código', 'Lote', 'Producto', 'Categoría', 'Precio neto', 'PVP', 'IVA', 'Stock', 'Mín.', 'Máx.', 'Estado'].map(
+                    h => <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
+                  )}</tr>
                 </thead>
                 <tbody>
-                  {productosFiltrados.length === 0 ? (
-                    <SinDatos cols={11} />
-                  ) : (
-                    productosFiltrados.map((p) => {
-                      const disponible = p.cantidad - (p.cantidad_reservada ?? 0);
-                      const bajo = disponible <= p.stock_minimo;
-                      const alto = p.stock_maximo > 0 && disponible >= p.stock_maximo;
-                      return (
-                        <tr key={p.id} className={`border-t border-amber-50 hover:bg-amber-50/50 ${bajo ? 'bg-red-50/40' : ''}`}>
-                          <td className="px-4 py-3 font-mono text-xs text-stone-500">{p.codigo_barra || '—'}</td>
-                          <td className="px-4 py-3 text-xs text-stone-400">{p.lote || '—'}</td>
-                          <td className="px-4 py-3 font-semibold">{p.nombre}</td>
-                          <td className="px-4 py-3">
-                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                              {p.categoria_nombre ?? '—'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-stone-600">${Number(p.precio_neto).toLocaleString('es-CO')}</td>
-                          <td className="px-4 py-3 text-green-700 font-semibold">
-                            {p.precio_final
-                              ? `$${Number(p.precio_final).toLocaleString('es-CO', { maximumFractionDigits: 0 })}`
-                              : '—'}
-                          </td>
-                          <td className="px-4 py-3 text-stone-500">{p.iva}%</td>
-                          <td className="px-4 py-3 font-bold text-center">{disponible}</td>
-                          <td className="px-4 py-3 text-center text-stone-400">{p.stock_minimo}</td>
-                          <td className="px-4 py-3 text-center text-stone-400">{p.stock_maximo || '—'}</td>
-                          <td className="px-4 py-3">
-                            {bajo ? (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">⚠️ Bajo</span>
-                            ) : alto ? (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">📦 Máximo</span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">✓ OK</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
+                  {productosFiltrados.length === 0 ? <SinDatos cols={12} /> : productosFiltrados.map(p => {
+                    const disponible = p.cantidad - (p.cantidad_reservada ?? 0);
+                    const bajo = disponible <= p.stock_minimo;
+                    const alto = p.stock_maximo > 0 && disponible >= p.stock_maximo;
+                    return (
+                      <tr key={p.id} className={`border-t border-amber-50 hover:bg-amber-50/50 ${bajo ? 'bg-red-50/40' : ''}`}>
+                        <td className="px-4 py-3 font-mono text-xs text-stone-500">{p.codigo_barra || '—'}</td>
+                        <td className="px-4 py-3 text-xs text-stone-400">{p.lote || '—'}</td>
+                        <td className="px-4 py-3 font-semibold">{p.nombre}</td>
+                        <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">{p.categoria_nombre ?? '—'}</span></td>
+                        <td className="px-4 py-3 text-stone-600">${Number(p.precio_neto).toLocaleString('es-CO')}</td>
+                        <td className="px-4 py-3 text-green-700 font-semibold">{p.precio_final ? `$${Number(p.precio_final).toLocaleString('es-CO', { maximumFractionDigits: 0 })}` : '—'}</td>
+                        <td className="px-4 py-3 text-stone-500">{p.iva}%</td>
+                        <td className="px-4 py-3 font-bold text-center">{disponible}</td>
+                        <td className="px-4 py-3 text-center text-stone-400">{p.stock_minimo}</td>
+                        <td className="px-4 py-3 text-center text-stone-400">{p.stock_maximo || '—'}</td>
+                        <td className="px-4 py-3">
+                          {bajo ? <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">⚠️ Bajo</span>
+                            : alto ? <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">📦 Máximo</span>
+                              : <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">✓ OK</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              <p className="text-xs text-stone-400 p-3">{productosFiltrados.length} producto{productosFiltrados.length !== 1 ? 's' : ''}{productosFiltrados.length !== productos.length && ` de ${productos.length} total`}</p>
             </div>
-            <p className="text-xs text-stone-400 mt-2">
-              {productosFiltrados.length} producto{productosFiltrados.length !== 1 ? 's' : ''}
-              {productosFiltrados.length !== productos.length && ` de ${productos.length} total`}
-            </p>
-          </div>
+          )}
         </div>
       )}
 
-      {/* ── CONTABLE ── */}
+      {/* ══════ TAB CONTABLE ══════ */}
       {tabReporte === 'contable' && (
-        <div className="space-y-5">
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-serif text-xl text-amber-800">📒 Reporte Contable</h3>
-              <BotonesDescarga tipo="contable" />
+        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <h3 className="font-serif text-xl text-amber-800">📒 Reporte Contable</h3>
+            <Acciones tipo="contable" tab="contable" />
+          </div>
+
+          <Filtros f={fContable} setF={setFContable} err={errContable} setErr={setErrContable} />
+
+          {vista['contable'] === 'dashboard' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <KPI label="Valor Inventario" value={`$${valorContable.toLocaleString('es-CO')}`} color="text-green-700" />
+                <KPI label="Ingresos por ventas"
+                  value={`$${contableFiltrado.filter(k => String((k as any).subtipo).toLowerCase() === 'venta')
+                    .reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0)
+                    .toLocaleString('es-CO')}`}
+                  color="text-amber-700" />
+                <KPI label="Movimientos" value={contableFiltrado.length} />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Grafica title="Ventas e inventario por fecha">
+                  {contablePorFecha.length === 0 ? <SinGrafica /> : (
+                    <ResponsiveContainer width="100%" height={240}>
+                      <BarChart data={contablePorFecha}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#fde68a" />
+                        <XAxis dataKey="fecha" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [`$${Number(v).toLocaleString('es-CO')}`, '']} />
+                        <Bar dataKey="ingreso" name="Ventas" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="egreso" name="Inventario" fill="#b45309" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </Grafica>
+                <Grafica title="Por tipo de movimiento">
+                  {contablePorSubtipo.length === 0 ? <SinGrafica /> : <PieConLeyenda data={contablePorSubtipo} />}
+                </Grafica>
+              </div>
             </div>
+          )}
 
-            <Filtros f={fContable} setF={setFContable} err={errContable} setErr={setErrContable} />
-
-            {/* Métricas */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-5">
-              <Metrica
-                label="Valor total movido ($)"
-                value={`$${valorContable.toLocaleString('es-CO')}`}
-                color="text-green-700"
-                border="border-green-100"
-              />
-              <Metrica
-                label="Ingresos (ventas)"
-                value={`$${contableFiltrado
-                  .filter((k) => String((k as any).subtipo).toLowerCase() === 'venta')
-                  .reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0)
-                  .toLocaleString('es-CO')}`}
-                color="text-amber-700"
-              />
-              <Metrica label="Movimientos" value={contableFiltrado.length} />
-            </div>
-
-            {/* Tabla */}
+          {vista['contable'] === 'tabla' && (
             <div className="overflow-x-auto rounded-xl border border-amber-100">
               <table className="w-full text-sm">
                 <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
-                  <tr>
-                    {['Fecha', 'Producto', 'Categoría', 'Tipo', 'Subtipo', 'Cantidad', 'PVP Unit.', 'Total ($)', 'Pedido ref.', 'Registrado por', 'Nota'].map(
-                      (h) => <th key={h} className="px-3 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
-                    )}
-                  </tr>
+                  <tr>{['Fecha', 'Producto', 'Categoría', 'Tipo', 'Subtipo', 'Cantidad', 'PVP Unit.', 'Ventas', 'Inventario', 'Pedido ref.', 'Registrado por', 'Nota'].map(
+                    h => <th key={h} className="px-3 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
+                  )}</tr>
                 </thead>
                 <tbody>
-                  {contableFiltrado.length === 0 ? (
-                    <SinDatos cols={11} />
-                  ) : (
-                    contableFiltrado.map((k) => {
-                      const prod = productos.find((p) => p.id === k.producto);
-                      const pvp = Number((k as any).precio_unitario ?? 0);
-                      const sub = String((k as any).subtipo ?? '').toLowerCase();
-                      const esIngreso = sub === 'venta';
-                      return (
-                        <tr key={k.id} className="border-t border-amber-50 hover:bg-amber-50/50">
-                          <td className="px-3 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
-                          <td className="px-3 py-3 font-semibold">{k.producto_nombre}</td>
-                          <td className="px-3 py-3">
-                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">
-                              {prod?.categoria_nombre ?? '—'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3"><TipoBadge tipo={k.tipo} /></td>
-                          <td className="px-3 py-3">
-                            <span className="text-xs bg-stone-50 border border-stone-100 px-2 py-0.5 rounded-full text-stone-500">
-                              {(k as any).subtipo ?? '—'}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 font-bold text-center">{k.cantidad}</td>
-                          <td className="px-3 py-3 text-stone-600">
-                            {pvp ? `$${pvp.toLocaleString('es-CO')}` : '—'}
-                          </td>
-                          <td className={`px-3 py-3 font-semibold ${esIngreso ? 'text-green-700' : 'text-red-600'}`}>
-                            {pvp ? `${esIngreso ? '+' : '-'}$${(pvp * k.cantidad).toLocaleString('es-CO')}` : '—'}
-                          </td>
-                          <td className="px-3 py-3 text-xs text-stone-400 font-mono">
-                            {(k as any).pedido_ref ?? '—'}
-                          </td>
-                          <td className="px-3 py-3 text-xs text-stone-400">
-                            {(k as any).creado_por ?? '—'}
-                          </td>
-                          <td className="px-3 py-3 text-xs text-stone-400">{k.nota ?? '—'}</td>
-                        </tr>
-                      );
-                    })
-                  )}
+                  {contableFiltrado.length === 0 ? <SinDatos cols={11} /> : contableFiltrado.map(k => {
+                    const prod = productos.find(p => p.id === k.producto);
+                    const pvp = Number((k as any).precio_unitario ?? 0);
+                    const esIngreso = String((k as any).subtipo ?? '').toLowerCase() === 'venta';
+                    return (
+                      <tr key={k.id} className="border-t border-amber-50 hover:bg-amber-50/50">
+                        <td className="px-3 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
+                        <td className="px-3 py-3 font-semibold">{k.producto_nombre}</td>
+                        <td className="px-3 py-3"><span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">{prod?.categoria_nombre ?? '—'}</span></td>
+                        <td className="px-3 py-3"><TipoBadge tipo={k.tipo} /></td>
+                        <td className="px-3 py-3"><span className="text-xs bg-stone-50 border border-stone-100 px-2 py-0.5 rounded-full text-stone-500">{(k as any).subtipo ?? '—'}</span></td>
+                        <td className="px-3 py-3 font-bold text-center">{k.cantidad}</td>
+                        <td className="px-3 py-3 text-stone-600">{pvp ? `$${pvp.toLocaleString('es-CO')}` : '—'}</td>
+                        {/* VENTAS */}
+                        <td className="px-3 py-3 font-semibold text-green-700">
+                          {esIngreso && pvp
+                            ? `$${(pvp * k.cantidad).toLocaleString('es-CO')}`
+                            : '—'}
+                        </td>
+
+                        {/* INVENTARIO */}
+                        <td className="px-3 py-3 font-semibold text-amber-700">
+                          {!esIngreso && pvp
+                            ? `$${(pvp * k.cantidad).toLocaleString('es-CO')}`
+                            : '—'}
+                        </td>
+                        <td className="px-3 py-3 text-xs text-stone-400 font-mono">{(k as any).pedido_ref ?? '—'}</td>
+                        <td className="px-3 py-3 text-xs text-stone-400">{(k as any).creado_por ?? '—'}</td>
+                        <td className="px-3 py-3 text-xs text-stone-400">{k.nota ?? '—'}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              <p className="text-xs text-stone-400 p-3">{contableFiltrado.length} registro{contableFiltrado.length !== 1 ? 's' : ''}</p>
             </div>
-            <p className="text-xs text-stone-400 mt-2">
-              {contableFiltrado.length} registro{contableFiltrado.length !== 1 ? 's' : ''}
-            </p>
-          </div>
+          )}
         </div>
       )}
     </div>
   );
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // PÁGINA PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2973,7 +3236,12 @@ export default function PerfilArtesano() {
   const [error, setError] = useState('');
   const [filtroInventarioProd, setFiltroInventarioProd] = useState<string>('todos');
 
-  const { notificaciones, marcarLeida, marcarTodasLeidas } = useNotificaciones();
+  const {
+  notificaciones,
+  setNotificaciones,
+  marcarLeida,
+  marcarTodasLeidas
+} = useNotificaciones();
 
   const cargarDatos = useCallback(async () => {
     setLoading(true);
@@ -3003,6 +3271,26 @@ export default function PerfilArtesano() {
   }, []);
 
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
+
+  useEffect(() => {
+
+  setNotificaciones(prev => [
+
+    {
+      id: Date.now(),
+      tipo: 'pedido',
+      titulo: 'Pedido de prueba',
+      detalle: 'Cliente compró una alcancía artesanal',
+      fecha: 'Hace un momento',
+      leida: false,
+      ruta: '/pedidos',
+    },
+
+    ...prev
+
+  ]);
+
+}, []);
 
   return (
     <div className="min-h-screen bg-amber-50/60 font-sans text-base">
