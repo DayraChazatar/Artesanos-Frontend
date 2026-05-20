@@ -40,6 +40,7 @@ export interface Producto {
   tallas?: string[];
   cantidad_reservada?: number
   cantidad_disponible?: number
+  visible?: boolean;
 }
 
 export interface Kardex {

@@ -33,18 +33,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// ✅ Fix 1: leer foto desde localStorage con email resuelto
 function mapDjangoUser(data: any, email?: string): User {
   const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const resolvedEmail = email || data.correo || savedUser.email || '';
+  const savedPhoto =
+    localStorage.getItem(`profileImage_${resolvedEmail}`) ||
+    savedUser.profileImage || '';
   return {
     id:           String(data.id),
     name:         data.nombre,
-    email:        email || data.correo || savedUser.email || '',
+    email:        resolvedEmail,
     role:         data.tipo === 'artesano' ? 'artisan' : 'customer',
     phone:        data.telefono ?? '',
-    address:      '',
+    address:      data.direccion ?? '',
     bio:          data.biografia ?? '',
     specialty:    data.especialidad ?? '',
-    profileImage: savedUser.profileImage || '',
+    profileImage: savedPhoto,
   };
 }
 
@@ -64,42 +69,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string): Promise<{ user: User; token: string }> => {
-  const data = await new Promise<any>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${BASE}/login/`);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve(JSON.parse(xhr.responseText));
-      } else {
-        reject(new Error('Error de conexión con el servidor'));
-      }
+    const data = await new Promise<any>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${BASE}/login/`);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(JSON.parse(xhr.responseText));
+        } else {
+          reject(new Error('Error de conexión con el servidor'));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Error de conexión con el servidor'));
+      xhr.send(JSON.stringify({ correo: email, password }));
+    });
+
+    if (!data.success) throw new Error(data.mensaje || 'Credenciales incorrectas');
+
+    const savedPhoto =
+      localStorage.getItem(`profileImage_${email}`) ||
+      localStorage.getItem('profileImage_undefined') ||
+      '';
+
+    const loggedUser: User = {
+      ...mapDjangoUser(data, email),
+      profileImage: savedPhoto,
+      email,
     };
-    xhr.onerror = () => reject(new Error('Error de conexión con el servidor'));
-    xhr.send(JSON.stringify({ correo: email, password }));
-  });
 
-  if (!data.success) throw new Error(data.mensaje || 'Credenciales incorrectas');
+    setUser(loggedUser);
+    localStorage.setItem('user', JSON.stringify(loggedUser));
+    localStorage.setItem('usuario_id', String(data.id));
+    localStorage.setItem('usuario_nombre', data.nombre);
+    if (data.token) localStorage.setItem('token', data.token);
 
-  const savedPhoto =
-    localStorage.getItem(`profileImage_${email}`) ||
-    localStorage.getItem('profileImage_undefined') ||
-    '';
-
-  const loggedUser: User = {
-    ...mapDjangoUser(data, email),
-    profileImage: savedPhoto,
-    email,
+    return { user: loggedUser, token: data.token };
   };
-
-  setUser(loggedUser);
-  localStorage.setItem('user', JSON.stringify(loggedUser));
-  localStorage.setItem('usuario_id', String(data.id));
-  localStorage.setItem('usuario_nombre', data.nombre);
-  if (data.token) localStorage.setItem('token', data.token);
-
-  return { user: loggedUser, token: data.token };
-};
 
   const loginWithGoogle = (googleUser: User) => {
     setUser(googleUser);
@@ -151,6 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('token');
   };
 
+  // ✅ Fix 2: agregar direccion al PATCH
   const updateProfile = async (data: Partial<User>) => {
     if (!user) return;
     const updatedUser = { ...user, ...data };
@@ -164,6 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         telefono:     data.phone     ?? user.phone,
         biografia:    data.bio       ?? user.bio,
         especialidad: data.specialty ?? user.specialty,
+        direccion:    data.address   ?? user.address,  // ✅ agregado
       }),
     });
   };
