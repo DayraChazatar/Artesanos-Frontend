@@ -1185,7 +1185,6 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias, i
     </div>
   );
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // MÓDULO INVENTARIO
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1213,6 +1212,8 @@ function ModuloInventario({
   const [loading, setLoading] = useState(false);
   const [modalProd, setModalProd] = useState<Producto | null>(null);
   const [resumen, setResumen] = useState<ResumenInventario | null>(null);
+  // ── NUEVO: tab activo ────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<'entrada' | 'historial'>('entrada');
 
   const [filtros, setFiltros] = useState({
     desde: '',
@@ -1225,7 +1226,6 @@ function ModuloInventario({
   useEffect(() => {
     if (filtroProductoInicial !== 'todos') {
       setFiltros(prev => ({ ...prev, producto: filtroProductoInicial }));
-      // También selecciona el producto en el formulario si existe
       const prod = productos.find(p => String(p.id) === filtroProductoInicial);
       if (prod?.id) setForm(prev => ({ ...prev, producto: prod.id! }));
       onFiltroUsado?.();
@@ -1243,15 +1243,12 @@ function ModuloInventario({
 
   const productoSeleccionado = productos.find(p => p.id === form.producto);
 
-  // ── Registrar entrada manual ────────────────────────────────────────────
   const handleAdd = async () => {
     if (!form.producto || !form.fecha)
       return showAlert('Producto y fecha son obligatorios', 'error');
-
     const cantidad = parseInt(form.cantidad);
     if (!cantidad || cantidad <= 0)
       return showAlert('La cantidad debe ser mayor a 0', 'error');
-
     setLoading(true);
     try {
       const nuevo = await createKardex({
@@ -1262,17 +1259,11 @@ function ModuloInventario({
         ...(form.precio_pvp ? { precio_pvp: parseFloat(form.precio_pvp) } : {}),
       });
       setKardex(prev => [nuevo, ...prev]);
-
       if (nuevo.stock_resultante !== undefined) {
         setProductos(prev =>
           prev.map(p =>
             p.id === form.producto
-              ? {
-                ...p,
-                cantidad: nuevo.stock_resultante!,
-                // Actualizar precio_pvp si se envió
-                ...(form.precio_pvp ? { precio_pvp: parseFloat(form.precio_pvp) } : {}),
-              }
+              ? { ...p, cantidad: nuevo.stock_resultante!, ...(form.precio_pvp ? { precio_pvp: parseFloat(form.precio_pvp) } : {}) }
               : p
           )
         );
@@ -1280,10 +1271,7 @@ function ModuloInventario({
       try {
         const kardexActualizado = await getKardex();
         setKardex(kardexActualizado);
-      } catch {
-        // Si falla la recarga, el stock del producto ya está actualizado
-      }
-
+      } catch { }
       setForm({ producto: productos[0]?.id ?? 0, fecha: '', cantidad: '', precio_pvp: '', nota: '' });
       showAlert('✓ Entrada registrada correctamente');
     } catch (err: any) {
@@ -1298,7 +1286,6 @@ function ModuloInventario({
   const handleReposicion = async (cantidad: number, nota: string) => {
     if (!modalProd?.id) return;
     const movimiento = await reponerStock({ producto: modalProd.id, cantidad, nota });
-    console.log('MOVIMIENTO RECIBIDO:', movimiento);
     setKardex(prev => [movimiento, ...prev]);
     setProductos(prev =>
       prev.map(p =>
@@ -1307,39 +1294,38 @@ function ModuloInventario({
           : p
       )
     );
-
     try {
       const kardexActualizado = await getKardex();
       setKardex(kardexActualizado);
-    } catch {
-      // Si falla la recarga, no romper la app
-    }
+    } catch { }
     showAlert(`✓ Entrada registrada — nuevo stock: ${movimiento.stock_resultante}`);
   };
 
-  // ── Filtros ─────────────────────────────────────────────────────────────
   const kardexFiltrado = kardex.filter(k => {
     if (!k || !k.tipo) return false;
     if (filtros.desde && k.fecha < filtros.desde) return false;
     if (filtros.hasta && k.fecha > filtros.hasta) return false;
     if (filtros.tipo !== 'todos') {
-      const tipo = String(k.tipo ?? '');
-      if (tipo.toLowerCase() !== filtros.tipo) return false;
+      if (String(k.tipo ?? '').toLowerCase() !== filtros.tipo) return false;
     }
     if (filtros.origen !== 'todos') {
-      const origen = String((k as any).origen ?? '');
-      if (origen !== filtros.origen) return false;
+      if (String((k as any).origen ?? '') !== filtros.origen) return false;
     }
     if (filtros.producto !== 'todos' && String(k.producto) !== filtros.producto) return false;
     return true;
   });
 
-  // ── Valor movido ($) calculado ──────────────────────────────────────────
-  const valorMovido = resumen?.valor_movido ?? 0;
-
   const labelCls = "block text-[10px] font-semibold tracking-widest uppercase text-stone-500 mb-1";
   const inputCls =
     "w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent transition";
+
+  // ── Estilos de tabs — idénticos a ModuloProductos ────────────────────────
+  const tabCls = (t: string) =>
+    `px-4 py-2 rounded-xl text-sm font-semibold transition ${
+      activeTab === t
+        ? 'bg-amber-700 text-white shadow'
+        : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+    }`;
 
   return (
     <div className="space-y-5 font-sans">
@@ -1354,283 +1340,279 @@ function ModuloInventario({
 
       {alert && <Alert msg={alert.msg} type={alert.type} />}
 
-      {/* ── TARJETAS RESUMEN ── */}
-
-
-      {/* ── FORMULARIO ENTRADA MANUAL ── */}
-      <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-6">
-        <h2 className="font-serif text-lg text-amber-800 font-semibold mb-1 flex items-center gap-2">
-          📦 Registrar entrada de mercancía
-        </h2>
-        <p className="text-xs text-stone-400 mb-5">
-          El sistema registra automáticamente el tipo, subtipo y quién lo registró.
-        </p>
-
-        <div className="space-y-4">
-          {/* Producto */}
-          <div>
-            <label className={labelCls}>Producto</label>
-            <select
-              className={inputCls}
-              value={form.producto}
-              onChange={e => setForm({ ...form, producto: Number(e.target.value) })}
-            >
-              {productos.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.nombre} [PROD-{String(p.id).padStart(4, '0')}]
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-wrap gap-4">
-            {/* Cantidad */}
-            <div className="flex-1 min-w-[140px]">
-              <label className={labelCls}>Cantidad <span className="text-red-400">*</span></label>
-              <input
-                type="number"
-                min={1}
-                className={inputCls}
-                placeholder="Ej: 10"
-                value={form.cantidad}
-                onChange={e => setForm({ ...form, cantidad: e.target.value })}
-              />
-            </div>
-
-            {/* Fecha */}
-            <div className="flex-1 min-w-[140px]">
-              <label className={labelCls}>Fecha <span className="text-red-400">*</span></label>
-              <input
-                type="date"
-                className={inputCls}
-                value={form.fecha}
-                onChange={e => setForm({ ...form, fecha: e.target.value })}
-              />
-            </div>
-          </div>
-
-          {/* Nota */}
-          <div>
-            <label className={labelCls}>Nota u observación</label>
-            <input
-              className={inputCls}
-              placeholder="Ej: Compra feria artesanal mayo 2026"
-              value={form.nota}
-              onChange={e => setForm({ ...form, nota: e.target.value })}
-            />
-          </div>
-
-          <button
-            onClick={handleAdd}
-            disabled={loading}
-            className="px-5 py-2 rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-sm font-semibold transition"
-          >
-            {loading ? 'Guardando...' : '✓ Registrar entrada'}
-          </button>
-        </div>
+      {/* ── TABS DE NAVEGACIÓN ── */}
+      <div className="flex gap-3 flex-wrap">
+        <button className={tabCls('entrada')} onClick={() => setActiveTab('entrada')}>
+          📦 Registrar entrada
+        </button>
+        <button className={tabCls('historial')} onClick={() => setActiveTab('historial')}>
+          📊 Historial de movimientos
+        </button>
       </div>
 
-      {/* ── STOCK DEL PRODUCTO ── */}
-      {productoSeleccionado && (() => {
-        const reservado = productoSeleccionado.cantidad_reservada ?? 0;
-        const disponible = productoSeleccionado.cantidad - reservado;
-        const bajo = disponible <= productoSeleccionado.stock_minimo;
-        const alto = productoSeleccionado.stock_maximo > 0 && disponible >= productoSeleccionado.stock_maximo;
+      {/* ══════════════════════════════════════════════════════════════════════
+          TAB 1: REGISTRAR ENTRADA + STOCK
+      ══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'entrada' && (
+        <>
+          {/* ── FORMULARIO ENTRADA MANUAL ── */}
+          <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-6">
+            <h2 className="font-serif text-lg text-amber-800 font-semibold mb-1 flex items-center gap-2">
+              📦 Registrar entrada de mercancía
+            </h2>
+            <p className="text-xs text-stone-400 mb-5">
+              El sistema registra automáticamente el tipo, subtipo y quién lo registró.
+            </p>
 
-        return (
-          <div className={`bg-white rounded-xl border p-5 ${bajo ? 'border-red-200' : alto ? 'border-blue-200' : 'border-amber-100'}`}>
-            <div className="flex items-center justify-between mb-4">
+            <div className="space-y-4">
               <div>
-                <p className="text-sm font-semibold text-stone-700">
-                  📦 Stock de &quot;{productoSeleccionado.nombre.toUpperCase()}&quot;{' '}
-                  <span className="text-xs font-normal text-stone-400">(solo lectura)</span>
-                </p>
-                {bajo && (
-                  <p className="text-xs text-red-500 font-semibold mt-0.5">⚠️ Stock disponible por debajo del mínimo</p>
-                )}
-                {alto && (
-                  <p className="text-xs text-blue-500 font-semibold mt-0.5">📦 Stock en máximo</p>
-                )}
+                <label className={labelCls}>Producto</label>
+                <select
+                  className={inputCls}
+                  value={form.producto}
+                  onChange={e => setForm({ ...form, producto: Number(e.target.value) })}
+                >
+                  {productos.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre} [PROD-{String(p.id).padStart(4, '0')}]
+                    </option>
+                  ))}
+                </select>
               </div>
-              <button
-                onClick={() => setModalProd(productoSeleccionado)}
-                className="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 text-xs font-semibold rounded-lg transition"
-              >
-                + Stock
-              </button>
-            </div>
 
-            <div className="grid grid-cols-5 gap-2 text-center">
-              {[
-                { label: 'Stock Total', value: productoSeleccionado.cantidad, color: 'text-stone-700' },
-                { label: 'Reservado', value: reservado, color: 'text-amber-600' },
-                { label: 'Disponible', value: disponible, color: bajo ? 'text-red-600' : 'text-green-600' },
-                { label: 'Mínimo', value: productoSeleccionado.stock_minimo, color: 'text-stone-400' },
-                { label: 'Máximo', value: productoSeleccionado.stock_maximo || '—', color: 'text-stone-400' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="bg-stone-50 rounded-lg py-3 border border-stone-100">
-                  <p className="text-[9px] uppercase tracking-widest text-stone-400 mb-1">{label}</p>
-                  <p className={`text-xl font-bold ${color}`}>{value}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Barra de stock visual */}
-            {productoSeleccionado.stock_maximo > 0 && (
-              <div className="mt-3">
-                <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${bajo ? 'bg-red-400' : alto ? 'bg-blue-400' : 'bg-green-400'}`}
-                    style={{ width: `${Math.min(100, (disponible / productoSeleccionado.stock_maximo) * 100)}%` }}
+              <div className="flex flex-wrap gap-4">
+                <div className="flex-1 min-w-[140px]">
+                  <label className={labelCls}>Cantidad <span className="text-red-400">*</span></label>
+                  <input
+                    type="number" min={1} className={inputCls} placeholder="Ej: 10"
+                    value={form.cantidad}
+                    onChange={e => setForm({ ...form, cantidad: e.target.value })}
                   />
                 </div>
-                <div className="flex justify-between text-[9px] text-stone-300 mt-0.5">
-                  <span>0</span>
-                  <span>{productoSeleccionado.stock_maximo}</span>
+                <div className="flex-1 min-w-[140px]">
+                  <label className={labelCls}>Fecha <span className="text-red-400">*</span></label>
+                  <input
+                    type="date" className={inputCls}
+                    value={form.fecha}
+                    onChange={e => setForm({ ...form, fecha: e.target.value })}
+                  />
                 </div>
               </div>
+
+              <div>
+                <label className={labelCls}>Nota u observación</label>
+                <input
+                  className={inputCls} placeholder="Ej: Compra feria artesanal mayo 2026"
+                  value={form.nota}
+                  onChange={e => setForm({ ...form, nota: e.target.value })}
+                />
+              </div>
+
+              <button
+                onClick={handleAdd} disabled={loading}
+                className="px-5 py-2 rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-sm font-semibold transition"
+              >
+                {loading ? 'Guardando...' : '✓ Registrar entrada'}
+              </button>
+            </div>
+          </div>
+
+          {/* ── STOCK DEL PRODUCTO ── */}
+          {productoSeleccionado && (() => {
+            const reservado = productoSeleccionado.cantidad_reservada ?? 0;
+            const disponible = productoSeleccionado.cantidad - reservado;
+            const bajo = disponible <= productoSeleccionado.stock_minimo;
+            const alto = productoSeleccionado.stock_maximo > 0 && disponible >= productoSeleccionado.stock_maximo;
+
+            return (
+              <div className={`bg-white rounded-xl border p-5 ${bajo ? 'border-red-200' : alto ? 'border-blue-200' : 'border-amber-100'}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-semibold text-stone-700">
+                      📦 Stock de &quot;{productoSeleccionado.nombre.toUpperCase()}&quot;{' '}
+                      <span className="text-xs font-normal text-stone-400">(solo lectura)</span>
+                    </p>
+                    {bajo && <p className="text-xs text-red-500 font-semibold mt-0.5">⚠️ Stock disponible por debajo del mínimo</p>}
+                    {alto && <p className="text-xs text-blue-500 font-semibold mt-0.5">📦 Stock en máximo</p>}
+                  </div>
+                  <button
+                    onClick={() => setModalProd(productoSeleccionado)}
+                    className="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 text-xs font-semibold rounded-lg transition"
+                  >
+                    + Stock
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-5 gap-2 text-center">
+                  {[
+                    { label: 'Stock Total', value: productoSeleccionado.cantidad, color: 'text-stone-700' },
+                    { label: 'Reservado', value: reservado, color: 'text-amber-600' },
+                    { label: 'Disponible', value: disponible, color: bajo ? 'text-red-600' : 'text-green-600' },
+                    { label: 'Mínimo', value: productoSeleccionado.stock_minimo, color: 'text-stone-400' },
+                    { label: 'Máximo', value: productoSeleccionado.stock_maximo || '—', color: 'text-stone-400' },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="bg-stone-50 rounded-lg py-3 border border-stone-100">
+                      <p className="text-[9px] uppercase tracking-widest text-stone-400 mb-1">{label}</p>
+                      <p className={`text-xl font-bold ${color}`}>{value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {productoSeleccionado.stock_maximo > 0 && (
+                  <div className="mt-3">
+                    <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${bajo ? 'bg-red-400' : alto ? 'bg-blue-400' : 'bg-green-400'}`}
+                        style={{ width: `${Math.min(100, (disponible / productoSeleccionado.stock_maximo) * 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[9px] text-stone-300 mt-0.5">
+                      <span>0</span>
+                      <span>{productoSeleccionado.stock_maximo}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          TAB 2: HISTORIAL DE MOVIMIENTOS
+      ══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'historial' && (
+        <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-6">
+          <h2 className="font-serif text-lg text-amber-800 font-semibold mb-4 flex items-center gap-2">
+            📊 Historial de movimientos
+          </h2>
+
+          {/* Filtros */}
+          <div className="flex flex-wrap items-center gap-2 mb-4 text-xs text-stone-500">
+            <span className="font-semibold">FILTRAR:</span>
+            <span>Desde</span>
+            <input type="date"
+              className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-amber-300"
+              value={filtros.desde} onChange={e => setFiltros({ ...filtros, desde: e.target.value })} />
+            <span>Hasta</span>
+            <input type="date"
+              className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-amber-300"
+              value={filtros.hasta} onChange={e => setFiltros({ ...filtros, hasta: e.target.value })} />
+            <select className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none"
+              value={filtros.tipo} onChange={e => setFiltros({ ...filtros, tipo: e.target.value })}>
+              <option value="todos">Tipo: todos</option>
+              <option value="entrada">Entrada</option>
+              <option value="salida">Salida</option>
+              <option value="devolucion">Devolución</option>
+              <option value="ajuste">Ajuste</option>
+            </select>
+            <select className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none"
+              value={filtros.origen} onChange={e => setFiltros({ ...filtros, origen: e.target.value })}>
+              <option value="todos">Origen: todos</option>
+              <option value="manual">Manual</option>
+              <option value="automatico">Automático</option>
+            </select>
+            <select className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none"
+              value={filtros.producto} onChange={e => setFiltros({ ...filtros, producto: e.target.value })}>
+              <option value="todos">Producto: todos</option>
+              {productos.map(p => (
+                <option key={p.id} value={String(p.id)}>{p.nombre}</option>
+              ))}
+            </select>
+            {Object.values(filtros).some(v => v !== 'todos' && v !== '') && (
+              <button
+                onClick={() => setFiltros({ desde: '', hasta: '', tipo: 'todos', origen: 'todos', producto: 'todos' })}
+                className="px-2 py-1 rounded-lg bg-stone-100 text-stone-500 text-xs hover:bg-stone-200 transition"
+              >
+                ✕ Limpiar
+              </button>
             )}
           </div>
-        );
-      })()}
 
-      {/* ── HISTORIAL ── */}
-      <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-6">
-        <h2 className="font-serif text-lg text-amber-800 font-semibold mb-4 flex items-center gap-2">
-          📊 Historial de movimientos
-        </h2>
-
-        {/* Filtros */}
-        <div className="flex flex-wrap items-center gap-2 mb-4 text-xs text-stone-500">
-          <span className="font-semibold">FILTRAR:
-          </span>
-          <span>Desde</span>
-          <input type="date"
-            className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-amber-300"
-            value={filtros.desde} onChange={e => setFiltros({ ...filtros, desde: e.target.value })} />
-          <span>Hasta</span>
-          <input type="date"
-            className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-amber-300"
-            value={filtros.hasta} onChange={e => setFiltros({ ...filtros, hasta: e.target.value })} />
-
-          <select className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none"
-            value={filtros.tipo} onChange={e => setFiltros({ ...filtros, tipo: e.target.value })}>
-            <option value="todos">Tipo: todos</option>
-            <option value="entrada">Entrada</option>
-            <option value="salida">Salida</option>
-            <option value="devolucion">Devolución</option>
-            <option value="ajuste">Ajuste</option>
-          </select>
-
-          <select className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none"
-            value={filtros.origen} onChange={e => setFiltros({ ...filtros, origen: e.target.value })}>
-            <option value="todos">Origen: todos</option>
-            <option value="manual">Manual</option>
-            <option value="automatico">Automático</option>
-          </select>
-
-          <select className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none"
-            value={filtros.producto} onChange={e => setFiltros({ ...filtros, producto: e.target.value })}>
-            <option value="todos">Producto: todos</option>
-            {productos.map(p => (
-              <option key={p.id} value={String(p.id)}>{p.nombre}</option>
-            ))}
-          </select>
-
-          {/* Botón limpiar filtros */}
-          {Object.values(filtros).some(v => v !== 'todos' && v !== '') && (
-            <button
-              onClick={() => setFiltros({ desde: '', hasta: '', tipo: 'todos', origen: 'todos', producto: 'todos' })}
-              className="px-2 py-1 rounded-lg bg-stone-100 text-stone-500 text-xs hover:bg-stone-200 transition"
-            >
-              ✕ Limpiar
-            </button>
-          )}
-        </div>
-
-        {/* Tabla */}
-        <div className="overflow-x-auto rounded-xl border border-amber-100">
-          <table className="w-full text-sm">
-            <thead className="bg-amber-50 text-[10px] font-semibold uppercase tracking-widest text-amber-900/60">
-              <tr>
-                <th className="px-3 py-3 text-left">Fecha</th>
-                <th className="px-3 py-3 text-left">Producto</th>
-                <th className="px-3 py-3 text-left">Tipo</th>
-                <th className="px-3 py-3 text-left">Subtipo</th>
-                <th className="px-3 py-3 text-left">Origen</th>
-                <th className="px-3 py-3 text-left">Cant.</th>
-                <th className="px-3 py-3 text-left">Stock Result.</th>
-                <th className="px-3 py-3 text-left">PVP Unit.</th>
-                <th className="px-3 py-3 text-left">Pedido ref.</th>
-                <th className="px-3 py-3 text-left">Registrado por</th>
-                <th className="px-3 py-3 text-left">Nota</th>
-              </tr>
-            </thead>
-            <tbody>
-              {kardexFiltrado.length === 0 ? (
+          {/* Tabla */}
+          <div className="overflow-x-auto rounded-xl border border-amber-100">
+            <table className="w-full text-sm">
+              <thead className="bg-amber-50 text-[10px] font-semibold uppercase tracking-widest text-amber-900/60">
                 <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center text-stone-400 text-sm">
-                    Sin movimientos
-                  </td>
+                  <th className="px-3 py-3 text-left">Fecha</th>
+                  <th className="px-3 py-3 text-left">Producto</th>
+                  <th className="px-3 py-3 text-left">Tipo</th>
+                  <th className="px-3 py-3 text-left">Subtipo</th>
+                  <th className="px-3 py-3 text-left">Origen</th>
+                  <th className="px-3 py-3 text-left">Cant.</th>
+                  <th className="px-3 py-3 text-left">Stock Result.</th>
+                  <th className="px-3 py-3 text-left">PVP Unit.</th>
+                  <th className="px-3 py-3 text-left">Pedido ref.</th>
+                  <th className="px-3 py-3 text-left">Registrado por</th>
+                  <th className="px-3 py-3 text-left">Nota</th>
                 </tr>
-              ) : (
-                kardexFiltrado.map(k => (
-                  <tr key={k.id} className="border-t border-amber-50 hover:bg-amber-50/50 transition">
-                    <td className="px-3 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
-                    <td className="px-3 py-3 font-semibold text-stone-800">{k.producto_nombre}</td>
-                    <td className="px-3 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${(k.tipo as string).toLowerCase() === 'entrada' ? 'bg-green-100 text-green-700' :
-                        (k.tipo as string).toLowerCase() === 'salida' ? 'bg-red-100 text-red-600' :
-                          (k.tipo as string).toLowerCase() === 'devolucion' ? 'bg-blue-100 text-blue-600' :
-                            'bg-stone-100 text-stone-500'
-                        }`}>
-                        {k.tipo}
-                      </span>
+              </thead>
+              <tbody>
+                {kardexFiltrado.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} className="px-4 py-8 text-center text-stone-400 text-sm">
+                      Sin movimientos
                     </td>
-                    <td className="px-3 py-3">
-                      <span className="text-xs text-stone-500 bg-stone-50 px-2 py-0.5 rounded-full border border-stone-100">
-                        {(k as any).subtipo ?? '—'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${(k as any).origen === 'automatico'
-                        ? 'bg-purple-50 text-purple-600'
-                        : 'bg-amber-50 text-amber-600'
-                        }`}>
-                        {(k as any).origen === 'automatico' ? '⚡ auto' : '✍️ manual'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 font-bold text-stone-800">{k.cantidad}</td>
-                    <td className="px-3 py-3 font-semibold text-green-700">{k.stock_resultante}</td>
-                    <td className="px-3 py-3 text-stone-600">
-                      {(k as any).precio_unitario
-                        ? `$${Number((k as any).precio_unitario).toLocaleString()}`
-                        : '—'}
-                    </td>
-                    <td className="px-3 py-3 text-xs text-stone-400 font-mono">
-                      {(k as any).pedido_ref ?? '—'}
-                    </td>
-                    <td className="px-3 py-3 text-xs text-stone-400">
-                      {(k as any).creado_por ?? '—'}
-                    </td>
-                    <td className="px-3 py-3 text-xs text-stone-400">{k.nota ?? '—'}</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  kardexFiltrado.map(k => (
+                    <tr key={k.id} className="border-t border-amber-50 hover:bg-amber-50/50 transition">
+                      <td className="px-3 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
+                      <td className="px-3 py-3 font-semibold text-stone-800">{k.producto_nombre}</td>
+                      <td className="px-3 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          (k.tipo as string).toLowerCase() === 'entrada' ? 'bg-green-100 text-green-700' :
+                          (k.tipo as string).toLowerCase() === 'salida'  ? 'bg-red-100 text-red-600'   :
+                          (k.tipo as string).toLowerCase() === 'devolucion' ? 'bg-blue-100 text-blue-600' :
+                          'bg-stone-100 text-stone-500'
+                        }`}>
+                          {k.tipo}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className="text-xs text-stone-500 bg-stone-50 px-2 py-0.5 rounded-full border border-stone-100">
+                          {(k as any).subtipo ?? '—'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          (k as any).origen === 'automatico'
+                            ? 'bg-purple-50 text-purple-600'
+                            : 'bg-amber-50 text-amber-600'
+                        }`}>
+                          {(k as any).origen === 'automatico' ? '⚡ auto' : '✍️ manual'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 font-bold text-stone-800">{k.cantidad}</td>
+                      <td className="px-3 py-3 font-semibold text-green-700">{k.stock_resultante}</td>
+                      <td className="px-3 py-3 text-stone-600">
+                        {(k as any).precio_unitario
+                          ? `$${Number((k as any).precio_unitario).toLocaleString()}`
+                          : '—'}
+                      </td>
+                      <td className="px-3 py-3 text-xs text-stone-400 font-mono">
+                        {(k as any).pedido_ref ?? '—'}
+                      </td>
+                      <td className="px-3 py-3 text-xs text-stone-400">
+                        {(k as any).creado_por ?? '—'}
+                      </td>
+                      <td className="px-3 py-3 text-xs text-stone-400">{k.nota ?? '—'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
 
-        {/* Contador de resultados */}
-        <p className="text-xs text-stone-400 mt-2">
-          {kardexFiltrado.length} movimiento{kardexFiltrado.length !== 1 ? 's' : ''}
-          {kardexFiltrado.length !== kardex.length && ` de ${kardex.length} total`}
-        </p>
-      </div>
+          <p className="text-xs text-stone-400 mt-2">
+            {kardexFiltrado.length} movimiento{kardexFiltrado.length !== 1 ? 's' : ''}
+            {kardexFiltrado.length !== kardex.length && ` de ${kardex.length} total`}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
-
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 interface DetallePedido {
   id: number;
@@ -1657,18 +1639,16 @@ interface Pedido {
   detalles: DetallePedido[];
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 const ESTADO_COLOR: Record<string, string> = {
   Pendiente: 'bg-yellow-100 text-yellow-700',
   'En proceso': 'bg-orange-100 text-orange-700',
-  Enviado: 'bg-blue-100   text-blue-700',
-  Entregado: 'bg-green-100  text-green-700',
-  Cancelado: 'bg-red-100    text-red-700',
+  Enviado: 'bg-blue-100 text-blue-700',
+  Entregado: 'bg-green-100 text-green-700',
+  Cancelado: 'bg-red-100 text-red-700',
   Devolucion: 'bg-purple-100 text-purple-700',
   'Devolucion solicitada': 'bg-purple-100 text-purple-700',
-  Devuelto: 'bg-teal-100   text-teal-700',
-  Rechazado: 'bg-red-200    text-red-800',
+  Devuelto: 'bg-teal-100 text-teal-700',
+  Rechazado: 'bg-red-200 text-red-800',
 };
 
 const ESTADO_ICONO: Record<string, string> = {
@@ -1683,7 +1663,6 @@ const ESTADO_ICONO: Record<string, string> = {
   Rechazado: '🚫',
 };
 
-/** Transiciones que el artesano puede hacer desde cada estado */
 const SIGUIENTES: Record<string, string[]> = {
   Pendiente: ['En proceso', 'Enviado', 'Cancelado'],
   'En proceso': ['Enviado', 'Cancelado'],
@@ -1698,12 +1677,12 @@ const SIGUIENTES: Record<string, string[]> = {
 
 const BTN_COLOR: Record<string, string> = {
   'En proceso': 'bg-orange-100 text-orange-700 hover:bg-orange-200',
-  Enviado: 'bg-blue-100   text-blue-700   hover:bg-blue-200',
-  Entregado: 'bg-green-100  text-green-700  hover:bg-green-200',
-  Cancelado: 'bg-red-100    text-red-700    hover:bg-red-200',
+  Enviado: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
+  Entregado: 'bg-green-100 text-green-700 hover:bg-green-200',
+  Cancelado: 'bg-red-100 text-red-700 hover:bg-red-200',
   Devolucion: 'bg-purple-100 text-purple-700 hover:bg-purple-200',
-  Devuelto: 'bg-teal-100   text-teal-700   hover:bg-teal-200',
-  Rechazado: 'bg-red-200    text-red-800    hover:bg-red-300',
+  Devuelto: 'bg-teal-100 text-teal-700 hover:bg-teal-200',
+  Rechazado: 'bg-red-200 text-red-800 hover:bg-red-300',
 };
 
 const MENSAJES_ESTADO: Record<string, string> = {
@@ -1715,10 +1694,10 @@ const MENSAJES_ESTADO: Record<string, string> = {
   Devuelto: '↩️ Devolución aprobada — stock repuesto',
   Rechazado: '🚫 Devolución rechazada',
 };
-
 // ─────────────────────────────────────────────────────────────────────────────
 // MÓDULO PEDIDOS 
 // ─────────────────────────────────────────────────────────────────────────────
+
 function ModuloPedidosArtesano({
   productos,
   setProductos,
