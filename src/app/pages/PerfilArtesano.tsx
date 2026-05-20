@@ -9,6 +9,8 @@ import {
   Line, PieChart, Pie, Cell
 } from 'recharts';
 
+
+
 import { useAuth } from '../context/AuthContext';
 import {
   getCategorias, createCategoria, deleteCategoria, updateCategoria,
