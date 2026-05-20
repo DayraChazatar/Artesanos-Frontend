@@ -1,18 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { generarGuiaEnvio } from '../utils/guiaEnvio';
 import {
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  BarChart,
-  Bar,
 } from 'recharts';
 import { Link, useNavigate } from 'react-router-dom';
 import { RefreshCw, Bell, User, House } from 'lucide-react';
