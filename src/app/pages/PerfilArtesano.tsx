@@ -392,21 +392,46 @@ function SidebarNotificaciones({
 // ─────────────────────────────────────────────────────────────────────────────
 // MÓDULO CATÁLOGO
 // ─────────────────────────────────────────────────────────────────────────────
-function ModuloCatalogo({ productos, imagenes }: { productos: Producto[]; imagenes: Record<number, string> }) {
-  const [visibles, setVisibles] = useState<Record<number, boolean>>(() =>
-    Object.fromEntries(productos.map(p => [p.id!, true]))
-  );
+function ModuloCatalogo({
+  productos,
+  imagenes,
+  setProductos,
+}: {
+  productos: Producto[];
+  imagenes: Record<number, string>;
+  setProductos: React.Dispatch<React.SetStateAction<Producto[]>>;
+}) {
+ 
   const [modalImg, setModalImg] = useState<{ nombre: string; src: string } | null>(null);
 
-  useEffect(() => {
-    setVisibles(prev => {
-      const next = { ...prev };
-      productos.forEach(p => { if (p.id !== undefined && !(p.id in next)) next[p.id] = true; });
-      return next;
-    });
-  }, [productos]);
 
-  const toggleVisible = (id: number) => setVisibles(prev => ({ ...prev, [id]: !prev[id] }));
+const toggleVisible = async (id: number) => {
+  const producto = productos.find(p => p.id === id);
+  if (!producto) return;
+
+  const nuevoVisible = !(producto.visible ?? true);
+
+  const res = await fetch(`http://localhost:8000/api/productos/${id}/`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ visible: nuevoVisible }),
+  });
+
+  if (!res.ok) {
+    alert(`No se pudo cambiar la visibilidad. Código: ${res.status}`);
+    return;
+  }
+
+  const actualizado = await res.json();
+
+  setProductos(prev =>
+    prev.map(p =>
+      p.id === id ? { ...p, visible: actualizado.visible } : p
+    )
+  );
+};
 
   return (
     <div className="space-y-5">
@@ -436,7 +461,7 @@ function ModuloCatalogo({ productos, imagenes }: { productos: Producto[]; imagen
             </thead>
             <tbody>
               {productos.map(p => {
-                const esVisible = visibles[p.id!] ?? true;
+              const esVisible = p.visible ?? true;
                 return (
                   <tr key={p.id} className={`border-t border-amber-50 transition ${esVisible ? 'hover:bg-amber-50/50' : 'opacity-40 bg-stone-50'}`}>
                     <td className="px-3 py-3 font-mono text-sm">{p.codigo_barra || '—'}</td>
@@ -2919,7 +2944,13 @@ export default function PerfilArtesano() {
             <Alert msg={error} type="error" />
           ) : (
             <>
-              {tab === 'catalogo' && <ModuloCatalogo productos={productos} imagenes={imagenes} />}
+              {tab === 'catalogo' && (
+  <ModuloCatalogo
+    productos={productos}
+    imagenes={imagenes}
+    setProductos={setProductos}
+  />
+)}
               {tab === 'contable' && <ModuloContable productos={productos} />}
               {tab === 'productos' && (
                 <ModuloProductos
