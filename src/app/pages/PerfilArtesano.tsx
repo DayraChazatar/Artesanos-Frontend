@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { RefreshCw, Bell, User, House } from 'lucide-react';
+import { generarGuiaEnvio } from '../utils/guiaEnvio';
 
 import { useAuth } from '../context/AuthContext';
 import {
@@ -1643,6 +1644,10 @@ interface Pedido {
   fecha: string;
   updated: string;
   detalles: DetallePedido[];
+  numero_guia?: string;
+  transportadora?: string;
+  fecha_envio?: string;
+  fecha_entrega?: string;
 }
 
 const ESTADO_COLOR: Record<string, string> = {
@@ -1703,7 +1708,15 @@ const MENSAJES_ESTADO: Record<string, string> = {
 // ─────────────────────────────────────────────────────────────────────────────
 // MÓDULO PEDIDOS 
 // ─────────────────────────────────────────────────────────────────────────────
-
+const ACCIONES_ARTESANO: Record<string, string[]> = {
+  'Pendiente': ['En proceso'],
+  'En proceso': ['Enviado'],
+  'Enviado': ['Entregado'],
+  'Devolucion solicitada': [
+    'Devolucion aprobada',
+    'Devolucion rechazada'
+  ],
+};
 function ModuloPedidosArtesano({
   productos,
   setProductos,
@@ -1836,12 +1849,14 @@ function ModuloPedidosArtesano({
     'focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition';
 
   // ── Resumen rápido ──────────────────────────────────────────────────────────
-  const resumen = {
-    total: pedidos.length,
-    pendiente: pedidos.filter(p => p.estado === 'Pendiente').length,
-    enviado: pedidos.filter(p => p.estado === 'Enviado').length,
-    entregado: pedidos.filter(p => p.estado === 'Entregado').length,
-  };
+const resumen = {
+  total: pedidos.length,
+  pendiente: pedidos.filter(p => p.estado === 'Pendiente').length,
+  enviado: pedidos.filter(p => p.estado === 'Enviado').length,
+  entregado: pedidos.filter(p => p.estado === 'Entregado').length,
+  devoluciones: pedidos.filter(p => p.estado === 'Devolucion solicitada').length,
+  cancelado: pedidos.filter(p => p.estado === 'Cancelado').length,
+};
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -1868,10 +1883,11 @@ function ModuloPedidosArtesano({
       {/* Tarjetas de resumen */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total', value: resumen.total, color: 'text-stone-700', bg: 'bg-stone-50' },
-          { label: 'Pendiente', value: resumen.pendiente, color: 'text-yellow-700', bg: 'bg-yellow-50' },
-          { label: 'Enviado', value: resumen.enviado, color: 'text-blue-700', bg: 'bg-blue-50' },
-          { label: 'Entregado', value: resumen.entregado, color: 'text-green-700', bg: 'bg-green-50' },
+          { label: 'Total',     value: resumen.total,     color: 'text-stone-700',  bg: 'bg-stone-50' },
+{ label: 'Pendiente', value: resumen.pendiente,  color: 'text-yellow-700', bg: 'bg-yellow-50' },
+{ label: 'Enviado',   value: resumen.enviado,    color: 'text-blue-700',   bg: 'bg-blue-50' },
+{ label: 'Entregado', value: resumen.entregado,  color: 'text-green-700',  bg: 'bg-green-50' },
+{ label: 'Cancelado', value: resumen.cancelado,  color: 'text-red-700',    bg: 'bg-red-50' },
         ].map(card => (
           <div key={card.label} className={`${card.bg} rounded-2xl border border-amber-100 p-4 text-center`}>
             <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
@@ -1903,7 +1919,8 @@ function ModuloPedidosArtesano({
             <option>Cancelado</option>
             <option>Devolucion solicitada</option>
             <option>Devuelto</option>
-            <option>Rechazado</option>
+            <option>Devolucion aprobada</option>
+            <option>Devolucion rechazada</option>
           </select>
           <div className="flex items-center gap-2">
             <span className="text-sm text-stone-500">Desde</span>
@@ -1964,134 +1981,8 @@ function ModuloPedidosArtesano({
                     </td>
                   </tr>
                 ) : pedidosFiltrados.map(pedido => {
-                  const siguientes = SIGUIENTES[pedido.estado] ?? [];
+                (ACCIONES_ARTESANO[pedido.estado] ?? [])
                   const isLoading = loadingId === pedido.id;
-
-                  const generarGuiaPDF = (pedido: Pedido) => {
-  import('jspdf').then(({ jsPDF }: any) => {
-    const doc = new jsPDF({ unit: 'mm', format: 'a5' });
-    const W = doc.internal.pageSize.getWidth();
-
-    // Encabezado
-    doc.setFillColor(180, 83, 9);
-    doc.rect(0, 0, W, 35, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PAKARI SHOP', W / 2, 14, { align: 'center' });
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Artesanías colombianas hechas a mano', W / 2, 21, { align: 'center' });
-    doc.text('www.pakarishop.com', W / 2, 27, { align: 'center' });
-
-    // Título
-    doc.setFillColor(254, 243, 199);
-    doc.rect(0, 35, W, 12, 'F');
-    doc.setTextColor(120, 53, 15);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('GUÍA DE ENVÍO', W / 2, 43, { align: 'center' });
-
-    // Info pedido
-    let y = 55;
-    const half = (W - 16) / 2;
-
-    const infoBox = (label: string, value: string, x: number, yPos: number, w: number) => {
-      doc.setFillColor(245, 245, 244);
-      doc.roundedRect(x, yPos, w, 11, 2, 2, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
-      doc.setTextColor(120, 53, 15);
-      doc.text(label, x + 3, yPos + 4.5);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
-      doc.setTextColor(40, 40, 40);
-      doc.text(value, x + 3, yPos + 9);
-    };
-
-    infoBox('CÓDIGO', pedido.codigo, 8, y, half);
-    infoBox('FECHA', new Date(pedido.fecha).toLocaleDateString('es-CO', {
-      day: '2-digit', month: 'short', year: 'numeric'
-    }), 8 + half + 2, y, half);
-    y += 14;
-    infoBox('ESTADO', pedido.estado, 8, y, W - 16);
-
-    // Destinatario
-    y += 15;
-    doc.setFillColor(180, 83, 9);
-    doc.rect(8, y, W - 16, 6, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('DESTINATARIO', 11, y + 4.2);
-
-    y += 7;
-    doc.setFillColor(255, 255, 255);
-    doc.setDrawColor(217, 119, 6);
-    doc.roundedRect(8, y, W - 16, 26, 2, 2, 'FD');
-    doc.setTextColor(40, 40, 40);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text(pedido.cliente_nombre, 12, y + 7);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.text(`Tel: ${pedido.telefono || 'Sin telefono'}`, 12, y + 13);
-    doc.text(`Dir: ${pedido.direccion || 'Sin direccion'}`, 12, y + 19);
-
-    // Productos
-    y += 30;
-    doc.setFillColor(180, 83, 9);
-    doc.rect(8, y, W - 16, 6, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('PRODUCTOS', 11, y + 4.2);
-
-    y += 7;
-    doc.setFillColor(254, 243, 199);
-    doc.rect(8, y, W - 16, 6, 'F');
-    doc.setTextColor(120, 53, 15);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.5);
-    doc.text('Producto', 11, y + 4.2);
-    doc.text('Cant.', W - 48, y + 4.2);
-    doc.text('Subtotal', W - 28, y + 4.2);
-
-    y += 6;
-    pedido.detalles.forEach((d, i) => {
-      if (i % 2 === 0) {
-        doc.setFillColor(250, 250, 249);
-        doc.rect(8, y, W - 16, 7, 'F');
-      }
-      doc.setTextColor(40, 40, 40);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.text(d.producto_nombre, 11, y + 4.8);
-      doc.text(String(d.cantidad), W - 46, y + 4.8);
-      doc.text(`$${Number(d.subtotal).toLocaleString('es-CO')}`, W - 28, y + 4.8);
-      y += 7;
-    });
-
-    // Total
-    y += 3;
-    doc.setFillColor(180, 83, 9);
-    doc.roundedRect(8, y, W - 16, 10, 2, 2, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('TOTAL:', 11, y + 6.8);
-    doc.text(`$${Number(pedido.total).toLocaleString('es-CO')}`, W - 10, y + 6.8, { align: 'right' });
-
-    // Pie
-    y += 16;
-    doc.setTextColor(160, 160, 160);
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(7);
-    doc.text('Gracias por apoyar a los artesanos locales de Colombia', W / 2, y, { align: 'center' });
-
-    doc.save(`guia-${pedido.codigo}.pdf`);
-  });
-};
 
                   return (
                     <tr key={pedido.id} className="border-t border-amber-50 hover:bg-amber-50/50 transition-colors">
@@ -2122,15 +2013,45 @@ function ModuloPedidosArtesano({
                       <td className="px-4 py-3 font-semibold text-green-700 whitespace-nowrap">
                         ${Number(pedido.total).toLocaleString('es-CO')}
                       </td>
+  
+                      {/* Fecha y guía */}
+                        <td className="px-4 py-3 text-xs whitespace-nowrap">
 
-                     
+                          <div className="text-stone-500">
+                            {new Date(pedido.fecha).toLocaleDateString('es-CO', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
+                          </div>
 
-                      {/* Fecha */}
-                      <td className="px-4 py-3 text-stone-400 text-xs whitespace-nowrap">
-                        {new Date(pedido.fecha).toLocaleDateString('es-CO', {
-                          day: '2-digit', month: 'short', year: 'numeric',
-                        })}
-                      </td>
+                          {pedido.fecha_envio && (
+                            <div className="text-blue-600 mt-1">
+                              🚚 Enviado:
+                              {' '}
+                              {new Date(pedido.fecha_envio).toLocaleDateString('es-CO')}
+                            </div>
+                          )}
+
+                          {pedido.fecha_entrega && (
+                            <div className="text-green-600 mt-1">
+                              ✅ Entregado:
+                              {' '}
+                              {new Date(pedido.fecha_entrega).toLocaleDateString('es-CO')}
+                            </div>
+                          )}
+
+                          {pedido.numero_guia && (
+                            <div className="text-[11px] text-purple-600 font-semibold mt-1">
+                              📦 {pedido.transportadora}
+                              <br />
+                              Guía:
+                              {' '}
+                              {pedido.numero_guia}
+                            </div>
+                          )}
+
+                        </td>
                       {/* Acciones */}
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-2">
@@ -2157,7 +2078,7 @@ function ModuloPedidosArtesano({
 
                           {/* Botón guía PDF */}
                           <button
-                            onClick={() => generarGuiaPDF(pedido)}
+                            onClick={() => generarGuiaEnvio(pedido)}
                             className="px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition w-fit"
                           >
                             📄 Guía PDF
@@ -2953,11 +2874,9 @@ const handleCambiarPassword = async () => {
     }
   };
 
-return (
-    <div className="space-y-5 max-w-2xl mx-auto">
+  return (
+   <div className="space-y-5 max-w-2xl mx-auto">
       {alert && <Alert msg={alert.msg} type={alert.type} />}
-
-      {/* ── BLOQUE PERFIL ── */}
       <div className="bg-white rounded-2xl shadow-sm p-8">
         <div className="flex items-center justify-between mb-8">
           <h2 className="font-serif text-2xl text-amber-800">👤 Perfil del Artesano</h2>
@@ -2971,7 +2890,7 @@ return (
 
         <div className="flex flex-col items-center mb-8">
           <div className="relative">
-            <div className="w-36 h-36 rounded-full border-4 border-amber-200 overflow-hidden bg-amber-50 flex items-center justify-center">
+<div className="w-36 h-36 rounded-full border-4 border-amber-200 overflow-hidden bg-amber-50 flex items-center justify-center">
               {preview || perfil.foto_url ? (
                 <img src={preview || perfil.foto_url} className="w-full h-full object-cover" />
               ) : (
@@ -2993,7 +2912,7 @@ return (
               if (file) { setFotoFile(file); setPreview(URL.createObjectURL(file)); }
             }}
           />
-          <p className="mt-3 font-serif text-2xl font-bold text-stone-800">{perfil.nombre}</p>
+<p className="mt-3 font-serif text-2xl font-bold text-stone-800">{perfil.nombre}</p>
           <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-3 py-1 rounded-full mt-1">🧵 Artesano</span>
         </div>
 
@@ -3040,51 +2959,6 @@ return (
           )}
         </div>
       </div>
-
-      {/* ── BLOQUE CAMBIAR CONTRASEÑA ── */}
-      <div className="bg-white rounded-2xl shadow-sm p-8">
-        <h2 className="font-serif text-2xl text-amber-800 mb-6">🔒 Cambiar Contraseña</h2>
-        <div className="space-y-4">
-          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-            <p className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1">Contraseña actual</p>
-            <input
-              type="password"
-              className={inputCls}
-              value={password.password_actual}
-              onChange={e => setPassword({ ...password, password_actual: e.target.value })}
-              placeholder="Ingresa tu contraseña actual"
-            />
-          </div>
-          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-            <p className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1">Nueva contraseña</p>
-            <input
-              type="password"
-              className={inputCls}
-              value={password.password_nueva}
-              onChange={e => setPassword({ ...password, password_nueva: e.target.value })}
-              placeholder="Mínimo 6 caracteres"
-            />
-          </div>
-          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-            <p className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1">Confirmar nueva contraseña</p>
-            <input
-              type="password"
-              className={inputCls}
-              value={password.password_confirmar}
-              onChange={e => setPassword({ ...password, password_confirmar: e.target.value })}
-              placeholder="Repite la nueva contraseña"
-            />
-          </div>
-          <button
-            onClick={handleCambiarPassword}
-            disabled={loadingPass}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white font-semibold shadow hover:shadow-md transition disabled:opacity-60"
-          >
-            {loadingPass ? 'Actualizando...' : '🔒 Actualizar contraseña'}
-          </button>
-        </div>
-      </div>
-
     </div>
   );
 }

@@ -3,14 +3,25 @@ interface Order {
   date: string;
   total: number;
   status: string;
+
+  numero_guia?: string;
+  transportadora?: string;
+  fecha_envio?: string;
+  fecha_entrega?: string;
+
   items: any[];
-  customer: { name: string; email: string; phone?: string };
+
+  customer: {
+    name: string;
+    email: string;
+    phone?: string;
+  };
 }
 
 export function generarFacturaPDF(order: Order) {
-  if (!order.customer?.name || !order.customer?.email) {
-    throw new Error('La factura no tiene información del cliente');
-  }
+if (!order.customer?.name) {
+  throw new Error('La factura no tiene información del cliente');
+}
 
   const fecha = new Date(order.date).toLocaleDateString('es-CO');
 
@@ -47,8 +58,14 @@ export function generarFacturaPDF(order: Order) {
           <p><strong>Pedido:</strong> #${order.id.slice(-6)}</p>
           <p><strong>Fecha:</strong> ${fecha}</p>
           <p><strong>Estado:</strong> ${order.status}</p>
+
+          ${order.numero_guia ? `<p><strong>Número de guía:</strong> ${order.numero_guia}</p>` : ''}
+          ${order.transportadora ? `<p><strong>Transportadora:</strong> ${order.transportadora}</p>` : ''}
+          ${order.fecha_envio ? `<p><strong>Fecha de envío:</strong> ${new Date(order.fecha_envio).toLocaleDateString('es-CO')}</p>` : ''}
+          ${order.fecha_entrega ? `<p><strong>Fecha de entrega:</strong> ${new Date(order.fecha_entrega).toLocaleDateString('es-CO')}</p>` : ''}
+
           <p><strong>Cliente:</strong> ${order.customer.name}</p>
-          <p><strong>Email:</strong> ${order.customer.email}</p>
+          ${order.customer.email ? `<p><strong>Email:</strong> ${order.customer.email}</p>` : ''}
           ${order.customer.phone ? `<p><strong>Teléfono:</strong> ${order.customer.phone}</p>` : ''}
         </div>
         <table>
