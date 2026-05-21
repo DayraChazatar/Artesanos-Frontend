@@ -94,13 +94,13 @@ export interface Notificacion {
 export function useNotificaciones() {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>(() => {
 
-  const guardadas = localStorage.getItem('notificaciones');
+    const guardadas = localStorage.getItem('notificaciones');
 
-  return guardadas
-    ? JSON.parse(guardadas)
-    : [];
+    return guardadas
+      ? JSON.parse(guardadas)
+      : [];
 
-});
+  });
 
   const cargar = useCallback(async () => {
     try {
@@ -122,12 +122,12 @@ export function useNotificaciones() {
 
   useEffect(() => {
 
-  localStorage.setItem(
-    'notificaciones',
-    JSON.stringify(notificaciones)
-  );
+    localStorage.setItem(
+      'notificaciones',
+      JSON.stringify(notificaciones)
+    );
 
-}, [notificaciones]);
+  }, [notificaciones]);
 
   const marcarLeida = async (id: number) => {
     await fetch(`${BASE}/notificaciones/${id}/leer/`, { method: 'PATCH' });
@@ -140,12 +140,12 @@ export function useNotificaciones() {
   };
 
   return {
-  notificaciones,
-  setNotificaciones,
-  marcarLeida,
-  marcarTodasLeidas,
-  recargar: cargar
-};
+    notificaciones,
+    setNotificaciones,
+    marcarLeida,
+    marcarTodasLeidas,
+    recargar: cargar
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -259,20 +259,20 @@ function Topbar({ noLeidas, onVerPerfil }: { noLeidas: number; onVerPerfil: () =
 
                 </div>
 
-<button
-  onClick={() => { onVerPerfil(); setOpen(false); }}
-  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-stone-700 hover:bg-amber-50 transition"
->
-  <span>👤</span>
-  Perfil Artesano
-</button>
-<button
-  onClick={handleLogout}
-  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
->
-  <span>↩</span>
-  Cerrar Sesión
-</button>
+                <button
+                  onClick={() => { onVerPerfil(); setOpen(false); }}
+                  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-stone-700 hover:bg-amber-50 transition"
+                >
+                  <span>👤</span>
+                  Perfil Artesano
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
+                >
+                  <span>↩</span>
+                  Cerrar Sesión
+                </button>
 
               </div>
             )}
@@ -346,7 +346,7 @@ function SidebarNotificaciones({
       ? notificaciones
       : notificaciones.filter(n => n.tipo === filtro);
 
-    
+
 
   return (
     <aside className="fixed top-16 right-0 bottom-0 z-20 w-64 bg-white border-l border-amber-100 flex flex-col shadow-sm">
@@ -441,12 +441,12 @@ function SidebarNotificaciones({
             </div>
 
           ) : (
-            
+
 
             <>
-             <p className="text-red-500">
-      Total: {filtradas.length}
-    </p>
+              <p className="text-red-500">
+                Total: {filtradas.length}
+              </p>
               {filtradas.filter(n => !n.leida).length > 0 && (
                 <button
                   onClick={marcarTodasLeidas}
@@ -475,8 +475,8 @@ function SidebarNotificaciones({
 
                       <span
                         className={`text-sm font-semibold truncate ${!n.leida
-                            ? 'text-stone-800'
-                            : 'text-stone-400'
+                          ? 'text-stone-800'
+                          : 'text-stone-400'
                           }`}
                       >
                         {n.titulo}
@@ -506,9 +506,9 @@ function SidebarNotificaciones({
               ))}
             </>
           )}
-         </div>
+        </div>
       )}
-      </aside>
+    </aside>
   );
 }
 
@@ -524,21 +524,20 @@ function ModuloCatalogo({
   imagenes: Record<number, string>;
   setProductos: React.Dispatch<React.SetStateAction<Producto[]>>;
 }) {
- 
+
   const [modalImg, setModalImg] = useState<{ nombre: string; src: string } | null>(null);
 
 
-const toggleVisible = async (id: number) => {
+  const toggleVisible = async (id: number) => {
   const producto = productos.find(p => p.id === id);
   if (!producto) return;
 
   const nuevoVisible = !(producto.visible ?? true);
 
-  const res = await fetch(`http://localhost:8000/api/productos/${id}/`, {
+  // ← usa el endpoint dedicado, no el PATCH general
+  const res = await fetch(`http://localhost:8000/api/productos/${id}/visibilidad/`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ visible: nuevoVisible }),
   });
 
@@ -548,11 +547,8 @@ const toggleVisible = async (id: number) => {
   }
 
   const actualizado = await res.json();
-
   setProductos(prev =>
-    prev.map(p =>
-      p.id === id ? { ...p, visible: actualizado.visible } : p
-    )
+    prev.map(p => p.id === id ? { ...p, visible: actualizado.visible } : p)
   );
 };
 
@@ -584,7 +580,7 @@ const toggleVisible = async (id: number) => {
             </thead>
             <tbody>
               {productos.map(p => {
-              const esVisible = p.visible ?? true;
+                const esVisible = p.visible ?? true;
                 return (
                   <tr key={p.id} className={`border-t border-amber-50 transition ${esVisible ? 'hover:bg-amber-50/50' : 'opacity-40 bg-stone-50'}`}>
                     <td className="px-3 py-3 font-mono text-sm">{p.codigo_barra || '—'}</td>
@@ -903,8 +899,9 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias, i
           formData.append('precio_pvp', String((prod as any).precio_pvp));
         }
 
-        if (prod.categoria) {
-          formData.append('categoria', String(prod.categoria));
+        const categoriaId = categorias[0]?.id;
+        if (categoriaId) {
+          formData.append('categoria', String(categoriaId));
         }
 
         formData.append('descuento', String(prod.descuento));
@@ -937,7 +934,7 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias, i
         const nuevoCodigo = generarCodigo(productosActualizados);
         const nuevoLote = generarLote(productosActualizados);
         setProd({
-          codigo_barra: nuevoCodigo, lote: nuevoLote, nombre: '', categoria: null,
+          codigo_barra: nuevoCodigo, lote: nuevoLote, nombre: '', categoria: categorias[0]?.id ?? null,
           precio_neto: 0, iva: 0, descuento: false, valor_descuento: 0,
           cantidad: 0, stock_minimo: 0, stock_maximo: 0,
           artesano: ARTESANO_ID, colores: [], maneja_tallas: false, tallas: [],
@@ -1118,12 +1115,14 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias, i
                   <input className={inputCls} value={prod.nombre}
                     onChange={e => setProd({ ...prod, nombre: e.target.value })} placeholder="Ej: Mochila wayuu" />
                 </Field>
+
                 <Field label="Categoría">
-                  <select className={inputCls} value={prod.categoria ?? ''}
-                    onChange={e => setProd({ ...prod, categoria: e.target.value ? Number(e.target.value) : null })}>
-                    <option value="">— Seleccionar —</option>
-                    {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                  </select>
+                  <div className={`${inputCls} bg-amber-100 cursor-not-allowed text-stone-600`}>
+                    {categorias[0]?.nombre ?? '—'}
+                  </div>
+                  <span className="text-xs text-stone-400">
+                    Asignada automáticamente a tu perfil
+                  </span>
                 </Field>
               </div>
 
@@ -1227,23 +1226,39 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias, i
         </div>
       )}
 
+      {/* DESPUÉS — muestra la categoría del artesano, no permite crear más */}
       {tabLocal === 'categoria' && (
         <div className="bg-white rounded-2xl shadow-sm p-6">
-          <h2 className="font-serif text-xl text-amber-800 mb-5">🏷️ {editandoCatId ? 'Editar' : 'Crear'} Categoría</h2>
-          <div className="space-y-4">
-            <Field label="Nombre *">
-              <input className={inputCls} value={cat.nombre}
-                onChange={e => setCat({ ...cat, nombre: e.target.value })} placeholder="Ej: Bisutería" />
-            </Field>
-            <Field label="Descripción">
-              <textarea className={`${inputCls} min-h-[80px] resize-y`} value={cat.descripcion}
-                onChange={e => setCat({ ...cat, descripcion: e.target.value })} placeholder="Descripción breve..." />
-            </Field>
-            <button onClick={handleAddCategoria} disabled={loading}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white text-sm font-semibold shadow hover:shadow-md transition disabled:opacity-60">
-              {loading ? 'Guardando...' : editandoCatId ? 'Actualizar categoría' : 'Guardar categoría'}
-            </button>
-          </div>
+          <h2 className="font-serif text-xl text-amber-800 mb-5">🏷️ Mi Categoría</h2>
+
+          {categorias.length === 0 ? (
+            <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl text-sm text-orange-700">
+              ⚠️ Aún no tienes una categoría asignada. Contacta al administrador.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Muestra la única categoría del artesano */}
+              <div className="p-5 bg-amber-50 border border-amber-200 rounded-2xl">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-2xl">🏷️</span>
+                  <div>
+                    <p className="font-semibold text-stone-800 text-lg">{categorias[0].nombre}</p>
+                    <p className="text-xs text-amber-600 font-semibold">Tu categoría artesanal</p>
+                  </div>
+                </div>
+                {categorias[0].descripcion && (
+                  <p className="text-sm text-stone-500 mt-2 leading-relaxed">
+                    {categorias[0].descripcion}
+                  </p>
+                )}
+              </div>
+
+              <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700">
+                ℹ️ Cada artesano maneja una única categoría. Tus productos se registran automáticamente bajo <strong>{categorias[0].nombre}</strong>.
+                Si necesitas cambiarla, contacta al administrador.
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1458,7 +1473,7 @@ function ModuloInventario({
     }
     if (filtros.producto !== 'todos' && String(k.producto) !== filtros.producto) return false;
     return true;
-  });
+  })
 
   const labelCls = "block text-[10px] font-semibold tracking-widest uppercase text-stone-500 mb-1";
   const inputCls =
@@ -3034,39 +3049,39 @@ function ModuloPerfil() {
   const [editando, setEditando] = useState(false);
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-const [password, setPassword] = useState({
-  password_actual: '',
-  password_nueva: '',
-  password_confirmar: '',
-});
-const [loadingPass, setLoadingPass] = useState(false);
+  const [password, setPassword] = useState({
+    password_actual: '',
+    password_nueva: '',
+    password_confirmar: '',
+  });
+  const [loadingPass, setLoadingPass] = useState(false);
 
-const handleCambiarPassword = async () => {
-  if (!password.password_actual || !password.password_nueva || !password.password_confirmar)
-    return setAlert({ msg: 'Todos los campos son obligatorios', type: 'error' });
-  if (password.password_nueva !== password.password_confirmar)
-    return setAlert({ msg: 'Las contraseñas nuevas no coinciden', type: 'error' });
-  if (password.password_nueva.length < 6)
-    return setAlert({ msg: 'La contraseña debe tener al menos 6 caracteres', type: 'error' });
+  const handleCambiarPassword = async () => {
+    if (!password.password_actual || !password.password_nueva || !password.password_confirmar)
+      return setAlert({ msg: 'Todos los campos son obligatorios', type: 'error' });
+    if (password.password_nueva !== password.password_confirmar)
+      return setAlert({ msg: 'Las contraseñas nuevas no coinciden', type: 'error' });
+    if (password.password_nueva.length < 6)
+      return setAlert({ msg: 'La contraseña debe tener al menos 6 caracteres', type: 'error' });
 
-  setLoadingPass(true);
-  try {
-    const res = await fetch(`http://localhost:8000/api/perfil/cambiar-password/${artesanoId}/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(password),
-    });
-    const data = await res.json();
-    if (!res.ok) return setAlert({ msg: data.error ?? 'Error al cambiar contraseña', type: 'error' });
-    setPassword({ password_actual: '', password_nueva: '', password_confirmar: '' });
-    setAlert({ msg: '✓ Contraseña actualizada correctamente', type: 'success' });
-    setTimeout(() => setAlert(null), 3000);
-  } catch {
-    setAlert({ msg: 'Error de conexión', type: 'error' });
-  } finally {
-    setLoadingPass(false);
-  }
-};
+    setLoadingPass(true);
+    try {
+      const res = await fetch(`http://localhost:8000/api/perfil/cambiar-password/${artesanoId}/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(password),
+      });
+      const data = await res.json();
+      if (!res.ok) return setAlert({ msg: data.error ?? 'Error al cambiar contraseña', type: 'error' });
+      setPassword({ password_actual: '', password_nueva: '', password_confirmar: '' });
+      setAlert({ msg: '✓ Contraseña actualizada correctamente', type: 'success' });
+      setTimeout(() => setAlert(null), 3000);
+    } catch {
+      setAlert({ msg: 'Error de conexión', type: 'error' });
+    } finally {
+      setLoadingPass(false);
+    }
+  };
 
 
   useEffect(() => {
@@ -3108,7 +3123,7 @@ const handleCambiarPassword = async () => {
     }
   };
 
-return (
+  return (
     <div className="space-y-5 max-w-2xl mx-auto">
       {alert && <Alert msg={alert.msg} type={alert.type} />}
 
@@ -3255,11 +3270,11 @@ export default function PerfilArtesano() {
   const [filtroInventarioProd, setFiltroInventarioProd] = useState<string>('todos');
 
   const {
-  notificaciones,
-  setNotificaciones,
-  marcarLeida,
-  marcarTodasLeidas
-} = useNotificaciones();
+    notificaciones,
+    setNotificaciones,
+    marcarLeida,
+    marcarTodasLeidas
+  } = useNotificaciones();
 
   const cargarDatos = useCallback(async () => {
     setLoading(true);
@@ -3292,30 +3307,30 @@ export default function PerfilArtesano() {
 
   useEffect(() => {
 
-  setNotificaciones(prev => [
+    setNotificaciones(prev => [
 
-    {
-      id: Date.now(),
-      tipo: 'pedido',
-      titulo: 'Pedido de prueba',
-      detalle: 'Cliente compró una alcancía artesanal',
-      fecha: 'Hace un momento',
-      leida: false,
-      ruta: '/pedidos',
-    },
+      {
+        id: Date.now(),
+        tipo: 'pedido',
+        titulo: 'Pedido de prueba',
+        detalle: 'Cliente compró una alcancía artesanal',
+        fecha: 'Hace un momento',
+        leida: false,
+        ruta: '/pedidos',
+      },
 
-    ...prev
+      ...prev
 
-  ]);
+    ]);
 
-}, []);
+  }, []);
 
   return (
     <div className="min-h-screen bg-amber-50/60 font-sans text-base">
-<Topbar 
-  noLeidas={notificaciones.filter(n => !n.leida).length}
-  onVerPerfil={() => setTab('perfil')}
-/>
+      <Topbar
+        noLeidas={notificaciones.filter(n => !n.leida).length}
+        onVerPerfil={() => setTab('perfil')}
+      />
       <Sidebar active={tab} onChange={setTab} />
       <SidebarNotificaciones
         notificaciones={notificaciones}
@@ -3337,14 +3352,14 @@ export default function PerfilArtesano() {
             <Alert msg={error} type="error" />
           ) : (
             <>
-            {tab === 'perfil' && <ModuloPerfil />}
+              {tab === 'perfil' && <ModuloPerfil />}
               {tab === 'catalogo' && (
-  <ModuloCatalogo
-    productos={productos}
-    imagenes={imagenes}
-    setProductos={setProductos}
-  />
-)}
+                <ModuloCatalogo
+                  productos={productos}
+                  imagenes={imagenes}
+                  setProductos={setProductos}
+                />
+              )}
               {tab === 'contable' && <ModuloContable productos={productos} />}
               {tab === 'productos' && (
                 <ModuloProductos

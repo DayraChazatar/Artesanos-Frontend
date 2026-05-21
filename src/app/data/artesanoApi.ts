@@ -217,3 +217,21 @@ export const descargarReporte = async (
   a.remove();
   window.URL.revokeObjectURL(blobUrl);
 };
+
+export const getCategoriasDisponibles = () =>
+  request<Categoria[]>(`${BASE}/categorias/?disponibles=true`);
+
+// ── Registro artesano con categoría ──────────────────────────────────────────
+export const registrarArtesano = (data: {
+  nombre: string;
+  correo: string;
+  password: string;
+  telefono?: string;
+  especialidad?: string;
+  biografia?: string;
+  categoria_id: number;
+}) =>
+  request<{ id: number; nombre: string; tipo: string }>(
+    `${BASE}/registro-artesano/`,
+    { method: 'POST', body: JSON.stringify(data) }
+  );
