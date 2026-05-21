@@ -61,21 +61,13 @@ interface Order {
 function mapBackendOrder(p: any): Order {
   return {
     id: String(p.id),
-
     codigo: p.codigo,
-
     date: p.fecha,
-
     total: Number(p.total),
-
     status: p.estado,
-
     numero_guia: p.numero_guia,
-
     transportadora: p.transportadora,
-
     fecha_envio: p.fecha_envio,
-
     fecha_entrega: p.fecha_entrega,
 
     items: (p.detalles ?? []).map((d: any) => ({
@@ -85,10 +77,10 @@ function mapBackendOrder(p: any): Order {
       price: Number(d.precio),
     })),
 
-    customer: {
-      name: p.cliente_nombre ?? '',
-      email: '',
-      phone: p.telefono ?? '',
+    customer: {                                                    // ← 4 espacios
+      name:  p.cliente_nombre || `Cliente #${p.cliente}`,
+      email: p.cliente_email  || '',
+      phone: p.telefono       || '',
     },
   };
 }
@@ -510,13 +502,15 @@ function OrderCard({
         </button>
 
         {/* Cancelar */}
-        {![
-          'Cancelado',
-          'Entregado',
-          'Devolucion solicitada',
-          'Devuelto',
-          'Rechazado',
-        ].includes(order.status) && (
+          {![
+            'Cancelado',
+            'En proceso',
+            'Enviado',
+            'Entregado',
+            'Devolucion solicitada',
+            'Devuelto',
+            'Rechazado',
+          ].includes(order.status) && (
           <button
             onClick={onCancel}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 transition text-xs font-medium"
@@ -642,10 +636,11 @@ const handleReturnSubmit = async (reason: string, photos: string[]) => {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Token ${token}` } : {}),
         },
-        body: JSON.stringify({
-          pedido_id:    Number(returnOrder.id),
-          estado_nuevo: 'Devolucion solicitada',
-        }),
+          body: JSON.stringify({
+            pedido_id:      Number(returnOrder.id),
+            estado_nuevo:   'Devolucion solicitada',
+            admin_response: reason,  // ← envía el motivo al backend
+          }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? 'Error al solicitar devolución'); return; }
@@ -915,7 +910,7 @@ const handleReturnSubmit = async (reason: string, photos: string[]) => {
                             className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                             <FileText className="h-4 w-4" />
                           </button>
-                          {!['Cancelado','Entregado','Devolucion solicitada','Devuelto','Rechazado'].includes(order.status) && (
+                          {!['Cancelado','En proceso','Enviado','Entregado','Devolucion solicitada','Devuelto','Rechazado'].includes(order.status) && (
                             <button onClick={() => handleCancelOrder(order.id)} title="Cancelar Pedido"
                               className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors">
                               <XCircle className="h-4 w-4" />

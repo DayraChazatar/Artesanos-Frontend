@@ -97,13 +97,13 @@ export interface Notificacion {
 export function useNotificaciones() {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>(() => {
 
-  const guardadas = localStorage.getItem('notificaciones');
+    const guardadas = localStorage.getItem('notificaciones');
 
-  return guardadas
-    ? JSON.parse(guardadas)
-    : [];
+    return guardadas
+      ? JSON.parse(guardadas)
+      : [];
 
-});
+  });
 
   const cargar = useCallback(async () => {
     try {
@@ -125,12 +125,12 @@ export function useNotificaciones() {
 
   useEffect(() => {
 
-  localStorage.setItem(
-    'notificaciones',
-    JSON.stringify(notificaciones)
-  );
+    localStorage.setItem(
+      'notificaciones',
+      JSON.stringify(notificaciones)
+    );
 
-}, [notificaciones]);
+  }, [notificaciones]);
 
   const marcarLeida = async (id: number) => {
     await fetch(`${BASE}/notificaciones/${id}/leer/`, { method: 'PATCH' });
@@ -143,12 +143,12 @@ export function useNotificaciones() {
   };
 
   return {
-  notificaciones,
-  setNotificaciones,
-  marcarLeida,
-  marcarTodasLeidas,
-  recargar: cargar
-};
+    notificaciones,
+    setNotificaciones,
+    marcarLeida,
+    marcarTodasLeidas,
+    recargar: cargar
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -262,20 +262,20 @@ function Topbar({ noLeidas, onVerPerfil }: { noLeidas: number; onVerPerfil: () =
 
                 </div>
 
-<button
-  onClick={() => { onVerPerfil(); setOpen(false); }}
-  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-stone-700 hover:bg-amber-50 transition"
->
-  <span>👤</span>
-  Perfil Artesano
-</button>
-<button
-  onClick={handleLogout}
-  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
->
-  <span>↩</span>
-  Cerrar Sesión
-</button>
+                <button
+                  onClick={() => { onVerPerfil(); setOpen(false); }}
+                  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-stone-700 hover:bg-amber-50 transition"
+                >
+                  <span>👤</span>
+                  Perfil Artesano
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
+                >
+                  <span>↩</span>
+                  Cerrar Sesión
+                </button>
 
               </div>
             )}
@@ -349,7 +349,7 @@ function SidebarNotificaciones({
       ? notificaciones
       : notificaciones.filter(n => n.tipo === filtro);
 
-    
+
 
   return (
     <aside className="fixed top-16 right-0 bottom-0 z-20 w-64 bg-white border-l border-amber-100 flex flex-col shadow-sm">
@@ -444,12 +444,12 @@ function SidebarNotificaciones({
             </div>
 
           ) : (
-            
+
 
             <>
-             <p className="text-red-500">
-      Total: {filtradas.length}
-    </p>
+              <p className="text-red-500">
+                Total: {filtradas.length}
+              </p>
               {filtradas.filter(n => !n.leida).length > 0 && (
                 <button
                   onClick={marcarTodasLeidas}
@@ -478,8 +478,8 @@ function SidebarNotificaciones({
 
                       <span
                         className={`text-sm font-semibold truncate ${!n.leida
-                            ? 'text-stone-800'
-                            : 'text-stone-400'
+                          ? 'text-stone-800'
+                          : 'text-stone-400'
                           }`}
                       >
                         {n.titulo}
@@ -509,9 +509,9 @@ function SidebarNotificaciones({
               ))}
             </>
           )}
-         </div>
+        </div>
       )}
-      </aside>
+    </aside>
   );
 }
 
@@ -527,37 +527,37 @@ function ModuloCatalogo({
   imagenes: Record<number, string>;
   setProductos: React.Dispatch<React.SetStateAction<Producto[]>>;
 }) {
- 
+
   const [modalImg, setModalImg] = useState<{ nombre: string; src: string } | null>(null);
 
 
-const toggleVisible = async (id: number) => {
-  const producto = productos.find(p => p.id === id);
-  if (!producto) return;
+  const toggleVisible = async (id: number) => {
+    const producto = productos.find(p => p.id === id);
+    if (!producto) return;
 
-  const nuevoVisible = !(producto.visible ?? true);
+    const nuevoVisible = !(producto.visible ?? true);
 
-  const res = await fetch(`http://localhost:8000/api/productos/${id}/`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ visible: nuevoVisible }),
-  });
+    const res = await fetch(`http://localhost:8000/api/productos/${id}/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ visible: nuevoVisible }),
+    });
 
-  if (!res.ok) {
-    alert(`No se pudo cambiar la visibilidad. Código: ${res.status}`);
-    return;
-  }
+    if (!res.ok) {
+      alert(`No se pudo cambiar la visibilidad. Código: ${res.status}`);
+      return;
+    }
 
-  const actualizado = await res.json();
+    const actualizado = await res.json();
 
-  setProductos(prev =>
-    prev.map(p =>
-      p.id === id ? { ...p, visible: actualizado.visible } : p
-    )
-  );
-};
+    setProductos(prev =>
+      prev.map(p =>
+        p.id === id ? { ...p, visible: actualizado.visible } : p
+      )
+    );
+  };
 
   return (
     <div className="space-y-5">
@@ -587,7 +587,7 @@ const toggleVisible = async (id: number) => {
             </thead>
             <tbody>
               {productos.map(p => {
-              const esVisible = p.visible ?? true;
+                const esVisible = p.visible ?? true;
                 return (
                   <tr key={p.id} className={`border-t border-amber-50 transition ${esVisible ? 'hover:bg-amber-50/50' : 'opacity-40 bg-stone-50'}`}>
                     <td className="px-3 py-3 font-mono text-sm">{p.codigo_barra || '—'}</td>
@@ -1813,15 +1813,15 @@ const ESTADO_ICONO: Record<string, string> = {
 };
 
 const SIGUIENTES: Record<string, string[]> = {
-  Pendiente: ['En proceso', 'Enviado', 'Cancelado'],
-  'En proceso': ['Enviado', 'Cancelado'],
-  Enviado: ['Entregado', 'Cancelado'],
-  Entregado: ['Devolucion'],
-  'Devolucion solicitada': ['Devuelto', 'Rechazado'],
-  Cancelado: [],
-  Devolucion: [],
-  Devuelto: [],
-  Rechazado: [],
+  'Pendiente': ['En proceso'],
+  'En proceso': ['Enviado'],
+  'Enviado': ['Entregado'],
+  'Entregado': [],
+  'Devolucion solicitada': ['Devolucion aprobada', 'Devolucion rechazada'],
+  'Cancelado': [],
+  'Devolucion aprobada': [],
+  'Devolucion rechazada': [],
+  'Devuelto': [],
 };
 
 const BTN_COLOR: Record<string, string> = {
@@ -1873,6 +1873,8 @@ function ModuloPedidosArtesano({
   const [filtroHasta, setFiltroHasta] = useState('');
   const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
+  const [devolucionSeleccionada, setDevolucionSeleccionada] = useState<Pedido | null>(null);
+  const [pedidoExpandido, setPedidoExpandido] = useState<number | null>(null);
 
   const showAlert = (msg: string, type: 'success' | 'error' = 'success') => {
     setAlert({ msg, type });
@@ -1929,12 +1931,6 @@ function ModuloPedidosArtesano({
         return;
       }
 
-      // Actualizar estado del pedido en el frontend
-      setPedidos(prev =>
-        prev.map(p => p.id === pedido.id ? { ...p, estado: estadoNuevo } : p)
-      );
-
-      // Actualizar stock de los productos afectados en el frontend
       if (data.stock_actual !== undefined) {
         const productosAfectados = new Set(pedido.detalles.map(d => d.producto));
         setProductos(prev =>
@@ -1953,12 +1949,12 @@ function ModuloPedidosArtesano({
       }
 
       showAlert(MENSAJES_ESTADO[estadoNuevo] ?? 'Estado actualizado');
+      await fetchPedidos();
 
-      // ← AGREGAR AQUÍ
       try {
         const kardexActualizado = await getKardex();
         setKardex(kardexActualizado);
-      } catch { /* silencioso */ }
+      } catch { }
 
     } catch {
       showAlert('Error de conexión con el servidor', 'error');
@@ -1987,14 +1983,14 @@ function ModuloPedidosArtesano({
     'focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition';
 
   // ── Resumen rápido ──────────────────────────────────────────────────────────
-const resumen = {
-  total: pedidos.length,
-  pendiente: pedidos.filter(p => p.estado === 'Pendiente').length,
-  enviado: pedidos.filter(p => p.estado === 'Enviado').length,
-  entregado: pedidos.filter(p => p.estado === 'Entregado').length,
-  devoluciones: pedidos.filter(p => p.estado === 'Devolucion solicitada').length,
-  cancelado: pedidos.filter(p => p.estado === 'Cancelado').length,
-};
+  const resumen = {
+    total: pedidos.length,
+    pendiente: pedidos.filter(p => p.estado === 'Pendiente').length,
+    enviado: pedidos.filter(p => p.estado === 'Enviado').length,
+    entregado: pedidos.filter(p => p.estado === 'Entregado').length,
+    devoluciones: pedidos.filter(p => p.estado === 'Devolucion solicitada').length,
+    cancelado: pedidos.filter(p => p.estado === 'Cancelado').length,
+  };
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -2021,11 +2017,11 @@ const resumen = {
       {/* Tarjetas de resumen */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total',     value: resumen.total,     color: 'text-stone-700',  bg: 'bg-stone-50' },
-{ label: 'Pendiente', value: resumen.pendiente,  color: 'text-yellow-700', bg: 'bg-yellow-50' },
-{ label: 'Enviado',   value: resumen.enviado,    color: 'text-blue-700',   bg: 'bg-blue-50' },
-{ label: 'Entregado', value: resumen.entregado,  color: 'text-green-700',  bg: 'bg-green-50' },
-{ label: 'Cancelado', value: resumen.cancelado,  color: 'text-red-700',    bg: 'bg-red-50' },
+          { label: 'Total', value: resumen.total, color: 'text-stone-700', bg: 'bg-stone-50' },
+          { label: 'Pendiente', value: resumen.pendiente, color: 'text-yellow-700', bg: 'bg-yellow-50' },
+          { label: 'Enviado', value: resumen.enviado, color: 'text-blue-700', bg: 'bg-blue-50' },
+          { label: 'Entregado', value: resumen.entregado, color: 'text-green-700', bg: 'bg-green-50' },
+          { label: 'Cancelado', value: resumen.cancelado, color: 'text-red-700', bg: 'bg-red-50' },
         ].map(card => (
           <div key={card.label} className={`${card.bg} rounded-2xl border border-amber-100 p-4 text-center`}>
             <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
@@ -2119,7 +2115,7 @@ const resumen = {
                     </td>
                   </tr>
                 ) : pedidosFiltrados.map(pedido => {
-                (ACCIONES_ARTESANO[pedido.estado] ?? [])
+                  (ACCIONES_ARTESANO[pedido.estado] ?? [])
                   const isLoading = loadingId === pedido.id;
 
                   const generarGuiaPDF = (pedido: Pedido) => {
@@ -2290,10 +2286,39 @@ const resumen = {
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-2">
 
+                          {/* Estado actual */}
+                          <div className="mb-2">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-semibold
+                            ${pedido.estado === 'Pendiente'
+                                  ? 'bg-yellow-100 text-yellow-700'
+                                  : pedido.estado === 'En proceso'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : pedido.estado === 'Enviado'
+                                      ? 'bg-indigo-100 text-indigo-700'
+                                      : pedido.estado === 'Entregado'
+                                        ? 'bg-green-100 text-green-700'
+                                        : pedido.estado === 'Cancelado'
+                                          ? 'bg-red-100 text-red-700'
+                                          : pedido.estado === 'Devolucion solicitada'
+                                            ? 'bg-purple-100 text-purple-700'
+                                            : pedido.estado === 'Devolucion aprobada'
+                                              ? 'bg-green-100 text-green-700'
+                                              : pedido.estado === 'Devolucion rechazada'
+                                                ? 'bg-red-100 text-red-700'
+                                                : 'bg-gray-100 text-gray-700'
+                                }`}
+                            >
+                              {pedido.estado}
+                            </span>
+                          </div>
+
                           {/* Botones cambio de estado */}
                           <div className="flex flex-wrap gap-1">
                             {(SIGUIENTES[pedido.estado] ?? []).length === 0 ? (
-                              <span className="text-xs text-stone-300 italic">Sin acciones</span>
+                              <span className="text-xs text-gray-400 font-medium">
+                                Estado finalizado
+                              </span>
                             ) : (
                               (SIGUIENTES[pedido.estado] ?? []).map(siguiente => (
                                 <button
@@ -2310,17 +2335,126 @@ const resumen = {
                             )}
                           </div>
 
-                          {/* Botón guía PDF */}
+                          {/* Ver devolución */}
+                          {pedido.estado === 'Devolucion solicitada' && (
+                            <button
+                              onClick={() => setDevolucionSeleccionada(pedido)}
+                              className="px-3 py-1 rounded-lg text-xs font-semibold bg-purple-100 text-purple-700 hover:bg-purple-200 transition w-fit"
+                            >
+                              👁 Ver devolución
+                            </button>
+                          )}
                           <button
-                            onClick={() => generarGuiaEnvio(pedido)}
-                            className="px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition w-fit"
+                            onClick={() =>
+                              setPedidoExpandido(
+                                pedidoExpandido === pedido.id ? null : pedido.id
+                              )
+                            }
+                            className="px-2 py-1 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition w-fit"
                           >
-                            📄 Guía PDF
+                            {pedidoExpandido === pedido.id ? '▲ Ocultar' : '▼ Detalles'}
                           </button>
+                          {!['Cancelado', 'Pendiente', 'En proceso'].includes(pedido.estado) && (
+                            <button
+                              onClick={() => generarGuiaEnvio(pedido)}
+                              className="px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition w-fit"
+                            >
+                              📄 Guía PDF
+                            </button>
+
+                          )}
 
                         </div>
                       </td>
+                      {pedidoExpandido === pedido.id && (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="bg-amber-50/30 px-6 py-5 border-b"
+                          >
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                              {/* PRODUCTOS */}
+                              <div className="bg-white rounded-2xl border p-4 shadow-sm">
+
+                                <h3 className="font-bold text-stone-700 mb-3">
+                                  📦 Productos
+                                </h3>
+
+                                <div className="space-y-2">
+
+                                  {pedido.detalles.map((d, idx) => (
+
+                                    <div
+                                      key={idx}
+                                      className="flex justify-between text-sm border-b pb-2"
+                                    >
+                                      <span>{d.producto_nombre}</span>
+
+                                      <span>x{d.cantidad}</span>
+                                    </div>
+
+                                  ))}
+
+                                </div>
+
+                              </div>
+
+                              {/* INFORMACIÓN */}
+                              <div className="bg-white rounded-2xl border p-4 shadow-sm">
+
+                                <h3 className="font-bold text-stone-700 mb-3">
+                                  📋 Información
+                                </h3>
+
+                                <div className="space-y-2 text-sm">
+
+                                  <p>
+                                    <span className="font-semibold">
+                                      Cliente:
+                                    </span>{' '}
+
+                                    {pedido.cliente_nombre}
+                                  </p>
+
+                                  <p>
+                                    <span className="font-semibold">
+                                      Estado:
+                                    </span>{' '}
+
+                                    {pedido.estado}
+                                  </p>
+
+                                  <p>
+                                    <span className="font-semibold">
+                                      Total:
+                                    </span>{' '}
+
+                                    ${pedido.total}
+                                  </p>
+
+                                  {pedido.numero_guia && (
+                                    <p>
+                                      <span className="font-semibold">
+                                        Guía:
+                                      </span>{' '}
+
+                                      {pedido.numero_guia}
+                                    </p>
+                                  )}
+
+                                </div>
+
+                              </div>
+
+                            </div>
+
+                          </td>
+                        </tr>
+                      )}
                     </tr>
+
                   );
                 })}
               </tbody>
@@ -2328,6 +2462,74 @@ const resumen = {
           </div>
         )}
       </div>
+
+      {devolucionSeleccionada && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+
+          <div className="bg-white rounded-2xl p-6 w-[600px] max-h-[90vh] overflow-y-auto shadow-2xl">
+
+            {/* HEADER */}
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xl font-bold text-gray-800">
+                Detalle devolución
+              </h2>
+
+              <button
+                onClick={() => setDevolucionSeleccionada(null)}
+                className="text-gray-400 hover:text-black text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* ESTADO */}
+            <div className="mb-4">
+              <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-semibold">
+                {devolucionSeleccionada.estado}
+              </span>
+            </div>
+
+            {/* MOTIVO */}
+            <div className="mb-5">
+              <h3 className="font-semibold text-gray-700 mb-2">
+                Motivo
+              </h3>
+
+              <div className="bg-gray-50 border rounded-xl p-4 text-sm text-gray-700">
+                {(devolucionSeleccionada as any).devolucion?.motivo || 'Sin motivo'}
+              </div>
+            </div>
+
+            {/* BOTONES */}
+            <div className="flex justify-end gap-3">
+
+              <button
+                onClick={() => {
+                  actualizarEstado(devolucionSeleccionada!, 'Devolucion rechazada');
+                  setDevolucionSeleccionada(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-red-100 text-red-700 hover:bg-red-200 transition"
+              >
+                Rechazar
+              </button>
+
+              <button
+                onClick={() => {
+                  actualizarEstado(devolucionSeleccionada!, 'Devolucion aprobada');
+                  setDevolucionSeleccionada(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-green-100 text-green-700 hover:bg-green-200 transition"
+              >
+                Aprobar
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
     </div>
   );
 }
@@ -3053,39 +3255,39 @@ function ModuloPerfil() {
   const [editando, setEditando] = useState(false);
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
-const [password, setPassword] = useState({
-  password_actual: '',
-  password_nueva: '',
-  password_confirmar: '',
-});
-const [loadingPass, setLoadingPass] = useState(false);
+  const [password, setPassword] = useState({
+    password_actual: '',
+    password_nueva: '',
+    password_confirmar: '',
+  });
+  const [loadingPass, setLoadingPass] = useState(false);
 
-const handleCambiarPassword = async () => {
-  if (!password.password_actual || !password.password_nueva || !password.password_confirmar)
-    return setAlert({ msg: 'Todos los campos son obligatorios', type: 'error' });
-  if (password.password_nueva !== password.password_confirmar)
-    return setAlert({ msg: 'Las contraseñas nuevas no coinciden', type: 'error' });
-  if (password.password_nueva.length < 6)
-    return setAlert({ msg: 'La contraseña debe tener al menos 6 caracteres', type: 'error' });
+  const handleCambiarPassword = async () => {
+    if (!password.password_actual || !password.password_nueva || !password.password_confirmar)
+      return setAlert({ msg: 'Todos los campos son obligatorios', type: 'error' });
+    if (password.password_nueva !== password.password_confirmar)
+      return setAlert({ msg: 'Las contraseñas nuevas no coinciden', type: 'error' });
+    if (password.password_nueva.length < 6)
+      return setAlert({ msg: 'La contraseña debe tener al menos 6 caracteres', type: 'error' });
 
-  setLoadingPass(true);
-  try {
-    const res = await fetch(`http://localhost:8000/api/perfil/cambiar-password/${artesanoId}/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(password),
-    });
-    const data = await res.json();
-    if (!res.ok) return setAlert({ msg: data.error ?? 'Error al cambiar contraseña', type: 'error' });
-    setPassword({ password_actual: '', password_nueva: '', password_confirmar: '' });
-    setAlert({ msg: '✓ Contraseña actualizada correctamente', type: 'success' });
-    setTimeout(() => setAlert(null), 3000);
-  } catch {
-    setAlert({ msg: 'Error de conexión', type: 'error' });
-  } finally {
-    setLoadingPass(false);
-  }
-};
+    setLoadingPass(true);
+    try {
+      const res = await fetch(`http://localhost:8000/api/perfil/cambiar-password/${artesanoId}/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(password),
+      });
+      const data = await res.json();
+      if (!res.ok) return setAlert({ msg: data.error ?? 'Error al cambiar contraseña', type: 'error' });
+      setPassword({ password_actual: '', password_nueva: '', password_confirmar: '' });
+      setAlert({ msg: '✓ Contraseña actualizada correctamente', type: 'success' });
+      setTimeout(() => setAlert(null), 3000);
+    } catch {
+      setAlert({ msg: 'Error de conexión', type: 'error' });
+    } finally {
+      setLoadingPass(false);
+    }
+  };
 
 
   useEffect(() => {
@@ -3128,7 +3330,7 @@ const handleCambiarPassword = async () => {
   };
 
   return (
-   <div className="space-y-5 max-w-2xl mx-auto">
+    <div className="space-y-5 max-w-2xl mx-auto">
       {alert && <Alert msg={alert.msg} type={alert.type} />}
       <div className="bg-white rounded-2xl shadow-sm p-8">
         <div className="flex items-center justify-between mb-8">
@@ -3143,7 +3345,7 @@ const handleCambiarPassword = async () => {
 
         <div className="flex flex-col items-center mb-8">
           <div className="relative">
-<div className="w-36 h-36 rounded-full border-4 border-amber-200 overflow-hidden bg-amber-50 flex items-center justify-center">
+            <div className="w-36 h-36 rounded-full border-4 border-amber-200 overflow-hidden bg-amber-50 flex items-center justify-center">
               {preview || perfil.foto_url ? (
                 <img src={preview || perfil.foto_url} className="w-full h-full object-cover" />
               ) : (
@@ -3165,7 +3367,7 @@ const handleCambiarPassword = async () => {
               if (file) { setFotoFile(file); setPreview(URL.createObjectURL(file)); }
             }}
           />
-<p className="mt-3 font-serif text-2xl font-bold text-stone-800">{perfil.nombre}</p>
+          <p className="mt-3 font-serif text-2xl font-bold text-stone-800">{perfil.nombre}</p>
           <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-3 py-1 rounded-full mt-1">🧵 Artesano</span>
         </div>
 
@@ -3227,11 +3429,11 @@ export default function PerfilArtesano() {
   const [filtroInventarioProd, setFiltroInventarioProd] = useState<string>('todos');
 
   const {
-  notificaciones,
-  setNotificaciones,
-  marcarLeida,
-  marcarTodasLeidas
-} = useNotificaciones();
+    notificaciones,
+    setNotificaciones,
+    marcarLeida,
+    marcarTodasLeidas
+  } = useNotificaciones();
 
   const cargarDatos = useCallback(async () => {
     setLoading(true);
@@ -3264,30 +3466,30 @@ export default function PerfilArtesano() {
 
   useEffect(() => {
 
-  setNotificaciones(prev => [
+    setNotificaciones(prev => [
 
-    {
-      id: Date.now(),
-      tipo: 'pedido',
-      titulo: 'Pedido de prueba',
-      detalle: 'Cliente compró una alcancía artesanal',
-      fecha: 'Hace un momento',
-      leida: false,
-      ruta: '/pedidos',
-    },
+      {
+        id: Date.now(),
+        tipo: 'pedido',
+        titulo: 'Pedido de prueba',
+        detalle: 'Cliente compró una alcancía artesanal',
+        fecha: 'Hace un momento',
+        leida: false,
+        ruta: '/pedidos',
+      },
 
-    ...prev
+      ...prev
 
-  ]);
+    ]);
 
-}, []);
+  }, []);
 
   return (
     <div className="min-h-screen bg-amber-50/60 font-sans text-base">
-<Topbar 
-  noLeidas={notificaciones.filter(n => !n.leida).length}
-  onVerPerfil={() => setTab('perfil')}
-/>
+      <Topbar
+        noLeidas={notificaciones.filter(n => !n.leida).length}
+        onVerPerfil={() => setTab('perfil')}
+      />
       <Sidebar active={tab} onChange={setTab} />
       <SidebarNotificaciones
         notificaciones={notificaciones}
@@ -3309,14 +3511,14 @@ export default function PerfilArtesano() {
             <Alert msg={error} type="error" />
           ) : (
             <>
-            {tab === 'perfil' && <ModuloPerfil />}
+              {tab === 'perfil' && <ModuloPerfil />}
               {tab === 'catalogo' && (
-  <ModuloCatalogo
-    productos={productos}
-    imagenes={imagenes}
-    setProductos={setProductos}
-  />
-)}
+                <ModuloCatalogo
+                  productos={productos}
+                  imagenes={imagenes}
+                  setProductos={setProductos}
+                />
+              )}
               {tab === 'contable' && <ModuloContable productos={productos} />}
               {tab === 'productos' && (
                 <ModuloProductos
