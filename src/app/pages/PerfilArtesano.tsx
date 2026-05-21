@@ -98,10 +98,11 @@ export function useNotificaciones() {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>(() => {
 
     const guardadas = localStorage.getItem('notificaciones');
+    const guardadas = localStorage.getItem('notificaciones');
 
-    return guardadas
-      ? JSON.parse(guardadas)
-      : [];
+      return guardadas
+        ? JSON.parse(guardadas)
+        : [];
 
   });
 
@@ -532,32 +533,29 @@ function ModuloCatalogo({
 
 
   const toggleVisible = async (id: number) => {
-    const producto = productos.find(p => p.id === id);
-    if (!producto) return;
+  const producto = productos.find(p => p.id === id);
+  if (!producto) return;
 
     const nuevoVisible = !(producto.visible ?? true);
 
-    const res = await fetch(`http://localhost:8000/api/productos/${id}/`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ visible: nuevoVisible }),
-    });
+  const res = await fetch(`http://localhost:8000/api/productos/${id}/`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ visible: nuevoVisible }),
+  });
 
     if (!res.ok) {
       alert(`No se pudo cambiar la visibilidad. Código: ${res.status}`);
       return;
     }
 
-    const actualizado = await res.json();
-
-    setProductos(prev =>
-      prev.map(p =>
-        p.id === id ? { ...p, visible: actualizado.visible } : p
-      )
-    );
-  };
+  const actualizado = await res.json();
+  setProductos(prev =>
+    prev.map(p => p.id === id ? { ...p, visible: actualizado.visible } : p)
+  );
+};
 
   return (
     <div className="space-y-5">
@@ -906,8 +904,9 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias, i
           formData.append('precio_pvp', String((prod as any).precio_pvp));
         }
 
-        if (prod.categoria) {
-          formData.append('categoria', String(prod.categoria));
+        const categoriaId = categorias[0]?.id;
+        if (categoriaId) {
+          formData.append('categoria', String(categoriaId));
         }
 
         formData.append('descuento', String(prod.descuento));
@@ -940,7 +939,7 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias, i
         const nuevoCodigo = generarCodigo(productosActualizados);
         const nuevoLote = generarLote(productosActualizados);
         setProd({
-          codigo_barra: nuevoCodigo, lote: nuevoLote, nombre: '', categoria: null,
+          codigo_barra: nuevoCodigo, lote: nuevoLote, nombre: '', categoria: categorias[0]?.id ?? null,
           precio_neto: 0, iva: 0, descuento: false, valor_descuento: 0,
           cantidad: 0, stock_minimo: 0, stock_maximo: 0,
           artesano: ARTESANO_ID, colores: [], maneja_tallas: false, tallas: [],
@@ -1121,12 +1120,14 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias, i
                   <input className={inputCls} value={prod.nombre}
                     onChange={e => setProd({ ...prod, nombre: e.target.value })} placeholder="Ej: Mochila wayuu" />
                 </Field>
+
                 <Field label="Categoría">
-                  <select className={inputCls} value={prod.categoria ?? ''}
-                    onChange={e => setProd({ ...prod, categoria: e.target.value ? Number(e.target.value) : null })}>
-                    <option value="">— Seleccionar —</option>
-                    {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                  </select>
+                  <div className={`${inputCls} bg-amber-100 cursor-not-allowed text-stone-600`}>
+                    {categorias[0]?.nombre ?? '—'}
+                  </div>
+                  <span className="text-xs text-stone-400">
+                    Asignada automáticamente a tu perfil
+                  </span>
                 </Field>
               </div>
 
@@ -1230,23 +1231,39 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias, i
         </div>
       )}
 
+      {/* DESPUÉS — muestra la categoría del artesano, no permite crear más */}
       {tabLocal === 'categoria' && (
         <div className="bg-white rounded-2xl shadow-sm p-6">
-          <h2 className="font-serif text-xl text-amber-800 mb-5">🏷️ {editandoCatId ? 'Editar' : 'Crear'} Categoría</h2>
-          <div className="space-y-4">
-            <Field label="Nombre *">
-              <input className={inputCls} value={cat.nombre}
-                onChange={e => setCat({ ...cat, nombre: e.target.value })} placeholder="Ej: Bisutería" />
-            </Field>
-            <Field label="Descripción">
-              <textarea className={`${inputCls} min-h-[80px] resize-y`} value={cat.descripcion}
-                onChange={e => setCat({ ...cat, descripcion: e.target.value })} placeholder="Descripción breve..." />
-            </Field>
-            <button onClick={handleAddCategoria} disabled={loading}
-              className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white text-sm font-semibold shadow hover:shadow-md transition disabled:opacity-60">
-              {loading ? 'Guardando...' : editandoCatId ? 'Actualizar categoría' : 'Guardar categoría'}
-            </button>
-          </div>
+          <h2 className="font-serif text-xl text-amber-800 mb-5">🏷️ Mi Categoría</h2>
+
+          {categorias.length === 0 ? (
+            <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl text-sm text-orange-700">
+              ⚠️ Aún no tienes una categoría asignada. Contacta al administrador.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Muestra la única categoría del artesano */}
+              <div className="p-5 bg-amber-50 border border-amber-200 rounded-2xl">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-2xl">🏷️</span>
+                  <div>
+                    <p className="font-semibold text-stone-800 text-lg">{categorias[0].nombre}</p>
+                    <p className="text-xs text-amber-600 font-semibold">Tu categoría artesanal</p>
+                  </div>
+                </div>
+                {categorias[0].descripcion && (
+                  <p className="text-sm text-stone-500 mt-2 leading-relaxed">
+                    {categorias[0].descripcion}
+                  </p>
+                )}
+              </div>
+
+              <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700">
+                ℹ️ Cada artesano maneja una única categoría. Tus productos se registran automáticamente bajo <strong>{categorias[0].nombre}</strong>.
+                Si necesitas cambiarla, contacta al administrador.
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1461,7 +1478,7 @@ function ModuloInventario({
     }
     if (filtros.producto !== 'todos' && String(k.producto) !== filtros.producto) return false;
     return true;
-  });
+  })
 
   const labelCls = "block text-[10px] font-semibold tracking-widest uppercase text-stone-500 mb-1";
   const inputCls =
