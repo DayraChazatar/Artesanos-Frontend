@@ -98,7 +98,7 @@ export function useNotificaciones() {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>(() => {
 
     const guardadas = localStorage.getItem('notificaciones');
-    const guardadas = localStorage.getItem('notificaciones');
+    
 
       return guardadas
         ? JSON.parse(guardadas)
