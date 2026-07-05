@@ -38,17 +38,17 @@ export function Catalog() {
     )
   ];
 
-const prices = allProducts.map(p => p.precio_final ?? 0);
-const rawMaxPrice = prices.length > 0 ? Math.max(...prices) : 1000000;
-const minProductPrice = 0;
-const maxProductPrice = Math.ceil(rawMaxPrice / 50000) * 50000;
-const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
+  const prices = allProducts.map(p => p.precio_final ?? 0);
+  const rawMaxPrice = prices.length > 0 ? Math.max(...prices) : 1000000;
+  const minProductPrice = 0;
+  const maxProductPrice = Math.ceil(rawMaxPrice / 50000) * 50000;
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000000]);
 
-useEffect(() => {
-  if (maxProductPrice > 0) {
-    setPriceRange([0, maxProductPrice]);
-  }
-}, [maxProductPrice]);
+  useEffect(() => {
+    if (maxProductPrice > 0) {
+      setPriceRange([0, maxProductPrice]);
+    }
+  }, [maxProductPrice]);
   // ── Favoritos ──────────────────────────────────────────────────────────────
   const favKey = `favorites_${user?.email}`;
   const [favorites, setFavorites] = useState<string[]>(() => {
@@ -71,12 +71,12 @@ useEffect(() => {
       toast.success('Eliminado de favoritos');
     } else {
       const newFav = {
-  id: product.id,
-  name: product.nombre,
-  price: product.precio_final,
-  image: product.imagen_url,
-  artisan: product.artesano_nombre,
-};
+        id: product.id,
+        name: product.nombre,
+        price: product.precio_final,
+        image: product.imagen_url,
+        artisan: product.artesano_nombre,
+      };
       localStorage.setItem(favKey, JSON.stringify([...saved, newFav]));
       setFavorites(prev => [...prev, product.id]);
       toast.success('Guardado en favoritos ❤️');
@@ -105,7 +105,8 @@ useEffect(() => {
 
   const isArtisan = user?.role === 'artisan';
   const isCustomer = user?.role === 'customer';
-  const canEditProduct = (product: any) => isArtisan && product.createdBy === user?.id;
+  const canEditProduct = (product: any) =>
+    isArtisan && product.artesano === user?.id;
 
   const getStockLabel = (stock: number) => {
     if (stock === 0) return { label: 'Agotado', color: 'bg-red-100 text-red-700' };
@@ -113,7 +114,45 @@ useEffect(() => {
     if (stock <= 10) return { label: 'Poco stock', color: 'bg-yellow-100 text-yellow-700' };
     return null;
   };
+  const toggleVisibilidad = async (productoId: number) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/productos/${productoId}/visibilidad/`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({}),
+        }
+      );
 
+      if (!response.ok) {
+        alert(`No se pudo cambiar la visibilidad. Código: ${response.status}`);
+        return;
+      }
+
+      const data = await response.json();
+
+      setProductos(prev =>
+        prev.map(product =>
+          product.id === productoId
+            ? { ...product, visible: data.visible }
+            : product
+        )
+      );
+
+      toast.success(
+        data.visible
+          ? 'Producto visible en catálogo'
+          : 'Producto ocultado del catálogo'
+      );
+
+    } catch (error) {
+      console.error(error);
+      toast.error('Error al cambiar visibilidad');
+    }
+  };;
   return (
     <div className="py-8 bg-gray-50 min-h-[calc(100vh-4rem)]">
       <div className="container mx-auto px-4">
@@ -250,7 +289,7 @@ useEffect(() => {
                             <img
                               src={product.imagen_url || 'https://via.placeholder.com/400x300'}
                               alt={product.nombre}
-                              className="w-full h-60 object-cover group-hover:scale-105 transition-transform duration-500"
+                              className="w-full h-60 object-contain bg-white group-hover:scale-105 transition-transform duration-500"
                             />
                             {/* Badge oferta / stock */}
                             {tieneDescuento ? (
@@ -285,6 +324,8 @@ useEffect(() => {
                             )}
                           </div>
 
+
+
                           <CardContent className="p-5">
                             <div className="mb-3">
                               <span className="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-medium">
@@ -298,17 +339,17 @@ useEffect(() => {
                                 {discountedPrice ? (
                                   <>
                                     <span className="text-gray-400 line-through text-lg font-medium">
-                                      ${Number(product.precio_final).toLocaleString('es-CO')}
+                                      ${Number(product.precio_pvp).toLocaleString('es-CO')}
                                     </span>
-                                    <span className="text-red-600 font-black text-3xl leading-none">
+                                    <span className="text-orange-600 font-black text-3xl leading-none">
                                       ${discountedPrice.toLocaleString('es-CO')}
                                     </span>
                                   </>
                                 ) : (
-                                  <span className="text-orange-600 font-black text-3xl leading-none">
-                                    ${Number(product.precio_final).toLocaleString('es-CO')}
-                                  </span>
-                                )}
+                                <span className="text-orange-600 font-black text-3xl leading-none">
+                                  ${Number(product.precio_pvp).toLocaleString('es-CO')}
+                                </span>
+                              )}
                               </div>
                               {product.cantidad_disponible === 0 && (
                                 <span className="text-xs text-red-600 font-semibold bg-red-100 px-3 py-1 rounded-full">
@@ -322,14 +363,36 @@ useEffect(() => {
                         </Card>
                       </Link>
 
-                      {/* Botón editar artesano */}
+                      {/* Botones artesano */}
                       {canEditProduct(product) && (
-                        <Link to={`/producto/editar/${product.id}`}>
-                          <Button size="sm"
-                            className="absolute top-3 right-3 bg-white hover:bg-gray-100 text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg rounded-full">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </Link>
+                        <div className="absolute top-3 right-3 flex gap-2">
+
+                          {/* Editar */}
+                          <Link to={`/producto/editar/${product.id}`}>
+                            <Button
+                              size="sm"
+                              className="bg-white hover:bg-gray-100 text-gray-700 shadow-lg rounded-full"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </Link>
+
+                          {/* Visible / Oculto */}
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              toggleVisibilidad(product.id);
+                            }}
+                            className={`px-3 py-2 rounded-full text-xs font-semibold shadow-lg
+        ${product.visible
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-red-100 text-red-700'
+                              }`}
+                          >
+                            {product.visible ? 'Visible' : 'Oculto'}
+                          </button>
+
+                        </div>
                       )}
                     </div>
                   );

@@ -804,22 +804,18 @@ const HEX_MAP: Record<string, string> = Object.fromEntries(
 );
 
 function generarCodigo(productos: Producto[]): string {
-  const ultimo = productos
-    .map(p => p.codigo_barra).filter(c => c?.startsWith('PROD-'))
-    .map(c => parseInt(c!.replace('PROD-', '')) || 0)
-    .sort((a, b) => b - a)[0] ?? 0;
-  return `PROD-${String(ultimo + 1).padStart(4, '0')}`;
+  // Genera un código único basado en timestamp para evitar duplicados globales
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `PROD-${timestamp}${random}`;
 }
 
 function generarLote(productos: Producto[]): string {
   const hoy = new Date();
   const anio = hoy.getFullYear();
   const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-  const ultimo = productos
-    .map(p => p.lote).filter(l => l?.match(/^\d{6}-\d{4}$/))
-    .map(l => parseInt(l!.split('-')[1]) || 0)
-    .sort((a, b) => b - a)[0] ?? 0;
-  return `${anio}${mes}-${String(ultimo + 1).padStart(4, '0')}`;
+  const timestamp = Date.now().toString().slice(-4);
+  return `${anio}${mes}-${timestamp}`;
 }
 
 function ModuloProductos({ productos, setProductos, categorias, setCategorias, imagenes, setImagenes, onIrAInventario }: {
@@ -1052,7 +1048,7 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias, i
 
       {alert && <Alert msg={alert.msg} type={alert.type} />}
       <div className="flex gap-3 flex-wrap">
-        <button className={tabCls('categoria')} onClick={() => setTabLocal('categoria')}>🏷️ Nueva Categoría</button>
+        <button className={tabCls('categoria')} onClick={() => setTabLocal('categoria')}>🏷️Mi Categoría</button>
         <button className={tabCls('producto')} onClick={() => setTabLocal('producto')}>➕ Nuevo Producto</button>
         <button className={tabCls('lista')} onClick={() => setTabLocal('lista')}>📋 Ver todo</button>
       </div>
@@ -1125,6 +1121,107 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias, i
                   </span>
                 </Field>
               </div>
+
+              {/* ── COLORES ── */}
+<div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+  <p className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-3">🎨 Colores disponibles</p>
+  <div className="flex gap-2 items-center mb-3">
+    <input
+      type="color"
+      ref={colorPickerRef}
+      onChange={handlePickerChange}
+      defaultValue="#c8a96e"
+      className="w-10 h-10 rounded cursor-pointer border border-amber-200"
+    />
+    <input
+      ref={colorNombreRef}
+      onChange={handleNombreChange}
+      placeholder="Ej. Rojo, Azul marino..."
+      className={`${inputCls} flex-1`}
+    />
+    <button
+      type="button"
+      onClick={handleAgregarColor}
+      className="px-4 py-2 rounded-xl bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 transition"
+    >
+      + Agregar
+    </button>
+  </div>
+  {(prod.colores ?? []).length === 0 ? (
+    <p className="text-xs text-stone-400">Sin colores agregados aún</p>
+  ) : (
+    <div className="flex flex-wrap gap-2">
+      {(prod.colores ?? []).map((c, i) => (
+        <span key={i} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border border-amber-200 bg-white">
+          <span className="w-3 h-3 rounded-full border border-stone-200" style={{ background: c.hex }} />
+          {c.nombre}
+          <button
+            type="button"
+            onClick={() => setProd(prev => ({ ...prev, colores: prev.colores?.filter((_, j) => j !== i) }))}
+            className="text-stone-400 hover:text-red-500 transition ml-1"
+          >
+            ✕
+          </button>
+        </span>
+      ))}
+    </div>
+  )}
+</div>
+
+{/* ── TALLAS ── */}
+<div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+  <label className="flex items-center gap-2 text-sm cursor-pointer mb-3">
+    <input
+      type="checkbox"
+      checked={prod.maneja_tallas ?? false}
+      onChange={e => setProd({ ...prod, maneja_tallas: e.target.checked, tallas: [] })}
+      className="w-4 h-4 accent-orange-600"
+    />
+    <span className="font-semibold text-amber-800">¿Maneja tallas?</span>
+  </label>
+  {prod.maneja_tallas && (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input
+          id="input-talla"
+          placeholder="Ej. S, M, L, XL, 38..."
+          className={`${inputCls} flex-1`}
+        />
+        <button
+          type="button"
+          onClick={() => {
+            const input = document.getElementById('input-talla') as HTMLInputElement;
+            const talla = input?.value.trim();
+            if (!talla) return;
+            setProd(prev => ({ ...prev, tallas: [...(prev.tallas ?? []), talla] }));
+            input.value = '';
+          }}
+          className="px-4 py-2 rounded-xl bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 transition"
+        >
+          + Agregar
+        </button>
+      </div>
+      {(prod.tallas ?? []).length === 0 ? (
+        <p className="text-xs text-stone-400">Sin tallas agregadas aún</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {(prod.tallas ?? []).map((t, i) => (
+            <span key={i} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border border-amber-200 bg-white">
+              {t}
+              <button
+                type="button"
+                onClick={() => setProd(prev => ({ ...prev, tallas: prev.tallas?.filter((_, j) => j !== i) }))}
+                className="text-stone-400 hover:text-red-500 transition ml-1"
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )}
+</div>
 
               <div className="flex flex-wrap gap-4">
                 <Field label="Precio neto *">
@@ -1229,7 +1326,6 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias, i
       {/* DESPUÉS — muestra la categoría del artesano, no permite crear más */}
       {tabLocal === 'categoria' && (
         <div className="bg-white rounded-2xl shadow-sm p-6">
-          <h2 className="font-serif text-xl text-amber-800 mb-5">🏷️ Mi Categoría</h2>
 
           {categorias.length === 0 ? (
             <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl text-sm text-orange-700">
@@ -2348,12 +2444,13 @@ function ModuloReportes({
     setVista(prev => ({ ...prev, [tab]: prev[tab] === 'tabla' ? 'dashboard' : 'tabla' }));
 
   const hoy = new Date().toISOString().split('T')[0];
-  const filtroVacio = { categoria: '', producto: '', desde: '', hasta: '' };
+  const filtroVacio = {producto: '', desde: '', hasta: '' };
+  const filtroInventarioVacio = { producto: '', desde: '', hasta: '', tipo: 'todos', subtipo: 'todos' };
 
   const [fVentas, setFVentas] = useState({ ...filtroVacio });
-  const [fInventario, setFInventario] = useState({ ...filtroVacio });
+  const [fInventario, setFInventario] = useState({ ...filtroInventarioVacio }); 
   const [fProductos, setFProductos] = useState({ ...filtroVacio });
-  const [fContable, setFContable] = useState({ ...filtroVacio });
+  const [fContable, setFContable] = useState({ ...filtroVacio, subtipo: 'todos' });
   const [errVentas, setErrVentas] = useState({ desde: '', hasta: '' });
   const [errInventario, setErrInventario] = useState({ desde: '', hasta: '' });
   const [errProductos, setErrProductos] = useState({ desde: '', hasta: '' });
@@ -2383,27 +2480,29 @@ function ModuloReportes({
   const kardexVentas = kardex.filter(k => String((k as any).subtipo ?? '').toLowerCase() === 'venta');
 
   const ventasFiltradas = kardexVentas.filter(k => {
-    const { categoria, producto, desde, hasta } = fVentas;
+    const { producto, desde, hasta } = fVentas;
     if (!enRango(k.fecha, desde, hasta)) return false;
-    const prod = productos.find(p => p.id === k.producto);
-    if (categoria && prod?.categoria_nombre !== categoria) return false;
     if (producto && String(k.producto) !== producto) return false;
     return true;
   });
 
-  const inventarioFiltrado = kardex.filter(k => {
-    const { categoria, producto, desde, hasta } = fInventario;
-    if (!enRango(k.fecha, desde, hasta)) return false;
-    const prod = productos.find(p => p.id === k.producto);
-    if (categoria && prod?.categoria_nombre !== categoria) return false;
-    if (producto && String(k.producto) !== producto) return false;
-    return true;
-  });
+
+
+const inventarioFiltrado = kardex.filter(k => {
+  const { producto, desde, hasta, tipo, subtipo } = fInventario;
+  if (!enRango(k.fecha, desde, hasta)) return false;
+  if (producto && String(k.producto) !== producto) return false;
+  if (tipo !== 'todos' && String(k.tipo ?? '').toLowerCase() !== tipo) return false;
+  if (subtipo !== 'todos' && String((k as any).subtipo ?? '').toLowerCase() !== subtipo) return false;
+  return true;
+});
+
 
   const productosFiltrados = productos.filter(p => {
-    const { categoria, producto, desde, hasta } = fProductos;
-    if (categoria && p.categoria_nombre !== categoria) return false;
+    const { producto, desde, hasta } = fProductos;
+
     if (producto && String(p.id) !== producto) return false;
+
     if (desde || hasta) {
       const movs = kardex.filter(k => k.producto === p.id);
       if (movs.length > 0) {
@@ -2411,18 +2510,18 @@ function ModuloReportes({
         if (!enRango(primero, desde, hasta)) return false;
       }
     }
+
     return true;
   });
 
   const contableFiltrado = kardex.filter(k => {
-    const { categoria, producto, desde, hasta } = fContable;
+    const { producto, desde, hasta, subtipo } = fContable;
     if (!enRango(k.fecha, desde, hasta)) return false;
-    const prod = productos.find(p => p.id === k.producto);
-    if (categoria && prod?.categoria_nombre !== categoria) return false;
     if (producto && String(k.producto) !== producto) return false;
     const sub = String((k as any).subtipo ?? '').toLowerCase();
+    if (subtipo !== 'todos' && sub !== subtipo) return false;
     return ['venta', 'reposicion', 'ajuste_manual', 'devolucion_cliente', 'stock_inicial'].includes(sub);
-  });
+});
 
   const totalVentas = ventasFiltradas.reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0);
   const totalEntradas = inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'entrada').reduce((a, k) => a + k.cantidad, 0);
@@ -2450,15 +2549,6 @@ function ModuloReportes({
     }, {})
   ).sort(([a], [b]) => a.localeCompare(b)).slice(-10)
     .map(([fecha, total]) => ({ fecha: fecha.slice(5), total }));
-
-  const ventasPorCategoria = Object.entries(
-    ventasFiltradas.reduce((acc: Record<string, number>, k) => {
-      const prod = productos.find(p => p.id === k.producto);
-      const cat = prod?.categoria_nombre ?? 'Sin categoría';
-      acc[cat] = (acc[cat] ?? 0) + k.cantidad * Number((k as any).precio_unitario ?? 0);
-      return acc;
-    }, {})
-  ).map(([name, value]) => ({ name, value }));
 
   // ── Datos gráficas INVENTARIO ──────────────────────────────────────────────
   const movPorTipo = [
@@ -2583,52 +2673,71 @@ function ModuloReportes({
     );
   }
 
-  function Filtros({ f, setF, err, setErr, soloCategoria = false }: {
-    f: FiltroState; setF: React.Dispatch<React.SetStateAction<FiltroState>>;
-    err: ErrState; setErr: React.Dispatch<React.SetStateAction<ErrState>>;
-    soloCategoria?: boolean;
-  }) {
-    const prodsFiltrados = f.categoria ? productos.filter(p => p.categoria_nombre === f.categoria) : productos;
-    return (
-      <div className="flex flex-wrap items-end gap-3 mb-5 p-4 bg-amber-50 rounded-xl border border-amber-100">
+  function Filtros({
+  f, setF, err, setErr,
+}: {
+  f: any;
+  setF: React.Dispatch<React.SetStateAction<any>>;
+  err: any;
+  setErr: any;
+}) {
+  return (
+    <div className="flex flex-wrap items-end gap-3 mb-5 p-4 bg-amber-50 rounded-xl border border-amber-100">
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Producto</label>
+        <select className={selCls} value={f.producto ?? ''} onChange={e => setF({ ...f, producto: e.target.value })}>
+          <option value="">Todos</option>
+          {productos.map(p => <option key={p.id} value={String(p.id)}>{p.nombre}</option>)}
+        </select>
+      </div>
+      {f.tipo !== undefined && (
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Categoría</label>
-          <select className={selCls} value={f.categoria} onChange={e => setF({ ...f, categoria: e.target.value, producto: '' })}>
-            <option value="">Todas</option>
-            {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+          <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Tipo</label>
+          <select className={selCls} value={f.tipo ?? 'todos'} onChange={e => setF({ ...f, tipo: e.target.value })}>
+            <option value="todos">Todos</option>
+            <option value="entrada">Entrada</option>
+            <option value="salida">Salida</option>
+            <option value="devolucion">Devolución</option>
+            <option value="ajuste">Ajuste</option>
           </select>
         </div>
-        {!soloCategoria && (
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Producto</label>
-            <select className={selCls} value={f.producto} onChange={e => setF({ ...f, producto: e.target.value })}>
-              <option value="">Todos</option>
-              {prodsFiltrados.map(p => <option key={p.id} value={String(p.id)}>{p.nombre}</option>)}
-            </select>
-          </div>
-        )}
+      )}
+      {f.subtipo !== undefined && (
         <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Desde</label>
-          <input type="date" max={hoy} className={dateCls(err.desde)} value={f.desde}
-            onChange={e => { setF({ ...f, desde: e.target.value }); validarFechas(e.target.value, f.hasta, setErr); }} />
-          {err.desde && <span className="text-xs text-red-500 font-medium">{err.desde}</span>}
+          <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Subtipo</label>
+          <select className={selCls} value={f.subtipo ?? 'todos'} onChange={e => setF({ ...f, subtipo: e.target.value })}>
+            <option value="todos">Todos</option>
+            <option value="venta">Venta</option>
+            <option value="reposicion">Reposición</option>
+            <option value="ajuste_manual">Ajuste manual</option>
+            <option value="devolucion_cliente">Devolución cliente</option>
+            <option value="stock_inicial">Stock inicial</option>
+            <option value="reserva">Reserva</option>
+            <option value="cancelacion">Cancelación</option>
+          </select>
         </div>
-        <div className="flex flex-col gap-1">
-          <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Hasta</label>
-          <input type="date" max={hoy} className={dateCls(err.hasta)} value={f.hasta}
-            onChange={e => { setF({ ...f, hasta: e.target.value }); validarFechas(f.desde, e.target.value, setErr); }} />
-          {err.hasta && <span className="text-xs text-red-500 font-medium">{err.hasta}</span>}
-        </div>
-        {(f.categoria || f.producto || f.desde || f.hasta) && (
-          <button onClick={() => { setF({ ...filtroVacio }); setErr({ desde: '', hasta: '' }); }}
-            className="px-3 py-2 rounded-xl bg-stone-100 text-stone-500 text-xs font-semibold hover:bg-stone-200 transition">
-            ✕ Limpiar
-          </button>
-        )}
+      )}
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Desde</label>
+        <input type="date" max={hoy} className={dateCls(err.desde)} value={f.desde}
+          onChange={e => { setF({ ...f, desde: e.target.value }); validarFechas(e.target.value, f.hasta, setErr); }} />
+        {err.desde && <span className="text-xs text-red-500 font-medium">{err.desde}</span>}
       </div>
-    );
-  }
-
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Hasta</label>
+        <input type="date" max={hoy} className={dateCls(err.hasta)} value={f.hasta}
+          onChange={e => { setF({ ...f, hasta: e.target.value }); validarFechas(f.desde, e.target.value, setErr); }} />
+        {err.hasta && <span className="text-xs text-red-500 font-medium">{err.hasta}</span>}
+      </div>
+      {(f.producto || f.desde || f.hasta || (f.tipo && f.tipo !== 'todos') || (f.subtipo && f.subtipo !== 'todos')) && (
+        <button onClick={() => { setF({ producto: '', desde: '', hasta: '', ...(f.tipo !== undefined ? { tipo: 'todos' } : {}), ...(f.subtipo !== undefined ? { subtipo: 'todos' } : {}) }); setErr({ desde: '', hasta: '' }); }}
+          className="px-3 py-2 rounded-xl bg-stone-100 text-stone-500 text-xs font-semibold hover:bg-stone-200 transition">
+          ✕ Limpiar
+        </button>
+      )}
+    </div>
+  );
+}
   // ── Barra de acciones con vista toggle ────────────────────────────────────
   function Acciones({ tipo, tab }: { tipo: string; tab: string }) {
     const esDash = vista[tab] === 'dashboard';
@@ -2710,9 +2819,6 @@ function ModuloReportes({
                       </LineChart>
                     </ResponsiveContainer>
                   )}
-                </Grafica>
-                <Grafica title="Ventas por categoría">
-                  {ventasPorCategoria.length === 0 ? <SinGrafica /> : <PieConLeyenda data={ventasPorCategoria} />}
                 </Grafica>
                 <Grafica title="Top productos por ingresos">
                   {ventasPorProducto.length === 0 ? <SinGrafica /> : (
@@ -2873,9 +2979,6 @@ function ModuloReportes({
                 <KPI label="Con stock bajo" value={productosFiltrados.filter(p => (p.cantidad - (p.cantidad_reservada ?? 0)) <= p.stock_minimo).length} color="text-red-600" sub="bajo mínimo" />
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Grafica title="Productos por categoría">
-                  {prodsPorCategoria.length === 0 ? <SinGrafica /> : <PieConLeyenda data={prodsPorCategoria} />}
-                </Grafica>
                 <Grafica title="Stock disponible (menor a mayor)">
                   {stockDisponible.length === 0 ? <SinGrafica /> : (
                     <ResponsiveContainer width="100%" height={220}>
@@ -3258,6 +3361,7 @@ function ModuloPerfil() {
     </div>
   );
 }
+
 export default function PerfilArtesano() {
   const ARTESANO_ID = Number(localStorage.getItem('usuario_id') ?? 1);
   const [tab, setTab] = useState<Tab>('catalogo');
@@ -3304,26 +3408,6 @@ export default function PerfilArtesano() {
   }, []);
 
   useEffect(() => { cargarDatos(); }, [cargarDatos]);
-
-  useEffect(() => {
-
-    setNotificaciones(prev => [
-
-      {
-        id: Date.now(),
-        tipo: 'pedido',
-        titulo: 'Pedido de prueba',
-        detalle: 'Cliente compró una alcancía artesanal',
-        fecha: 'Hace un momento',
-        leida: false,
-        ruta: '/pedidos',
-      },
-
-      ...prev
-
-    ]);
-
-  }, []);
 
   return (
     <div className="min-h-screen bg-amber-50/60 font-sans text-base">

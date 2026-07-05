@@ -26,7 +26,7 @@ export function Home() {
   // 4. Efecto para consultar la API al cargar el componente
   useEffect(() => {
     // URL Corregida funcionando con tu puerto 8000 local
-    const API_URL = 'http://localhost:8000/api/productos/';
+    const API_URL = 'http://localhost:8000/api/catalogo/';
     fetch(API_URL)
       .then((res) => {
         if (!res.ok) {

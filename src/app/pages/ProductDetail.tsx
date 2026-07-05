@@ -321,7 +321,7 @@ export function ProductDetail() {
             <img
               src={product.imagen_url || 'https://via.placeholder.com/600x400'}
               alt={product.nombre}
-              className="w-full rounded-lg shadow-lg object-cover max-h-[500px]"
+              className="w-full rounded-lg shadow-lg object-contain bg-white max-h-[500px]"
             />
             {descuento > 0 && (
               <span className="absolute top-4 right-4 bg-gradient-to-r from-red-500 to-red-700 text-white text-sm font-bold px-4 py-2 rounded-full shadow-lg">
