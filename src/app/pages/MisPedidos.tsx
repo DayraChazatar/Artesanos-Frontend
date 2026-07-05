@@ -32,11 +32,26 @@ interface OrderItem {
 
 interface Order {
   id: string;
+  codigo?: string;
+
   date: string;
   total: number;
   status: string;
+
+  numero_guia?: string;
+  transportadora?: string;
+
+  fecha_envio?: string;
+  fecha_entrega?: string;
+
   items: OrderItem[];
-  customer: { name: string; email: string; phone?: string };
+
+  customer: {
+    name: string;
+    email: string;
+    phone?: string;
+  };
+
   returnRequest?: ReturnRequest;
 }
 
@@ -45,24 +60,30 @@ interface Order {
 /** Convierte la respuesta del backend (PedidoSerializer) al formato que ya usa la UI */
 function mapBackendOrder(p: any): Order {
   return {
-    id:     String(p.id),
-    date:   p.fecha,
-    total:  Number(p.total),
+    id: String(p.id),
+    codigo: p.codigo,
+    date: p.fecha,
+    total: Number(p.total),
     status: p.estado,
-    items:  (p.detalles ?? []).map((d: any) => ({
-      id:       d.id,
-      name:     d.producto_nombre,
+    numero_guia: p.numero_guia,
+    transportadora: p.transportadora,
+    fecha_envio: p.fecha_envio,
+    fecha_entrega: p.fecha_entrega,
+
+    items: (p.detalles ?? []).map((d: any) => ({
+      id: d.id,
+      name: d.producto_nombre,
       quantity: d.cantidad,
-      price:    Number(d.precio),
+      price: Number(d.precio),
     })),
-    customer: {
-      name:  p.cliente_nombre ?? '',
-      email: '',
-      phone: p.telefono ?? '',
+
+    customer: {                                                    // ← 4 espacios
+      name:  p.cliente_nombre || `Cliente #${p.cliente}`,
+      email: p.cliente_email  || '',
+      phone: p.telefono       || '',
     },
   };
 }
-
 // ─── Estilos / íconos de estado ───────────────────────────────────────────────
 
 const STATUS_STYLES: Record<string, string> = {
@@ -391,7 +412,13 @@ function DetailModal({ order, onClose }: { order: Order; onClose: () => void }) 
 }
 
 // ─── Tarjeta móvil ────────────────────────────────────────────────────────────
-function OrderCard({ order, onReturn, onDetail, onCancel, onFactura }: {
+function OrderCard({
+  order,
+  onReturn,
+  onDetail,
+  onCancel,
+  onFactura,
+}: {
   order: Order;
   onReturn: () => void;
   onDetail: () => void;
@@ -400,50 +427,145 @@ function OrderCard({ order, onReturn, onDetail, onCancel, onFactura }: {
 }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
+
+      {/* Encabezado */}
       <div className="flex items-start justify-between gap-2">
-        <span className={`inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-medium ${STATUS_STYLES[order.status] ?? 'bg-gray-100 text-gray-600'}`}>
-          {STATUS_ICONS[order.status] ?? '🕐'} {order.status}
+
+        <div className="space-y-1">
+
+          {/* Estado */}
+          <span
+            className={`inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-medium ${
+              STATUS_STYLES[order.status] ?? 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            {STATUS_ICONS[order.status] ?? '🕐'} {order.status}
+          </span>
+
+          {/* Número guía */}
+          {order.numero_guia && (
+            <div className="text-xs text-gray-500">
+              📦 {order.numero_guia}
+            </div>
+          )}
+
+          {/* Transportadora */}
+          {order.transportadora && (
+            <div className="text-xs text-blue-600">
+              🚚 {order.transportadora}
+            </div>
+          )}
+
+        </div>
+
+        {/* Fecha */}
+        <span className="text-xs text-gray-400">
+          {new Date(order.date).toLocaleDateString('es-CO')}
         </span>
-        <span className="text-xs text-gray-400">{new Date(order.date).toLocaleDateString('es-CO')}</span>
+
       </div>
+
+      {/* Código y total */}
       <div className="flex items-center justify-between">
-        <span className="font-semibold text-gray-800 text-sm">#{order.id.slice(-6).toUpperCase()}</span>
-        <span className="font-bold text-orange-600">${order.total.toLocaleString('es-CO')}</span>
+        <span className="font-semibold text-gray-800 text-sm">
+          #{order.id.slice(-6).toUpperCase()}
+        </span>
+
+        <span className="font-bold text-orange-600">
+          ${order.total.toLocaleString('es-CO')}
+        </span>
       </div>
+
+      {/* Productos */}
       <div>
-        <p className="text-sm text-gray-600 truncate">{order.items?.map(i => i.name).join(', ')}</p>
-        <p className="text-xs text-gray-400 mt-0.5">{order.items?.length} {order.items?.length === 1 ? 'producto' : 'productos'}</p>
+        <p className="text-sm text-gray-600 truncate">
+          {order.items?.map(i => i.name).join(', ')}
+        </p>
+
+        <p className="text-xs text-gray-400 mt-0.5">
+          {order.items?.length}{' '}
+          {order.items?.length === 1 ? 'producto' : 'productos'}
+        </p>
       </div>
+
+      {/* Acciones */}
       <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-50">
-        <button onClick={onFactura}
+
+        {/* Factura */}
+        <button
+          onClick={onFactura}
           disabled={order.status === 'Cancelado'}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed">
-          <FileText className="h-3.5 w-3.5" /> Factura
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <FileText className="h-3.5 w-3.5" />
+          Factura
         </button>
-        {!['Cancelado','Entregado','Devolucion solicitada','Devuelto','Rechazado'].includes(order.status) && (
-          <button onClick={onCancel}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 transition text-xs font-medium">
-            <XCircle className="h-3.5 w-3.5" /> Cancelar
+
+        {/* Cancelar */}
+          {![
+            'Cancelado',
+            'En proceso',
+            'Enviado',
+            'Entregado',
+            'Devolucion solicitada',
+            'Devuelto',
+            'Rechazado',
+          ].includes(order.status) && (
+          <button
+            onClick={onCancel}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-500 border border-red-200 hover:bg-red-100 transition text-xs font-medium"
+          >
+            <XCircle className="h-3.5 w-3.5" />
+            Cancelar
           </button>
         )}
+
+        {/* Solicitar devolución */}
         {order.status === 'Entregado' && (
-          <button onClick={onReturn}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition text-xs font-medium">
-            <RotateCcw className="h-3.5 w-3.5" /> Solicitar devolución
+          <button
+            onClick={onReturn}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50 text-purple-600 border border-purple-200 hover:bg-purple-100 transition text-xs font-medium"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Solicitar devolución
           </button>
         )}
-        {['Devolucion solicitada','Devuelto','Rechazado'].includes(order.status) && (
-          <button onClick={onDetail}
+
+        {/* Ver detalle devolución */}
+        {[
+          'Devolucion solicitada',
+          'Devuelto',
+          'Rechazado',
+        ].includes(order.status) && (
+          <button
+            onClick={onDetail}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition text-xs font-medium ${
-              order.status === 'Rechazado' ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
-              : order.status === 'Devuelto' ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
-              : 'bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100'
-            }`}>
-            {order.status === 'Rechazado' ? <><AlertCircle className="h-3.5 w-3.5" /> Ver rechazo</>
-              : order.status === 'Devuelto' ? <><Eye className="h-3.5 w-3.5" /> Ver aprobación</>
-              : <><Eye className="h-3.5 w-3.5" /> Ver solicitud</>}
+              order.status === 'Rechazado'
+                ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                : order.status === 'Devuelto'
+                ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                : 'bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100'
+            }`}
+          >
+            {order.status === 'Rechazado' ? (
+              <>
+                <AlertCircle className="h-3.5 w-3.5" />
+                Ver rechazo
+              </>
+            ) : order.status === 'Devuelto' ? (
+              <>
+                <Eye className="h-3.5 w-3.5" />
+                Ver aprobación
+              </>
+            ) : (
+              <>
+                <Eye className="h-3.5 w-3.5" />
+                Ver solicitud
+              </>
+            )}
           </button>
         )}
+
       </div>
     </div>
   );
@@ -514,10 +636,11 @@ const handleReturnSubmit = async (reason: string, photos: string[]) => {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Token ${token}` } : {}),
         },
-        body: JSON.stringify({
-          pedido_id:    Number(returnOrder.id),
-          estado_nuevo: 'Devolucion solicitada',
-        }),
+          body: JSON.stringify({
+            pedido_id:      Number(returnOrder.id),
+            estado_nuevo:   'Devolucion solicitada',
+            admin_response: reason,  // ← envía el motivo al backend
+          }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error ?? 'Error al solicitar devolución'); return; }
@@ -726,11 +849,52 @@ const handleReturnSubmit = async (reason: string, photos: string[]) => {
                     </tr>
                   ) : filteredOrders.map(order => (
                     <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-medium ${STATUS_STYLES[order.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                          {STATUS_ICONS[order.status] ?? '🕐'} {order.status}
-                        </span>
-                      </td>
+                 <td className="px-6 py-4">
+  <div className="space-y-1">
+
+    {/* Estado */}
+    <span
+      className={`inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-medium ${
+        STATUS_STYLES[order.status] ?? 'bg-gray-100 text-gray-600'
+      }`}
+    >
+      {STATUS_ICONS[order.status] ?? '🕐'} {order.status}
+    </span>
+
+    {/* Número guía */}
+    {order.numero_guia && (
+      <div className="text-xs text-gray-500">
+        📦 Guía: {order.numero_guia}
+      </div>
+    )}
+
+    {/* Transportadora */}
+    {order.transportadora && (
+      <div className="text-xs text-blue-600">
+        🚚 {order.transportadora}
+      </div>
+    )}
+
+    {/* Fecha envío */}
+    {order.fecha_envio && (
+      <div className="text-xs text-orange-500">
+        📅 Enviado:
+        {' '}
+        {new Date(order.fecha_envio).toLocaleDateString('es-CO')}
+      </div>
+    )}
+
+    {/* Fecha entrega */}
+    {order.fecha_entrega && (
+      <div className="text-xs text-green-600">
+        ✅ Entregado:
+        {' '}
+        {new Date(order.fecha_entrega).toLocaleDateString('es-CO')}
+      </div>
+    )}
+
+  </div>
+</td>
                       <td className="px-6 py-4 font-semibold text-gray-800">#{order.id.slice(-6).toUpperCase()}</td>
                       <td className="px-6 py-4 text-gray-500">{new Date(order.date).toLocaleDateString('es-CO')}</td>
                       <td className="px-6 py-4 text-gray-600 max-w-[200px]">
@@ -746,7 +910,7 @@ const handleReturnSubmit = async (reason: string, photos: string[]) => {
                             className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                             <FileText className="h-4 w-4" />
                           </button>
-                          {!['Cancelado','Entregado','Devolucion solicitada','Devuelto','Rechazado'].includes(order.status) && (
+                          {!['Cancelado','En proceso','Enviado','Entregado','Devolucion solicitada','Devuelto','Rechazado'].includes(order.status) && (
                             <button onClick={() => handleCancelOrder(order.id)} title="Cancelar Pedido"
                               className="p-1.5 rounded-lg text-red-500 hover:bg-red-50 transition-colors">
                               <XCircle className="h-4 w-4" />

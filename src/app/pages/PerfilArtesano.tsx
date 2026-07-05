@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { generarGuiaEnvio } from '../utils/guiaEnvio';
+import {
+} from 'recharts';
 import { Link, useNavigate } from 'react-router-dom';
 import { RefreshCw, Bell, User, House } from 'lucide-react';
 import {
@@ -95,10 +98,11 @@ export function useNotificaciones() {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>(() => {
 
     const guardadas = localStorage.getItem('notificaciones');
+    
 
-    return guardadas
-      ? JSON.parse(guardadas)
-      : [];
+      return guardadas
+        ? JSON.parse(guardadas)
+        : [];
 
   });
 
@@ -532,19 +536,20 @@ function ModuloCatalogo({
   const producto = productos.find(p => p.id === id);
   if (!producto) return;
 
-  const nuevoVisible = !(producto.visible ?? true);
+    const nuevoVisible = !(producto.visible ?? true);
 
-  // ← usa el endpoint dedicado, no el PATCH general
-  const res = await fetch(`http://localhost:8000/api/productos/${id}/visibilidad/`, {
+  const res = await fetch(`http://localhost:8000/api/productos/${id}/`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({ visible: nuevoVisible }),
   });
 
-  if (!res.ok) {
-    alert(`No se pudo cambiar la visibilidad. Código: ${res.status}`);
-    return;
-  }
+    if (!res.ok) {
+      alert(`No se pudo cambiar la visibilidad. Código: ${res.status}`);
+      return;
+    }
 
   const actualizado = await res.json();
   setProductos(prev =>
@@ -1890,6 +1895,10 @@ interface Pedido {
   fecha: string;
   updated: string;
   detalles: DetallePedido[];
+  numero_guia?: string;
+  transportadora?: string;
+  fecha_envio?: string;
+  fecha_entrega?: string;
 }
 
 const ESTADO_COLOR: Record<string, string> = {
@@ -1917,15 +1926,15 @@ const ESTADO_ICONO: Record<string, string> = {
 };
 
 const SIGUIENTES: Record<string, string[]> = {
-  Pendiente: ['En proceso', 'Enviado', 'Cancelado'],
-  'En proceso': ['Enviado', 'Cancelado'],
-  Enviado: ['Entregado', 'Cancelado'],
-  Entregado: ['Devolucion'],
-  'Devolucion solicitada': ['Devuelto', 'Rechazado'],
-  Cancelado: [],
-  Devolucion: [],
-  Devuelto: [],
-  Rechazado: [],
+  'Pendiente': ['En proceso'],
+  'En proceso': ['Enviado'],
+  'Enviado': ['Entregado'],
+  'Entregado': [],
+  'Devolucion solicitada': ['Devolucion aprobada', 'Devolucion rechazada'],
+  'Cancelado': [],
+  'Devolucion aprobada': [],
+  'Devolucion rechazada': [],
+  'Devuelto': [],
 };
 
 const BTN_COLOR: Record<string, string> = {
@@ -1950,7 +1959,15 @@ const MENSAJES_ESTADO: Record<string, string> = {
 // ─────────────────────────────────────────────────────────────────────────────
 // MÓDULO PEDIDOS 
 // ─────────────────────────────────────────────────────────────────────────────
-
+const ACCIONES_ARTESANO: Record<string, string[]> = {
+  'Pendiente': ['En proceso'],
+  'En proceso': ['Enviado'],
+  'Enviado': ['Entregado'],
+  'Devolucion solicitada': [
+    'Devolucion aprobada',
+    'Devolucion rechazada'
+  ],
+};
 function ModuloPedidosArtesano({
   productos,
   setProductos,
@@ -1969,6 +1986,8 @@ function ModuloPedidosArtesano({
   const [filtroHasta, setFiltroHasta] = useState('');
   const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
+  const [devolucionSeleccionada, setDevolucionSeleccionada] = useState<Pedido | null>(null);
+  const [pedidoExpandido, setPedidoExpandido] = useState<number | null>(null);
 
   const showAlert = (msg: string, type: 'success' | 'error' = 'success') => {
     setAlert({ msg, type });
@@ -2025,12 +2044,6 @@ function ModuloPedidosArtesano({
         return;
       }
 
-      // Actualizar estado del pedido en el frontend
-      setPedidos(prev =>
-        prev.map(p => p.id === pedido.id ? { ...p, estado: estadoNuevo } : p)
-      );
-
-      // Actualizar stock de los productos afectados en el frontend
       if (data.stock_actual !== undefined) {
         const productosAfectados = new Set(pedido.detalles.map(d => d.producto));
         setProductos(prev =>
@@ -2049,12 +2062,12 @@ function ModuloPedidosArtesano({
       }
 
       showAlert(MENSAJES_ESTADO[estadoNuevo] ?? 'Estado actualizado');
+      await fetchPedidos();
 
-      // ← AGREGAR AQUÍ
       try {
         const kardexActualizado = await getKardex();
         setKardex(kardexActualizado);
-      } catch { /* silencioso */ }
+      } catch { }
 
     } catch {
       showAlert('Error de conexión con el servidor', 'error');
@@ -2088,6 +2101,8 @@ function ModuloPedidosArtesano({
     pendiente: pedidos.filter(p => p.estado === 'Pendiente').length,
     enviado: pedidos.filter(p => p.estado === 'Enviado').length,
     entregado: pedidos.filter(p => p.estado === 'Entregado').length,
+    devoluciones: pedidos.filter(p => p.estado === 'Devolucion solicitada').length,
+    cancelado: pedidos.filter(p => p.estado === 'Cancelado').length,
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -2119,6 +2134,7 @@ function ModuloPedidosArtesano({
           { label: 'Pendiente', value: resumen.pendiente, color: 'text-yellow-700', bg: 'bg-yellow-50' },
           { label: 'Enviado', value: resumen.enviado, color: 'text-blue-700', bg: 'bg-blue-50' },
           { label: 'Entregado', value: resumen.entregado, color: 'text-green-700', bg: 'bg-green-50' },
+          { label: 'Cancelado', value: resumen.cancelado, color: 'text-red-700', bg: 'bg-red-50' },
         ].map(card => (
           <div key={card.label} className={`${card.bg} rounded-2xl border border-amber-100 p-4 text-center`}>
             <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
@@ -2150,7 +2166,8 @@ function ModuloPedidosArtesano({
             <option>Cancelado</option>
             <option>Devolucion solicitada</option>
             <option>Devuelto</option>
-            <option>Rechazado</option>
+            <option>Devolucion aprobada</option>
+            <option>Devolucion rechazada</option>
           </select>
           <div className="flex items-center gap-2">
             <span className="text-sm text-stone-500">Desde</span>
@@ -2211,7 +2228,7 @@ function ModuloPedidosArtesano({
                     </td>
                   </tr>
                 ) : pedidosFiltrados.map(pedido => {
-                  const siguientes = SIGUIENTES[pedido.estado] ?? [];
+                  (ACCIONES_ARTESANO[pedido.estado] ?? [])
                   const isLoading = loadingId === pedido.id;
 
                   const generarGuiaPDF = (pedido: Pedido) => {
@@ -2382,10 +2399,39 @@ function ModuloPedidosArtesano({
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-2">
 
+                          {/* Estado actual */}
+                          <div className="mb-2">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-semibold
+                            ${pedido.estado === 'Pendiente'
+                                  ? 'bg-yellow-100 text-yellow-700'
+                                  : pedido.estado === 'En proceso'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : pedido.estado === 'Enviado'
+                                      ? 'bg-indigo-100 text-indigo-700'
+                                      : pedido.estado === 'Entregado'
+                                        ? 'bg-green-100 text-green-700'
+                                        : pedido.estado === 'Cancelado'
+                                          ? 'bg-red-100 text-red-700'
+                                          : pedido.estado === 'Devolucion solicitada'
+                                            ? 'bg-purple-100 text-purple-700'
+                                            : pedido.estado === 'Devolucion aprobada'
+                                              ? 'bg-green-100 text-green-700'
+                                              : pedido.estado === 'Devolucion rechazada'
+                                                ? 'bg-red-100 text-red-700'
+                                                : 'bg-gray-100 text-gray-700'
+                                }`}
+                            >
+                              {pedido.estado}
+                            </span>
+                          </div>
+
                           {/* Botones cambio de estado */}
                           <div className="flex flex-wrap gap-1">
                             {(SIGUIENTES[pedido.estado] ?? []).length === 0 ? (
-                              <span className="text-xs text-stone-300 italic">Sin acciones</span>
+                              <span className="text-xs text-gray-400 font-medium">
+                                Estado finalizado
+                              </span>
                             ) : (
                               (SIGUIENTES[pedido.estado] ?? []).map(siguiente => (
                                 <button
@@ -2402,17 +2448,126 @@ function ModuloPedidosArtesano({
                             )}
                           </div>
 
-                          {/* Botón guía PDF */}
+                          {/* Ver devolución */}
+                          {pedido.estado === 'Devolucion solicitada' && (
+                            <button
+                              onClick={() => setDevolucionSeleccionada(pedido)}
+                              className="px-3 py-1 rounded-lg text-xs font-semibold bg-purple-100 text-purple-700 hover:bg-purple-200 transition w-fit"
+                            >
+                              👁 Ver devolución
+                            </button>
+                          )}
                           <button
-                            onClick={() => generarGuiaPDF(pedido)}
-                            className="px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition w-fit"
+                            onClick={() =>
+                              setPedidoExpandido(
+                                pedidoExpandido === pedido.id ? null : pedido.id
+                              )
+                            }
+                            className="px-2 py-1 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition w-fit"
                           >
-                            📄 Guía PDF
+                            {pedidoExpandido === pedido.id ? '▲ Ocultar' : '▼ Detalles'}
                           </button>
+                          {!['Cancelado', 'Pendiente', 'En proceso'].includes(pedido.estado) && (
+                            <button
+                              onClick={() => generarGuiaEnvio(pedido)}
+                              className="px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition w-fit"
+                            >
+                              📄 Guía PDF
+                            </button>
+
+                          )}
 
                         </div>
                       </td>
+                      {pedidoExpandido === pedido.id && (
+                        <tr>
+                          <td
+                            colSpan={6}
+                            className="bg-amber-50/30 px-6 py-5 border-b"
+                          >
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                              {/* PRODUCTOS */}
+                              <div className="bg-white rounded-2xl border p-4 shadow-sm">
+
+                                <h3 className="font-bold text-stone-700 mb-3">
+                                  📦 Productos
+                                </h3>
+
+                                <div className="space-y-2">
+
+                                  {pedido.detalles.map((d, idx) => (
+
+                                    <div
+                                      key={idx}
+                                      className="flex justify-between text-sm border-b pb-2"
+                                    >
+                                      <span>{d.producto_nombre}</span>
+
+                                      <span>x{d.cantidad}</span>
+                                    </div>
+
+                                  ))}
+
+                                </div>
+
+                              </div>
+
+                              {/* INFORMACIÓN */}
+                              <div className="bg-white rounded-2xl border p-4 shadow-sm">
+
+                                <h3 className="font-bold text-stone-700 mb-3">
+                                  📋 Información
+                                </h3>
+
+                                <div className="space-y-2 text-sm">
+
+                                  <p>
+                                    <span className="font-semibold">
+                                      Cliente:
+                                    </span>{' '}
+
+                                    {pedido.cliente_nombre}
+                                  </p>
+
+                                  <p>
+                                    <span className="font-semibold">
+                                      Estado:
+                                    </span>{' '}
+
+                                    {pedido.estado}
+                                  </p>
+
+                                  <p>
+                                    <span className="font-semibold">
+                                      Total:
+                                    </span>{' '}
+
+                                    ${pedido.total}
+                                  </p>
+
+                                  {pedido.numero_guia && (
+                                    <p>
+                                      <span className="font-semibold">
+                                        Guía:
+                                      </span>{' '}
+
+                                      {pedido.numero_guia}
+                                    </p>
+                                  )}
+
+                                </div>
+
+                              </div>
+
+                            </div>
+
+                          </td>
+                        </tr>
+                      )}
                     </tr>
+
                   );
                 })}
               </tbody>
@@ -2420,6 +2575,74 @@ function ModuloPedidosArtesano({
           </div>
         )}
       </div>
+
+      {devolucionSeleccionada && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+
+          <div className="bg-white rounded-2xl p-6 w-[600px] max-h-[90vh] overflow-y-auto shadow-2xl">
+
+            {/* HEADER */}
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xl font-bold text-gray-800">
+                Detalle devolución
+              </h2>
+
+              <button
+                onClick={() => setDevolucionSeleccionada(null)}
+                className="text-gray-400 hover:text-black text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* ESTADO */}
+            <div className="mb-4">
+              <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-semibold">
+                {devolucionSeleccionada.estado}
+              </span>
+            </div>
+
+            {/* MOTIVO */}
+            <div className="mb-5">
+              <h3 className="font-semibold text-gray-700 mb-2">
+                Motivo
+              </h3>
+
+              <div className="bg-gray-50 border rounded-xl p-4 text-sm text-gray-700">
+                {(devolucionSeleccionada as any).devolucion?.motivo || 'Sin motivo'}
+              </div>
+            </div>
+
+            {/* BOTONES */}
+            <div className="flex justify-end gap-3">
+
+              <button
+                onClick={() => {
+                  actualizarEstado(devolucionSeleccionada!, 'Devolucion rechazada');
+                  setDevolucionSeleccionada(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-red-100 text-red-700 hover:bg-red-200 transition"
+              >
+                Rechazar
+              </button>
+
+              <button
+                onClick={() => {
+                  actualizarEstado(devolucionSeleccionada!, 'Devolucion aprobada');
+                  setDevolucionSeleccionada(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-green-100 text-green-700 hover:bg-green-200 transition"
+              >
+                Aprobar
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
     </div>
   );
 }
@@ -3229,8 +3452,6 @@ function ModuloPerfil() {
   return (
     <div className="space-y-5 max-w-2xl mx-auto">
       {alert && <Alert msg={alert.msg} type={alert.type} />}
-
-      {/* ── BLOQUE PERFIL ── */}
       <div className="bg-white rounded-2xl shadow-sm p-8">
         <div className="flex items-center justify-between mb-8">
           <h2 className="font-serif text-2xl text-amber-800">👤 Perfil del Artesano</h2>
@@ -3313,51 +3534,6 @@ function ModuloPerfil() {
           )}
         </div>
       </div>
-
-      {/* ── BLOQUE CAMBIAR CONTRASEÑA ── */}
-      <div className="bg-white rounded-2xl shadow-sm p-8">
-        <h2 className="font-serif text-2xl text-amber-800 mb-6">🔒 Cambiar Contraseña</h2>
-        <div className="space-y-4">
-          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-            <p className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1">Contraseña actual</p>
-            <input
-              type="password"
-              className={inputCls}
-              value={password.password_actual}
-              onChange={e => setPassword({ ...password, password_actual: e.target.value })}
-              placeholder="Ingresa tu contraseña actual"
-            />
-          </div>
-          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-            <p className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1">Nueva contraseña</p>
-            <input
-              type="password"
-              className={inputCls}
-              value={password.password_nueva}
-              onChange={e => setPassword({ ...password, password_nueva: e.target.value })}
-              placeholder="Mínimo 6 caracteres"
-            />
-          </div>
-          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-            <p className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1">Confirmar nueva contraseña</p>
-            <input
-              type="password"
-              className={inputCls}
-              value={password.password_confirmar}
-              onChange={e => setPassword({ ...password, password_confirmar: e.target.value })}
-              placeholder="Repite la nueva contraseña"
-            />
-          </div>
-          <button
-            onClick={handleCambiarPassword}
-            disabled={loadingPass}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white font-semibold shadow hover:shadow-md transition disabled:opacity-60"
-          >
-            {loadingPass ? 'Actualizando...' : '🔒 Actualizar contraseña'}
-          </button>
-        </div>
-      </div>
-
     </div>
   );
 }
