@@ -98,11 +98,11 @@ export function useNotificaciones() {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>(() => {
 
     const guardadas = localStorage.getItem('notificaciones');
-    
 
-      return guardadas
-        ? JSON.parse(guardadas)
-        : [];
+
+    return guardadas
+      ? JSON.parse(guardadas)
+      : [];
 
   });
 
@@ -437,11 +437,23 @@ function SidebarNotificaciones({
           {/* SIN NOTIFICACIONES */}
           {filtradas.length === 0 ? (
 
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-stone-300">
-              <span className="text-5xl">🔕</span>
-              <span className="text-sm">
-                Sin notificaciones
-              </span>
+            <div className="flex flex-col items-center justify-center h-full gap-3 px-6 py-10 text-center">
+              <span className="text-5xl">🔔</span>
+              <p className="text-sm font-semibold text-stone-500">Todo al día por ahora</p>
+              <p className="text-xs text-stone-400 leading-relaxed">
+                Aquí verás alertas de nuevos pedidos, stock bajo y devoluciones en tiempo real.
+              </p>
+              <div className="mt-2 flex flex-col gap-2 w-full">
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-700">
+                  <span>🛍️</span> Nuevos pedidos de clientes
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-700">
+                  <span>📦</span> Alertas de stock bajo
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-700">
+                  <span>↩️</span> Solicitudes de devolución
+                </div>
+              </div>
             </div>
 
           ) : (
@@ -533,29 +545,29 @@ function ModuloCatalogo({
 
 
   const toggleVisible = async (id: number) => {
-  const producto = productos.find(p => p.id === id);
-  if (!producto) return;
+    const producto = productos.find(p => p.id === id);
+    if (!producto) return;
 
     const nuevoVisible = !(producto.visible ?? true);
 
-  const res = await fetch(`http://localhost:8000/api/productos/${id}/`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ visible: nuevoVisible }),
-  });
+    const res = await fetch(`http://localhost:8000/api/productos/${id}/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ visible: nuevoVisible }),
+    });
 
     if (!res.ok) {
       alert(`No se pudo cambiar la visibilidad. Código: ${res.status}`);
       return;
     }
 
-  const actualizado = await res.json();
-  setProductos(prev =>
-    prev.map(p => p.id === id ? { ...p, visible: actualizado.visible } : p)
-  );
-};
+    const actualizado = await res.json();
+    setProductos(prev =>
+      prev.map(p => p.id === id ? { ...p, visible: actualizado.visible } : p)
+    );
+  };
 
   return (
     <div className="space-y-5">
@@ -2101,10 +2113,14 @@ function ModuloPedidosArtesano({
     pendiente: pedidos.filter(p => p.estado === 'Pendiente').length,
     enviado: pedidos.filter(p => p.estado === 'Enviado').length,
     entregado: pedidos.filter(p => p.estado === 'Entregado').length,
-    devoluciones: pedidos.filter(p => p.estado === 'Devolucion solicitada').length,
+    devoluciones: pedidos.filter(p => {
+      const estado = p.estado.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      return estado.startsWith('devolucion') || estado === 'devuelto';
+    }).length,
     cancelado: pedidos.filter(p => p.estado === 'Cancelado').length,
   };
 
+  // ── Render ──────────────────────────────────────────────────────────────────
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5">
@@ -2128,17 +2144,18 @@ function ModuloPedidosArtesano({
       </div>
 
       {/* Tarjetas de resumen */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
         {[
-          { label: 'Total', value: resumen.total, color: 'text-stone-700', bg: 'bg-stone-50' },
-          { label: 'Pendiente', value: resumen.pendiente, color: 'text-yellow-700', bg: 'bg-yellow-50' },
-          { label: 'Enviado', value: resumen.enviado, color: 'text-blue-700', bg: 'bg-blue-50' },
-          { label: 'Entregado', value: resumen.entregado, color: 'text-green-700', bg: 'bg-green-50' },
-          { label: 'Cancelado', value: resumen.cancelado, color: 'text-red-700', bg: 'bg-red-50' },
+          { label: 'Total', value: resumen.total, color: 'text-stone-700', bg: 'bg-white', border: 'border-stone-200' },
+          { label: 'Pendiente', value: resumen.pendiente, color: 'text-yellow-700', bg: 'bg-yellow-50', border: 'border-yellow-200' },
+          { label: 'Enviado', value: resumen.enviado, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
+          { label: 'Entregado', value: resumen.entregado, color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200' },
+          { label: 'Cancelado', value: resumen.cancelado, color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' },
+          { label: 'Devoluciones', value: resumen.devoluciones, color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200' },
         ].map(card => (
-          <div key={card.label} className={`${card.bg} rounded-2xl border border-amber-100 p-4 text-center`}>
-            <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
-            <p className="text-xs text-stone-400 mt-1">{card.label}</p>
+          <div key={card.label} className={`${card.bg} rounded-xl border ${card.border} px-4 py-3 text-center shadow-sm`}>
+            <p className={`text-xl font-bold ${card.color}`}>{card.value}</p>
+            <p className="text-[11px] text-stone-400 mt-0.5 font-medium">{card.label}</p>
           </div>
         ))}
       </div>
@@ -2153,11 +2170,7 @@ function ModuloPedidosArtesano({
             onChange={e => setBusqueda(e.target.value)}
             className={`${inputCls} flex-1 min-w-[200px]`}
           />
-          <select
-            value={filtroEstado}
-            onChange={e => setFiltroEstado(e.target.value)}
-            className={inputCls}
-          >
+          <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className={inputCls}>
             <option value="">Todos los estados</option>
             <option>Pendiente</option>
             <option>En proceso</option>
@@ -2171,23 +2184,13 @@ function ModuloPedidosArtesano({
           </select>
           <div className="flex items-center gap-2">
             <span className="text-sm text-stone-500">Desde</span>
-            <input
-              type="date"
-              max={new Date().toISOString().split('T')[0]}
-              value={filtroDesde}
-              onChange={e => setFiltroDesde(e.target.value)}
-              className={inputCls}
-            />
+            <input type="date" max={new Date().toISOString().split('T')[0]} value={filtroDesde}
+              onChange={e => setFiltroDesde(e.target.value)} className={inputCls} />
           </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-stone-500">Hasta</span>
-            <input
-              type="date"
-              max={new Date().toISOString().split('T')[0]}
-              value={filtroHasta}
-              onChange={e => setFiltroHasta(e.target.value)}
-              className={inputCls}
-            />
+            <input type="date" max={new Date().toISOString().split('T')[0]} value={filtroHasta}
+              onChange={e => setFiltroHasta(e.target.value)} className={inputCls} />
           </div>
         </div>
       </div>
@@ -2201,11 +2204,10 @@ function ModuloPedidosArtesano({
           </span>
         </div>
 
-        {/* Loading skeleton */}
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => (
-              <div key={i} className="h-12 bg-amber-50 rounded-xl animate-pulse" />
+              <div key={i} className="h-10 bg-amber-50 rounded-xl animate-pulse" />
             ))}
           </div>
         ) : (
@@ -2213,7 +2215,7 @@ function ModuloPedidosArtesano({
             <table className="w-full text-sm">
               <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
                 <tr>
-                  {['Código', 'Cliente', 'Productos', 'Total', 'Fecha', 'Acciones'].map(h => (
+                  {['Código / Estado', 'Cliente', 'Productos', 'Total', 'Fecha', 'Acciones'].map(h => (
                     <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -2221,353 +2223,137 @@ function ModuloPedidosArtesano({
               <tbody>
                 {pedidosFiltrados.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-10 text-center text-stone-400">
-                      {pedidos.length === 0
-                        ? 'Aún no tienes pedidos'
-                        : 'No hay pedidos con los filtros aplicados'}
+                    <td colSpan={6} className="px-4 py-10 text-center text-stone-400">
+                      {pedidos.length === 0 ? 'Aún no tienes pedidos' : 'No hay pedidos con los filtros aplicados'}
                     </td>
                   </tr>
                 ) : pedidosFiltrados.map(pedido => {
-                  (ACCIONES_ARTESANO[pedido.estado] ?? [])
                   const isLoading = loadingId === pedido.id;
-
-                  const generarGuiaPDF = (pedido: Pedido) => {
-                    import('jspdf').then(({ jsPDF }: any) => {
-                      const doc = new jsPDF({ unit: 'mm', format: 'a5' });
-                      const W = doc.internal.pageSize.getWidth();
-
-                      // Encabezado
-                      doc.setFillColor(180, 83, 9);
-                      doc.rect(0, 0, W, 35, 'F');
-                      doc.setTextColor(255, 255, 255);
-                      doc.setFontSize(18);
-                      doc.setFont('helvetica', 'bold');
-                      doc.text('PAKARI SHOP', W / 2, 14, { align: 'center' });
-                      doc.setFontSize(9);
-                      doc.setFont('helvetica', 'normal');
-                      doc.text('Artesanías colombianas hechas a mano', W / 2, 21, { align: 'center' });
-                      doc.text('www.pakarishop.com', W / 2, 27, { align: 'center' });
-
-                      // Título
-                      doc.setFillColor(254, 243, 199);
-                      doc.rect(0, 35, W, 12, 'F');
-                      doc.setTextColor(120, 53, 15);
-                      doc.setFontSize(11);
-                      doc.setFont('helvetica', 'bold');
-                      doc.text('GUÍA DE ENVÍO', W / 2, 43, { align: 'center' });
-
-                      // Info pedido
-                      let y = 55;
-                      const half = (W - 16) / 2;
-
-                      const infoBox = (label: string, value: string, x: number, yPos: number, w: number) => {
-                        doc.setFillColor(245, 245, 244);
-                        doc.roundedRect(x, yPos, w, 11, 2, 2, 'F');
-                        doc.setFont('helvetica', 'bold');
-                        doc.setFontSize(7);
-                        doc.setTextColor(120, 53, 15);
-                        doc.text(label, x + 3, yPos + 4.5);
-                        doc.setFont('helvetica', 'normal');
-                        doc.setFontSize(8.5);
-                        doc.setTextColor(40, 40, 40);
-                        doc.text(value, x + 3, yPos + 9);
-                      };
-
-                      infoBox('CÓDIGO', pedido.codigo, 8, y, half);
-                      infoBox('FECHA', new Date(pedido.fecha).toLocaleDateString('es-CO', {
-                        day: '2-digit', month: 'short', year: 'numeric'
-                      }), 8 + half + 2, y, half);
-                      y += 14;
-                      infoBox('ESTADO', pedido.estado, 8, y, W - 16);
-
-                      // Destinatario
-                      y += 15;
-                      doc.setFillColor(180, 83, 9);
-                      doc.rect(8, y, W - 16, 6, 'F');
-                      doc.setTextColor(255, 255, 255);
-                      doc.setFont('helvetica', 'bold');
-                      doc.setFontSize(8);
-                      doc.text('DESTINATARIO', 11, y + 4.2);
-
-                      y += 7;
-                      doc.setFillColor(255, 255, 255);
-                      doc.setDrawColor(217, 119, 6);
-                      doc.roundedRect(8, y, W - 16, 26, 2, 2, 'FD');
-                      doc.setTextColor(40, 40, 40);
-                      doc.setFont('helvetica', 'bold');
-                      doc.setFontSize(9);
-                      doc.text(pedido.cliente_nombre, 12, y + 7);
-                      doc.setFont('helvetica', 'normal');
-                      doc.setFontSize(8);
-                      doc.text(`Tel: ${pedido.telefono || 'Sin telefono'}`, 12, y + 13);
-                      doc.text(`Dir: ${pedido.direccion || 'Sin direccion'}`, 12, y + 19);
-
-                      // Productos
-                      y += 30;
-                      doc.setFillColor(180, 83, 9);
-                      doc.rect(8, y, W - 16, 6, 'F');
-                      doc.setTextColor(255, 255, 255);
-                      doc.setFont('helvetica', 'bold');
-                      doc.setFontSize(8);
-                      doc.text('PRODUCTOS', 11, y + 4.2);
-
-                      y += 7;
-                      doc.setFillColor(254, 243, 199);
-                      doc.rect(8, y, W - 16, 6, 'F');
-                      doc.setTextColor(120, 53, 15);
-                      doc.setFont('helvetica', 'bold');
-                      doc.setFontSize(7.5);
-                      doc.text('Producto', 11, y + 4.2);
-                      doc.text('Cant.', W - 48, y + 4.2);
-                      doc.text('Subtotal', W - 28, y + 4.2);
-
-                      y += 6;
-                      pedido.detalles.forEach((d, i) => {
-                        if (i % 2 === 0) {
-                          doc.setFillColor(250, 250, 249);
-                          doc.rect(8, y, W - 16, 7, 'F');
-                        }
-                        doc.setTextColor(40, 40, 40);
-                        doc.setFont('helvetica', 'normal');
-                        doc.setFontSize(8);
-                        doc.text(d.producto_nombre, 11, y + 4.8);
-                        doc.text(String(d.cantidad), W - 46, y + 4.8);
-                        doc.text(`$${Number(d.subtotal).toLocaleString('es-CO')}`, W - 28, y + 4.8);
-                        y += 7;
-                      });
-
-                      // Total
-                      y += 3;
-                      doc.setFillColor(180, 83, 9);
-                      doc.roundedRect(8, y, W - 16, 10, 2, 2, 'F');
-                      doc.setTextColor(255, 255, 255);
-                      doc.setFont('helvetica', 'bold');
-                      doc.setFontSize(10);
-                      doc.text('TOTAL:', 11, y + 6.8);
-                      doc.text(`$${Number(pedido.total).toLocaleString('es-CO')}`, W - 10, y + 6.8, { align: 'right' });
-
-                      // Pie
-                      y += 16;
-                      doc.setTextColor(160, 160, 160);
-                      doc.setFont('helvetica', 'italic');
-                      doc.setFontSize(7);
-                      doc.text('Gracias por apoyar a los artesanos locales de Colombia', W / 2, y, { align: 'center' });
-
-                      doc.save(`guia-${pedido.codigo}.pdf`);
-                    });
-                  };
-
                   return (
-                    <tr key={pedido.id} className="border-t border-amber-50 hover:bg-amber-50/50 transition-colors">
-                      {/* Código */}
-                      <td className="px-4 py-3 font-mono text-xs text-stone-500 whitespace-nowrap">
-                        {pedido.codigo}
-                      </td>
+                    <>
+                      <tr key={pedido.id} className="border-t border-amber-50 hover:bg-amber-50/40 transition-colors">
 
-                      {/* Cliente */}
-                      <td className="px-4 py-3 font-semibold whitespace-nowrap">
-                        {pedido.cliente_nombre}
-                        {pedido.telefono && (
-                          <div className="text-xs text-stone-400 font-normal">{pedido.telefono}</div>
-                        )}
-                      </td>
+                        {/* CÓDIGO + ESTADO */}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <p className="font-mono text-xs text-stone-400 mb-1">{pedido.codigo}</p>
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${pedido.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-700' :
+                            pedido.estado === 'En proceso' ? 'bg-orange-100 text-orange-700' :
+                              pedido.estado === 'Enviado' ? 'bg-blue-100 text-blue-700' :
+                                pedido.estado === 'Entregado' ? 'bg-green-100 text-green-700' :
+                                  pedido.estado === 'Cancelado' ? 'bg-red-100 text-red-700' :
+                                    pedido.estado?.includes('Devolucion') ? 'bg-purple-100 text-purple-700' :
+                                      'bg-stone-100 text-stone-500'
+                            }`}>
+                            {pedido.estado}
+                          </span>
+                        </td>
 
-                      {/* Productos */}
-                      <td className="px-4 py-3 max-w-[200px]">
-                        <div className="truncate text-stone-700">
-                          {pedido.detalles.map(d => `${d.producto_nombre} x${d.cantidad}`).join(', ')}
-                        </div>
-                        <div className="text-xs text-stone-400 mt-0.5">
-                          {pedido.detalles.length} {pedido.detalles.length === 1 ? 'producto' : 'productos'}
-                        </div>
-                      </td>
+                        {/* CLIENTE */}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <p className="font-semibold text-stone-800 text-sm">{pedido.cliente_nombre}</p>
+                          {pedido.telefono && <p className="text-xs text-stone-400">{pedido.telefono}</p>}
+                        </td>
 
-                      {/* Total */}
-                      <td className="px-4 py-3 font-semibold text-green-700 whitespace-nowrap">
-                        ${Number(pedido.total).toLocaleString('es-CO')}
-                      </td>
+                        {/* PRODUCTOS */}
+                        <td className="px-4 py-3 max-w-[180px]">
+                          <p className="truncate text-stone-600 text-xs">
+                            {pedido.detalles.map(d => `${d.producto_nombre} x${d.cantidad}`).join(', ')}
+                          </p>
+                          <p className="text-xs text-stone-400 mt-0.5">
+                            {pedido.detalles.length} {pedido.detalles.length === 1 ? 'producto' : 'productos'}
+                          </p>
+                        </td>
 
+                        {/* TOTAL */}
+                        <td className="px-4 py-3 font-bold text-green-700 whitespace-nowrap text-sm">
+                          ${Number(pedido.total).toLocaleString('es-CO')}
+                        </td>
 
+                        {/* FECHA */}
+                        <td className="px-4 py-3 text-xs text-stone-400 whitespace-nowrap">
+                          {new Date(pedido.fecha).toLocaleDateString('es-CO', {
+                            day: '2-digit', month: 'short', year: 'numeric',
+                          })}
+                        </td>
 
-                      {/* Fecha */}
-                      <td className="px-4 py-3 text-stone-400 text-xs whitespace-nowrap">
-                        {new Date(pedido.fecha).toLocaleDateString('es-CO', {
-                          day: '2-digit', month: 'short', year: 'numeric',
-                        })}
-                      </td>
-                      {/* Acciones */}
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col gap-2">
+                        {/* ACCIONES */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5 flex-wrap">
 
-                          {/* Estado actual */}
-                          <div className="mb-2">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-semibold
-                            ${pedido.estado === 'Pendiente'
-                                  ? 'bg-yellow-100 text-yellow-700'
-                                  : pedido.estado === 'En proceso'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : pedido.estado === 'Enviado'
-                                      ? 'bg-indigo-100 text-indigo-700'
-                                      : pedido.estado === 'Entregado'
-                                        ? 'bg-green-100 text-green-700'
-                                        : pedido.estado === 'Cancelado'
-                                          ? 'bg-red-100 text-red-700'
-                                          : pedido.estado === 'Devolucion solicitada'
-                                            ? 'bg-purple-100 text-purple-700'
-                                            : pedido.estado === 'Devolucion aprobada'
-                                              ? 'bg-green-100 text-green-700'
-                                              : pedido.estado === 'Devolucion rechazada'
-                                                ? 'bg-red-100 text-red-700'
-                                                : 'bg-gray-100 text-gray-700'
-                                }`}
-                            >
-                              {pedido.estado}
-                            </span>
-                          </div>
-
-                          {/* Botones cambio de estado */}
-                          <div className="flex flex-wrap gap-1">
                             {(SIGUIENTES[pedido.estado] ?? []).length === 0 ? (
-                              <span className="text-xs text-gray-400 font-medium">
-                                Estado finalizado
-                              </span>
+                              <span className="text-xs text-stone-300 italic">Finalizado</span>
                             ) : (
                               (SIGUIENTES[pedido.estado] ?? []).map(siguiente => (
                                 <button
                                   key={siguiente}
                                   disabled={isLoading}
                                   onClick={() => actualizarEstado(pedido, siguiente)}
-                                  className={`px-2 py-1 rounded-lg text-xs font-semibold transition
-                                  ${BTN_COLOR[siguiente] ?? 'bg-gray-100 text-gray-600'}
-                                  disabled:opacity-50`}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition disabled:opacity-50
+                                    ${BTN_COLOR[siguiente] ?? 'bg-gray-100 text-gray-600'}`}
                                 >
                                   {isLoading ? '⏳' : `→ ${siguiente}`}
                                 </button>
                               ))
                             )}
+
+                            {pedido.estado === 'Devolucion solicitada' && (
+                              <button
+                                onClick={() => setDevolucionSeleccionada(pedido)}
+                                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-100 text-purple-700 hover:bg-purple-200 transition"
+                              >
+                                👁 Ver
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => setPedidoExpandido(pedidoExpandido === pedido.id ? null : pedido.id)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-stone-100 text-stone-600 hover:bg-stone-200 transition"
+                            >
+                              {pedidoExpandido === pedido.id ? '▲' : '▼ Ver'}
+                            </button>
+
+                            {!['Cancelado', 'Pendiente', 'En proceso'].includes(pedido.estado) && (
+                              <button
+                                onClick={() => generarGuiaEnvio(pedido)}
+                                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-500 hover:bg-red-100 transition"
+                              >
+                                📄 PDF
+                              </button>
+                            )}
                           </div>
+                        </td>
+                      </tr>
 
-                          {/* Ver devolución */}
-                          {pedido.estado === 'Devolucion solicitada' && (
-                            <button
-                              onClick={() => setDevolucionSeleccionada(pedido)}
-                              className="px-3 py-1 rounded-lg text-xs font-semibold bg-purple-100 text-purple-700 hover:bg-purple-200 transition w-fit"
-                            >
-                              👁 Ver devolución
-                            </button>
-                          )}
-                          <button
-                            onClick={() =>
-                              setPedidoExpandido(
-                                pedidoExpandido === pedido.id ? null : pedido.id
-                              )
-                            }
-                            className="px-2 py-1 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition w-fit"
-                          >
-                            {pedidoExpandido === pedido.id ? '▲ Ocultar' : '▼ Detalles'}
-                          </button>
-                          {!['Cancelado', 'Pendiente', 'En proceso'].includes(pedido.estado) && (
-                            <button
-                              onClick={() => generarGuiaEnvio(pedido)}
-                              className="px-2 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition w-fit"
-                            >
-                              📄 Guía PDF
-                            </button>
-
-                          )}
-
-                        </div>
-                      </td>
+                      {/* FILA EXPANDIDA */}
                       {pedidoExpandido === pedido.id && (
-                        <tr>
-                          <td
-                            colSpan={6}
-                            className="bg-amber-50/30 px-6 py-5 border-b"
-                          >
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-                              {/* PRODUCTOS */}
-                              <div className="bg-white rounded-2xl border p-4 shadow-sm">
-
-                                <h3 className="font-bold text-stone-700 mb-3">
-                                  📦 Productos
-                                </h3>
-
+                        <tr key={`exp-${pedido.id}`}>
+                          <td colSpan={6} className="bg-amber-50/30 px-6 py-4 border-b border-amber-100">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
+                                <h3 className="font-bold text-stone-700 text-sm mb-3">📦 Productos</h3>
                                 <div className="space-y-2">
-
                                   {pedido.detalles.map((d, idx) => (
-
-                                    <div
-                                      key={idx}
-                                      className="flex justify-between text-sm border-b pb-2"
-                                    >
-                                      <span>{d.producto_nombre}</span>
-
-                                      <span>x{d.cantidad}</span>
+                                    <div key={idx} className="flex justify-between text-sm border-b border-amber-50 pb-1.5">
+                                      <span className="text-stone-700">{d.producto_nombre}</span>
+                                      <span className="font-semibold text-stone-500">x{d.cantidad}</span>
                                     </div>
-
                                   ))}
-
                                 </div>
-
                               </div>
-
-                              {/* INFORMACIÓN */}
-                              <div className="bg-white rounded-2xl border p-4 shadow-sm">
-
-                                <h3 className="font-bold text-stone-700 mb-3">
-                                  📋 Información
-                                </h3>
-
-                                <div className="space-y-2 text-sm">
-
-                                  <p>
-                                    <span className="font-semibold">
-                                      Cliente:
-                                    </span>{' '}
-
-                                    {pedido.cliente_nombre}
-                                  </p>
-
-                                  <p>
-                                    <span className="font-semibold">
-                                      Estado:
-                                    </span>{' '}
-
-                                    {pedido.estado}
-                                  </p>
-
-                                  <p>
-                                    <span className="font-semibold">
-                                      Total:
-                                    </span>{' '}
-
-                                    ${pedido.total}
-                                  </p>
-
-                                  {pedido.numero_guia && (
-                                    <p>
-                                      <span className="font-semibold">
-                                        Guía:
-                                      </span>{' '}
-
-                                      {pedido.numero_guia}
-                                    </p>
-                                  )}
-
+                              <div className="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
+                                <h3 className="font-bold text-stone-700 text-sm mb-3">📋 Información</h3>
+                                <div className="space-y-1.5 text-sm text-stone-600">
+                                  <p><span className="font-semibold text-stone-700">Cliente:</span> {pedido.cliente_nombre}</p>
+                                  <p><span className="font-semibold text-stone-700">Dirección:</span> {pedido.direccion || '—'}</p>
+                                  <p><span className="font-semibold text-stone-700">Total:</span> ${Number(pedido.total).toLocaleString('es-CO')}</p>
+                                  {pedido.numero_guia && <p><span className="font-semibold text-stone-700">Guía:</span> {pedido.numero_guia}</p>}
                                 </div>
-
                               </div>
-
                             </div>
-
                           </td>
                         </tr>
                       )}
-                    </tr>
-
+                    </>
                   );
                 })}
               </tbody>
@@ -3065,7 +2851,7 @@ const inventarioFiltrado = kardex.filter(k => {
             <div className="overflow-x-auto rounded-xl border border-amber-100">
               <table className="w-full text-sm">
                 <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
-                  <tr>{['Fecha', 'Producto', 'Categoría', 'Cantidad', 'PVP Unit.', 'Total', 'Pedido ref.', 'Registrado por'].map(
+                  <tr>{['Fecha', 'Producto', 'Tipo', 'Subtipo', 'Cantidad', 'PVP Unit.', 'Total', 'Pedido ref.', 'Registrado por'].map(
                     h => <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
                   )}</tr>
                 </thead>
@@ -3077,7 +2863,8 @@ const inventarioFiltrado = kardex.filter(k => {
                       <tr key={k.id} className="border-t border-amber-50 hover:bg-amber-50/50">
                         <td className="px-4 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
                         <td className="px-4 py-3 font-semibold">{k.producto_nombre}</td>
-                        <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">{prod?.categoria_nombre ?? '—'}</span></td>
+                        <td className="px-4 py-3"><TipoBadge tipo={k.tipo} /></td>
+                        <td className="px-4 py-3"><span className="text-xs bg-stone-50 border border-stone-100 px-2 py-0.5 rounded-full text-stone-500">{(k as any).subtipo ?? '—'}</span></td>
                         <td className="px-4 py-3 font-bold text-center">{k.cantidad}</td>
                         <td className="px-4 py-3 text-stone-600">{pvp ? `$${pvp.toLocaleString('es-CO')}` : '—'}</td>
                         <td className="px-4 py-3 font-semibold text-green-700">${(pvp * k.cantidad).toLocaleString('es-CO')}</td>

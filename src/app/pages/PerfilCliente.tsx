@@ -42,18 +42,19 @@ interface NotificationSettings {
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 const TABS_CLIENTE = [
-  { id: 'perfil',          label: 'Perfil',           icon: User },
-  { id: 'contrasena',      label: 'Contraseña',        icon: Lock },
-  { id: 'favoritos',       label: 'Mis Favoritos',     icon: Heart },
-  { id: 'resenas',         label: 'Mis Reseñas',       icon: Star },
-  { id: 'notificaciones',  label: 'Notificaciones',    icon: Bell },
+  { id: 'perfil', label: 'Perfil', icon: User },
+  { id: 'pedidos', label: 'Mis Pedidos', icon: ShoppingBag },
+  { id: 'contrasena', label: 'Contraseña', icon: Lock },
+  { id: 'favoritos', label: 'Mis Favoritos', icon: Heart },
+  { id: 'resenas', label: 'Mis Reseñas', icon: Star },
+  { id: 'notificaciones', label: 'Notificaciones', icon: Bell },
 ];
 
 // ─── Estrellas ────────────────────────────────────────────────────────────────
 function StarRating({ value }: { value: number }) {
   return (
     <div className="flex gap-0.5">
-      {[1,2,3,4,5].map(s => (
+      {[1, 2, 3, 4, 5].map(s => (
         <Star key={s} className={`h-4 w-4 ${s <= value ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200 fill-gray-200'}`} />
       ))}
     </div>
@@ -62,8 +63,8 @@ function StarRating({ value }: { value: number }) {
 
 // ─── Sección: Cambio de Contraseña ───────────────────────────────────────────
 function TabContrasena({ userEmail }: { userEmail: string }) {
-  const [form, setForm]       = useState({ actual: '', nueva: '', confirmar: '' });
-  const [show, setShow]       = useState({ actual: false, nueva: false, confirmar: false });
+  const [form, setForm] = useState({ actual: '', nueva: '', confirmar: '' });
+  const [show, setShow] = useState({ actual: false, nueva: false, confirmar: false });
   const [loading, setLoading] = useState(false);
 
   const toggle = (field: keyof typeof show) => setShow(s => ({ ...s, [field]: !s[field] }));
@@ -94,8 +95,8 @@ function TabContrasena({ userEmail }: { userEmail: string }) {
   };
 
   const fields = [
-    { key: 'actual',    label: 'Contraseña actual',    placeholder: 'Ingresa tu contraseña actual' },
-    { key: 'nueva',     label: 'Nueva contraseña',     placeholder: 'Mínimo 6 caracteres' },
+    { key: 'actual', label: 'Contraseña actual', placeholder: 'Ingresa tu contraseña actual' },
+    { key: 'nueva', label: 'Nueva contraseña', placeholder: 'Mínimo 6 caracteres' },
     { key: 'confirmar', label: 'Confirmar contraseña', placeholder: 'Repite la nueva contraseña' },
   ] as const;
 
@@ -321,11 +322,11 @@ function TabResenas({ userEmail }: { userEmail: string }) {
 // ─── Sección: Notificaciones ──────────────────────────────────────────────────
 function TabNotificaciones({ userEmail }: { userEmail: string }) {
   const defaultSettings: NotificationSettings = {
-    pedidoConfirmado:     true,
-    pedidoEnviado:        true,
-    pedidoEntregado:      true,
-    devolucionRespuesta:  true,
-    favoritoDescuento:    false,
+    pedidoConfirmado: true,
+    pedidoEnviado: true,
+    pedidoEntregado: true,
+    devolucionRespuesta: true,
+    favoritoDescuento: false,
     nuevoProductoArtesano: false,
   };
 
@@ -347,17 +348,17 @@ function TabNotificaciones({ userEmail }: { userEmail: string }) {
     {
       group: '📦 Mis Pedidos',
       items: [
-        { key: 'pedidoConfirmado',    icon: Package,      label: 'Pedido confirmado',         desc: 'Cuando tu pedido sea recibido por el artesano' },
-        { key: 'pedidoEnviado',       icon: TruckIcon,    label: 'Pedido en camino',           desc: 'Cuando tu pedido sea despachado' },
-        { key: 'pedidoEntregado',     icon: CheckCircle,  label: 'Pedido entregado',           desc: 'Confirmación de entrega exitosa' },
-        { key: 'devolucionRespuesta', icon: AlertCircle,  label: 'Respuesta a devolución',     desc: 'Cuando el artesano responda tu solicitud' },
+        { key: 'pedidoConfirmado', icon: Package, label: 'Pedido confirmado', desc: 'Cuando tu pedido sea recibido por el artesano' },
+        { key: 'pedidoEnviado', icon: TruckIcon, label: 'Pedido en camino', desc: 'Cuando tu pedido sea despachado' },
+        { key: 'pedidoEntregado', icon: CheckCircle, label: 'Pedido entregado', desc: 'Confirmación de entrega exitosa' },
+        { key: 'devolucionRespuesta', icon: AlertCircle, label: 'Respuesta a devolución', desc: 'Cuando el artesano responda tu solicitud' },
       ],
     },
     {
       group: '❤️ Favoritos y Descubrimiento',
       items: [
-        { key: 'favoritoDescuento',       icon: Heart,    label: 'Descuento en favorito',         desc: 'Cuando un producto guardado tenga oferta' },
-        { key: 'nuevoProductoArtesano',   icon: Star,     label: 'Nuevo producto del artesano',   desc: 'Cuando un artesano que sigues publique algo nuevo' },
+        { key: 'favoritoDescuento', icon: Heart, label: 'Descuento en favorito', desc: 'Cuando un producto guardado tenga oferta' },
+        { key: 'nuevoProductoArtesano', icon: Star, label: 'Nuevo producto del artesano', desc: 'Cuando un artesano que sigues publique algo nuevo' },
       ],
     },
   ] as const;
@@ -405,6 +406,190 @@ function TabNotificaciones({ userEmail }: { userEmail: string }) {
   );
 }
 
+// ─── Sección: Mis Pedidos ─────────────────────────────────────────────────────
+function TabPedidos({ userId }: { userId: string }) {
+  const [pedidos, setPedidos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [cancelando, setCancelando] = useState<number | null>(null);
+  const [expandido, setExpandido] = useState<number | null>(null);
+
+  const BASE = 'http://localhost:8000/api';
+
+  useEffect(() => {
+    const fetchPedidos = async () => {
+      try {
+        const token = localStorage.getItem('token') ?? '';
+        const res = await fetch(`${BASE}/inventario/pedidos/cliente/${userId}/`, {
+          headers: token ? { Authorization: `Token ${token}` } : {},
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setPedidos(data);
+      } catch {
+        toast.error('No se pudieron cargar los pedidos');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPedidos();
+  }, [userId]);
+
+  const cancelarPedido = async (pedido: any) => {
+    if (!confirm(`¿Seguro que deseas cancelar el pedido ${pedido.codigo}?`)) return;
+    setCancelando(pedido.id);
+    try {
+      const token = localStorage.getItem('token') ?? '';
+      const res = await fetch(`${BASE}/inventario/pedido/estado/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Token ${token}` } : {}),
+        },
+        body: JSON.stringify({ pedido_id: pedido.id, estado_nuevo: 'Cancelado' }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? 'No se pudo cancelar'); return; }
+      setPedidos(prev => prev.map(p => p.id === pedido.id ? { ...p, estado: 'Cancelado' } : p));
+      toast.success('Pedido cancelado correctamente');
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
+      setCancelando(null);
+    }
+  };
+
+  const estadoColor: Record<string, string> = {
+    Pendiente: 'bg-yellow-100 text-yellow-700',
+    'En proceso': 'bg-orange-100 text-orange-700',
+    Enviado: 'bg-blue-100 text-blue-700',
+    Entregado: 'bg-green-100 text-green-700',
+    Cancelado: 'bg-red-100 text-red-700',
+    'Devolucion solicitada': 'bg-purple-100 text-purple-700',
+    'Devolucion aprobada': 'bg-teal-100 text-teal-700',
+    'Devolucion rechazada': 'bg-red-200 text-red-800',
+  };
+
+  const estadoIcono: Record<string, string> = {
+    Pendiente: '🕐', 'En proceso': '⚙️', Enviado: '🚚',
+    Entregado: '✅', Cancelado: '❌',
+    'Devolucion solicitada': '🔄', 'Devolucion aprobada': '↩️',
+    'Devolucion rechazada': '🚫',
+  };
+
+  if (loading) return (
+    <Card>
+      <CardContent className="py-10 space-y-3">
+        {[1, 2, 3].map(i => <div key={i} className="h-14 bg-orange-50 rounded-xl animate-pulse" />)}
+      </CardContent>
+    </Card>
+  );
+
+  if (pedidos.length === 0) return (
+    <Card>
+      <CardContent className="py-16 text-center">
+        <ShoppingBag className="h-12 w-12 mx-auto mb-3 text-gray-200" />
+        <p className="text-sm font-medium text-gray-500 mb-1">No tienes pedidos aún</p>
+        <p className="text-xs text-gray-400 mb-4">Cuando realices una compra aparecerá aquí</p>
+        <Link to="/catalogo">
+          <Button className="bg-orange-600 hover:bg-orange-700">Explorar Catálogo</Button>
+        </Link>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ShoppingBag className="h-5 w-5 text-orange-600" /> Mis Pedidos
+          <span className="text-sm font-normal text-gray-400">({pedidos.length})</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {pedidos.map(pedido => (
+          <div key={pedido.id} className="border border-gray-100 rounded-2xl overflow-hidden hover:border-orange-200 transition">
+
+            {/* Fila principal */}
+            <div className="flex items-center gap-3 p-4">
+
+              {/* Ícono estado */}
+              <div className="text-2xl flex-shrink-0">{estadoIcono[pedido.estado] ?? '📦'}</div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-mono text-xs text-gray-400">{pedido.codigo}</p>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${estadoColor[pedido.estado] ?? 'bg-gray-100 text-gray-600'}`}>
+                    {pedido.estado}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-600 truncate mt-0.5">
+                  {pedido.detalles?.map((d: any) => `${d.producto_nombre} x${d.cantidad}`).join(', ')}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {new Date(pedido.fecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+
+              {/* Total */}
+              <div className="text-right flex-shrink-0">
+                <p className="font-bold text-green-700 text-sm">${Number(pedido.total).toLocaleString('es-CO')}</p>
+              </div>
+            </div>
+
+            {/* Acciones */}
+            <div className="flex items-center gap-2 px-4 pb-3 flex-wrap">
+
+              {/* Ver detalles */}
+              <button
+                onClick={() => setExpandido(expandido === pedido.id ? null : pedido.id)}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition"
+              >
+                {expandido === pedido.id ? '▲ Ocultar' : '▼ Ver detalles'}
+              </button>
+
+              {/* Cancelar — solo si está Pendiente */}
+              {pedido.estado === 'Pendiente' && (
+                <button
+                  onClick={() => cancelarPedido(pedido)}
+                  disabled={cancelando === pedido.id}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50"
+                >
+                  {cancelando === pedido.id ? '⏳ Cancelando...' : '❌ Cancelar pedido'}
+                </button>
+              )}
+            </div>
+
+            {/* Detalles expandidos */}
+            {expandido === pedido.id && (
+              <div className="border-t border-orange-50 bg-orange-50/30 px-4 py-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-white rounded-xl border border-orange-100 p-3">
+                  <p className="text-xs font-bold text-orange-700 mb-2">📦 Productos</p>
+                  {pedido.detalles?.map((d: any, i: number) => (
+                    <div key={i} className="flex justify-between text-sm border-b border-orange-50 pb-1.5 mb-1.5 last:border-0">
+                      <span className="text-gray-700">{d.producto_nombre}</span>
+                      <span className="font-semibold text-gray-500">x{d.cantidad}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-white rounded-xl border border-orange-100 p-3">
+                  <p className="text-xs font-bold text-orange-700 mb-2">📋 Información</p>
+                  <div className="space-y-1 text-sm text-gray-600">
+                    <p><span className="font-semibold">Estado:</span> {pedido.estado}</p>
+                    <p><span className="font-semibold">Total:</span> ${Number(pedido.total).toLocaleString('es-CO')}</p>
+                    {pedido.direccion && <p><span className="font-semibold">Dirección:</span> {pedido.direccion}</p>}
+                    {pedido.numero_guia && <p><span className="font-semibold">Guía:</span> {pedido.numero_guia}</p>}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export function Profile() {
   const { user, isAuthenticated, updateProfile } = useAuth();
@@ -429,8 +614,8 @@ export function Profile() {
         phone: user.phone || '', address: user.address || '',
         bio: user.bio || '', specialty: user.specialty || '',
       });
-const savedPhoto = localStorage.getItem(`profileImage_${user.email}`);
-    setPreviewImage(savedPhoto || user.profileImage || null);
+      const savedPhoto = localStorage.getItem(`profileImage_${user.email}`);
+      setPreviewImage(savedPhoto || user.profileImage || null);
     }
   }, [user, isAuthenticated, navigate]);
 
@@ -438,30 +623,30 @@ const savedPhoto = localStorage.getItem(`profileImage_${user.email}`);
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      setPreviewImage(base64);
-      
-      // Guardar en localStorage con la clave del email
-      localStorage.setItem(`profileImage_${user?.email}`, base64);
-      
-      // Actualizar el objeto user en localStorage
-      const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
-      savedUser.profileImage = base64;
-      localStorage.setItem('user', JSON.stringify(savedUser));
-      
-      // Actualizar en el contexto
-      updateProfile({ profileImage: base64 });
-      
-      toast.success('Foto de perfil actualizada');
-    };
-    reader.readAsDataURL(file);
-  }
-};
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        setPreviewImage(base64);
+
+        // Guardar en localStorage con la clave del email
+        localStorage.setItem(`profileImage_${user?.email}`, base64);
+
+        // Actualizar el objeto user en localStorage
+        const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
+        savedUser.profileImage = base64;
+        localStorage.setItem('user', JSON.stringify(savedUser));
+
+        // Actualizar en el contexto
+        updateProfile({ profileImage: base64 });
+
+        toast.success('Foto de perfil actualizada');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -510,8 +695,8 @@ const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                 <h3 className="font-bold text-xl mb-1 text-orange-600 tracking-wide">{user.name}</h3>
                 <p className="text-xs text-gray-500 mb-2">{user.email}</p>
                 <span className="inline-block px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
-                  {user.role === 'artisan' ? 'Artesano' : user.role === 'admin' ? 'Administrador' : user.role === 'customer'? 'Cliente'
-: 'Cliente'}                </span>
+                  {user.role === 'artisan' ? 'Artesano' : user.role === 'admin' ? 'Administrador' : user.role === 'customer' ? 'Cliente'
+                    : 'Cliente'}                </span>
                 <p className="text-xs text-gray-400 mt-3">Haz clic en la cámara para cambiar tu foto</p>
               </CardContent>
             </Card>
@@ -522,11 +707,10 @@ const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                 <nav className="space-y-0.5">
                   {tabs.map(({ id, label, icon: Icon }) => (
                     <button key={id} onClick={() => setActiveTab(id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-                        activeTab === id
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${activeTab === id
                           ? 'bg-orange-600 text-white font-medium shadow-sm'
                           : 'text-gray-600 hover:bg-orange-50 hover:text-orange-700'
-                      }`}>
+                        }`}>
                       <Icon className="h-4 w-4 flex-shrink-0" />
                       {label}
                     </button>
@@ -617,9 +801,10 @@ const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
               </Card>
             )}
 
-            {activeTab === 'contrasena'     && <TabContrasena     userEmail={user.email} />}
-            {activeTab === 'favoritos'      && <TabFavoritos      userEmail={user.email} />}
-            {activeTab === 'resenas'        && <TabResenas        userEmail={user.email} />}
+            {activeTab === 'pedidos' && <TabPedidos userId={String(localStorage.getItem('usuario_id') ?? '')} />}
+            {activeTab === 'contrasena' && <TabContrasena userEmail={user.email} />}
+            {activeTab === 'favoritos' && <TabFavoritos userEmail={user.email} />}
+            {activeTab === 'resenas' && <TabResenas userEmail={user.email} />}
             {activeTab === 'notificaciones' && <TabNotificaciones userEmail={user.email} />}
           </div>
         </div>
