@@ -538,18 +538,13 @@ function ModuloCatalogo({
 
     const nuevoVisible = !(producto.visible ?? true);
 
-  const res = await fetch(`http://localhost:8000/api/productos/${id}/`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ visible: nuevoVisible }),
-  });
-
-    if (!res.ok) {
-      alert(`No se pudo cambiar la visibilidad. Código: ${res.status}`);
-      return;
-    }
+  const res = await fetch(`http://localhost:8000/api/productos/${id}/visibilidad/`, {
+  method: 'PATCH',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ visible: nuevoVisible }),
+});
 
   const actualizado = await res.json();
   setProductos(prev =>
@@ -915,11 +910,16 @@ function ModuloProductos({ productos, setProductos, categorias, setCategorias, i
 
         const response = await fetch(
           'http://127.0.0.1:8000/api/productos/',
-          {
-            method: 'POST',
-            body: formData,
-          }
-        );
+  {
+    method: 'POST',
+    body: formData,
+  }
+);
+
+if (!response.ok) {
+  const error = await response.json();
+  throw new Error(JSON.stringify(error));
+}
 
         const nuevo = await response.json();
         const productosActualizados = [...productos, nuevo];
