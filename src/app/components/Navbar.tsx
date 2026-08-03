@@ -217,7 +217,7 @@ export function Navbar({ activeTab, onTabChange }: NavbarProps) {
                           <p className="text-sm">No hay notificaciones</p>
                         </div>
                       ) : (
-                        orders.slice().reverse().map((order: any) => {
+                       orders.slice().sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((order: any) => {
                           const status = order.estado || 'Pendiente';
                           const icon = STATUS_ICONS[status] || '🕐';
                           return (
