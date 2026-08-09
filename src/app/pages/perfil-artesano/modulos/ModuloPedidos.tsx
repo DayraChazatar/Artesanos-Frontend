@@ -127,13 +127,10 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
 
   const resumen = {
     total: pedidos.length,
-    pendiente: pedidos.filter(p => p.estado === 'Pendiente').length,
+    gestion: pedidos.filter(p => p.estado === 'Pendiente' || p.estado === 'En proceso').length,
     enviado: pedidos.filter(p => p.estado === 'Enviado').length,
     entregado: pedidos.filter(p => p.estado === 'Entregado').length,
-    devoluciones: pedidos.filter(p => {
-      const estado = p.estado.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-      return estado.startsWith('devolucion') || estado === 'devuelto';
-    }).length,
+    atencion: pedidos.filter(p => p.estado === 'Devolucion solicitada').length,
     cancelado: pedidos.filter(p => p.estado === 'Cancelado').length,
   };
 
@@ -154,13 +151,13 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
       <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
         {[
           { label: 'Total', value: resumen.total, color: 'text-stone-700', bg: 'bg-white', border: 'border-stone-200' },
-          { label: 'Pendiente', value: resumen.pendiente, color: 'text-yellow-700', bg: 'bg-yellow-50', border: 'border-yellow-200' },
-          { label: 'Enviado', value: resumen.enviado, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
+          { label: 'Pendientes de gestión', value: resumen.gestion, color: 'text-yellow-700', bg: 'bg-yellow-50', border: 'border-yellow-200' },
+          { label: 'En camino', value: resumen.enviado, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
           { label: 'Entregado', value: resumen.entregado, color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200' },
+          { label: 'Requieren atención', value: resumen.atencion, color: 'text-purple-700', bg: resumen.atencion > 0 ? 'bg-purple-100 animate-pulse' : 'bg-purple-50', border: 'border-purple-200' },
           { label: 'Cancelado', value: resumen.cancelado, color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' },
-          { label: 'Devoluciones', value: resumen.devoluciones, color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200' },
         ].map(card => (
-          <div key={card.label} className={`${card.bg} rounded-xl border ${card.border} px-4 py-3 text-center shadow-sm`}>
+          <div key={card.label} className={`${card.bg} rounded-xl border ${card.border} px-4 py-3 text-center shadow-sm transition`}>
             <p className={`text-xl font-bold ${card.color}`}>{card.value}</p>
             <p className="text-[11px] text-stone-400 mt-0.5 font-medium">{card.label}</p>
           </div>

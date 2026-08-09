@@ -23,12 +23,14 @@ export function ModuloInventario({
   productos, kardex, setKardex, setProductos,
   filtroProductoInicial = 'todos', onFiltroUsado,
 }: ModuloInventarioProps) {
-  const [form, setForm] = useState({ producto: productos[0]?.id ?? 0, fecha: '', cantidad: '', precio_pvp: '', nota: '' });
+  const [form, setForm] = useState({ producto: productos[0]?.id ?? 0, fecha: new Date().toISOString().slice(0, 10), cantidad: '', precio_pvp: '', nota: '' });
   const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [loading, setLoading] = useState(false);
   const [modalProd, setModalProd] = useState<Producto | null>(null);
   const [activeTab, setActiveTab] = useState<'entrada' | 'historial'>('entrada');
   const [filtros, setFiltros] = useState({ desde: '', hasta: '', tipo: 'todos', origen: 'todos', producto: filtroProductoInicial });
+  const [busquedaHistorial, setBusquedaHistorial] = useState('');
+  const [limiteVisible, setLimiteVisible] = useState(10);
 
   useEffect(() => {
     if (filtroProductoInicial !== 'todos') {
@@ -38,6 +40,10 @@ export function ModuloInventario({
       onFiltroUsado?.();
     }
   }, [filtroProductoInicial]);
+
+  useEffect(() => {
+    setLimiteVisible(10);
+  }, [filtros, busquedaHistorial]);
 
   const showAlert = (msg: string, type: 'success' | 'error' = 'success') => {
     setAlert({ msg, type }); setTimeout(() => setAlert(null), 3500);
@@ -57,7 +63,7 @@ export function ModuloInventario({
         setProductos(prev => prev.map(p => p.id === form.producto ? { ...p, cantidad: nuevo.stock_resultante! } : p));
       }
       try { const k = await getKardex(); setKardex(k); } catch { }
-      setForm({ producto: productos[0]?.id ?? 0, fecha: '', cantidad: '', precio_pvp: '', nota: '' });
+      setForm({ producto: productos[0]?.id ?? 0, fecha: new Date().toISOString().slice(0, 10), cantidad: '', precio_pvp: '', nota: '' });
       showAlert('✓ Entrada registrada correctamente');
     } catch (err: any) {
       let msg = 'Error al registrar el movimiento';
@@ -82,11 +88,17 @@ export function ModuloInventario({
     if (filtros.tipo !== 'todos' && String(k.tipo ?? '').toLowerCase() !== filtros.tipo) return false;
     if (filtros.origen !== 'todos' && String((k as any).origen ?? '') !== filtros.origen) return false;
     if (filtros.producto !== 'todos' && String(k.producto) !== filtros.producto) return false;
+    if (busquedaHistorial) {
+      const texto = busquedaHistorial.toLowerCase();
+      const nota = (k.nota ?? '').toLowerCase();
+      const pedidoRef = ((k as any).pedido_ref ?? '').toLowerCase();
+      if (!nota.includes(texto) && !pedidoRef.includes(texto)) return false;
+    }
     return true;
   });
 
   const tabCls = (t: string) => `px-4 py-2 rounded-xl text-sm font-semibold transition ${activeTab === t ? 'bg-amber-700 text-white shadow' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`;
-
+  const kardexVisible = kardexFiltrado.slice(0, limiteVisible);
   return (
     <div className="space-y-5 font-sans">
       {modalProd && <ModalReposicion producto={modalProd} onClose={() => setModalProd(null)} onConfirm={handleReposicion} />}
@@ -101,7 +113,9 @@ export function ModuloInventario({
         <>
           <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-6">
             <h2 className="font-serif text-lg text-amber-800 font-semibold mb-1">📦 Registrar entrada de mercancía</h2>
-            <p className="text-xs text-stone-400 mb-5">El sistema registra automáticamente el tipo, subtipo y quién lo registró.</p>
+            <p className="text-xs text-stone-400 mb-5">
+              Usa esta opción para sumar stock a un producto ya registrado (ej. nueva producción, reposición, compra de materiales). El sistema registra automáticamente el tipo, subtipo y quién lo hizo.
+            </p>
             <div className="space-y-4">
               <div>
                 <label className={labelCls}>Producto</label>
@@ -170,6 +184,15 @@ export function ModuloInventario({
           <h2 className="font-serif text-lg text-amber-800 font-semibold mb-4">📊 Historial de movimientos</h2>
           <div className="flex flex-wrap items-center gap-2 mb-4 text-xs text-stone-500">
             <span className="font-semibold">FILTRAR:</span>
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <input
+                type="text"
+                placeholder="Buscar por nota o referencia de pedido..."
+                className="border border-amber-200 bg-amber-50/40 rounded-lg px-3 py-1.5 text-xs flex-1 min-w-[220px]"
+                value={busquedaHistorial}
+                onChange={e => setBusquedaHistorial(e.target.value)}
+              />
+            </div>
             <span>Desde</span>
             <input type="date" className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.desde} onChange={e => setFiltros({ ...filtros, desde: e.target.value })} />
             <span>Hasta</span>
@@ -185,8 +208,8 @@ export function ModuloInventario({
               <option value="todos">Producto: todos</option>
               {productos.map(p => <option key={p.id} value={String(p.id)}>{p.nombre}</option>)}
             </select>
-            {Object.values(filtros).some(v => v !== 'todos' && v !== '') && (
-              <button onClick={() => setFiltros({ desde: '', hasta: '', tipo: 'todos', origen: 'todos', producto: 'todos' })}
+            {(Object.values(filtros).some(v => v !== 'todos' && v !== '') || busquedaHistorial) && (
+              <button onClick={() => { setFiltros({ desde: '', hasta: '', tipo: 'todos', origen: 'todos', producto: 'todos' }); setBusquedaHistorial(''); }}
                 className="px-2 py-1 rounded-lg bg-stone-100 text-stone-500 text-xs hover:bg-stone-200 transition">✕ Limpiar</button>
             )}
           </div>
@@ -202,7 +225,7 @@ export function ModuloInventario({
               <tbody>
                 {kardexFiltrado.length === 0 ? (
                   <tr><td colSpan={11} className="px-4 py-8 text-center text-stone-400 text-sm">Sin movimientos</td></tr>
-                ) : kardexFiltrado.map(k => (
+                ) : kardexVisible.map(k => (
                   <tr key={k.id} className="border-t border-amber-50 hover:bg-amber-50/50 transition">
                     <td className="px-3 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
                     <td className="px-3 py-3 font-semibold">{k.producto_nombre}</td>
@@ -213,7 +236,7 @@ export function ModuloInventario({
                     <td className="px-3 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${(k as any).origen === 'automatico' ? 'bg-purple-50 text-purple-600' : 'bg-amber-50 text-amber-600'}`}>{(k as any).origen === 'automatico' ? '⚡ auto' : '✍️ manual'}</span></td>
                     <td className="px-3 py-3 font-bold">{k.cantidad}</td>
                     <td className="px-3 py-3 font-semibold text-green-700">{k.stock_resultante}</td>
-                    <td className="px-3 py-3 text-stone-600">{(k as any).precio_unitario ? `$${Number((k as any).precio_unitario).toLocaleString()}` : '—'}</td>
+                    <td className="px-3 py-3 text-stone-600">{(k as any).precio_unitario ? `$${Math.round(Number((k as any).precio_unitario)).toLocaleString('es-CO')}` : '—'}</td>
                     <td className="px-3 py-3 text-xs text-stone-400 font-mono">{(k as any).pedido_ref ?? '—'}</td>
                     <td className="px-3 py-3 text-xs text-stone-400">{(k as any).creado_por ?? '—'}</td>
                     <td className="px-3 py-3 text-xs text-stone-400">{k.nota ?? '—'}</td>
@@ -221,8 +244,16 @@ export function ModuloInventario({
                 ))}
               </tbody>
             </table>
+            {limiteVisible < kardexFiltrado.length && (
+              <div className="flex justify-center mt-4">
+                <button onClick={() => setLimiteVisible(prev => prev + 10)}
+                  className="px-4 py-2 rounded-xl bg-amber-100 text-amber-800 text-sm font-semibold hover:bg-amber-200 transition">
+                  Cargar más movimientos
+                </button>
+              </div>
+            )}
           </div>
-          <p className="text-xs text-stone-400 mt-2">{kardexFiltrado.length} movimiento{kardexFiltrado.length !== 1 ? 's' : ''}{kardexFiltrado.length !== kardex.length && ` de ${kardex.length} total`}</p>
+          <p className="text-xs text-stone-400 mt-2">{kardexVisible.length} de {kardexFiltrado.length} movimiento{kardexFiltrado.length !== 1 ? 's' : ''}{kardexFiltrado.length !== kardex.length && ` (filtrado de ${kardex.length} total)`}</p>
         </div>
       )}
     </div>

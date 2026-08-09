@@ -41,6 +41,7 @@ interface ModuloCatalogoProps {
 
 export function ModuloCatalogo({ productos, imagenes, setProductos }: ModuloCatalogoProps) {
   const [modalImg, setModalImg] = useState<{ nombre: string; src: string } | null>(null);
+  const [busqueda, setBusqueda] = useState('');
 
   const toggleVisible = async (id: number) => {
     const producto = productos.find(p => p.id === id);
@@ -56,6 +57,10 @@ export function ModuloCatalogo({ productos, imagenes, setProductos }: ModuloCata
     setProductos(prev => prev.map(p => p.id === id ? { ...p, visible: actualizado.visible } : p));
   };
 
+  const productosFiltrados = productos.filter(p =>
+    p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+    (p.codigo_barra ?? '').toLowerCase().includes(busqueda.toLowerCase())
+  );
   return (
     <div className="space-y-5">
       {modalImg && (
@@ -73,24 +78,32 @@ export function ModuloCatalogo({ productos, imagenes, setProductos }: ModuloCata
       )}
       <div className="bg-white rounded-2xl shadow-sm p-6">
         <h2 className="font-serif text-xl text-amber-800 mb-4">📋 Productos en catálogo</h2>
+        <div className="flex flex-wrap gap-3 mb-4">
+          <input
+            type="text"
+            placeholder="Buscar por nombre o código..."
+            className="flex-1 min-w-[200px] px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-base text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition"
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+          />
+        </div>
         <div className="overflow-x-auto rounded-xl border border-amber-100">
           <table className="w-full text-base">
             <thead className="bg-amber-50 text-sm uppercase tracking-wider text-amber-900/60">
               <tr>
-                {['Código', 'Lote', 'Producto', 'Categoría', 'Precio neto', 'Precio Final', 'IVA', 'Desc.', 'Stock', 'Imagen', 'Visible'].map(h => (
+                {['Código', 'Lote', 'Producto', 'Precio neto', 'Precio Final', 'IVA', 'Desc.', 'Stock', 'Imagen', 'Visible'].map(h => (
                   <th key={h} className="px-3 py-3 text-left font-semibold">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {productos.map(p => {
+              {productosFiltrados.map(p => {
                 const esVisible = p.visible ?? true;
                 return (
                   <tr key={p.id} className={`border-t border-amber-50 transition ${esVisible ? 'hover:bg-amber-50/50' : 'opacity-40 bg-stone-50'}`}>
                     <td className="px-3 py-3 font-mono text-sm">{p.codigo_barra || '—'}</td>
                     <td className="px-3 py-3 text-sm">{p.lote || '—'}</td>
                     <td className="px-3 py-3 font-semibold">{p.nombre}</td>
-                    <td className="px-3 py-3"><Badge color="bg-amber-100 text-amber-800">{p.categoria_nombre ?? '—'}</Badge></td>
                     <td className="px-3 py-3">${Number(p.precio_neto).toLocaleString()}</td>
                     <td className="px-3 py-3">
                       {p.precio_final
@@ -118,8 +131,8 @@ export function ModuloCatalogo({ productos, imagenes, setProductos }: ModuloCata
                   </tr>
                 );
               })}
-              {productos.length === 0 && (
-                <tr><td colSpan={11} className="px-4 py-6 text-center text-stone-400">Sin productos</td></tr>
+              {productosFiltrados.length === 0 && (
+                <tr><td colSpan={10} className="px-4 py-6 text-center text-stone-400">No se encontraron productos</td></tr>
               )}
             </tbody>
           </table>

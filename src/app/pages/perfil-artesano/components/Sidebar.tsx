@@ -1,10 +1,9 @@
 import { Tab } from '../types';
 
 const NAV_ITEMS: { tab: Tab; icon: string; label: string }[] = [
-  { tab: 'catalogo', icon: '📋', label: 'Catálogo' },
-  { tab: 'contable', icon: '📒', label: 'Contable' },
   { tab: 'productos', icon: '🛍️', label: 'Productos' },
   { tab: 'inventario', icon: '📊', label: 'Inventario' },
+  { tab: 'catalogo', icon: '📋', label: 'Catálogo' },
   { tab: 'pedidos', icon: '🛒', label: 'Pedidos' },
   { tab: 'reportes', icon: '📈', label: 'Reportes' },
 ];

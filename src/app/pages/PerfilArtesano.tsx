@@ -7,7 +7,6 @@ import { Topbar } from './perfil-artesano/components/Topbar';
 import { Sidebar } from './perfil-artesano/components/Sidebar';
 import { SidebarNotificaciones } from './perfil-artesano/components/SidebarNotificaciones';
 import { ModuloCatalogo } from './perfil-artesano/modulos/ModuloCatalogo';
-import { ModuloContable } from './perfil-artesano/modulos/ModuloContable';
 import { ModuloProductos } from './perfil-artesano/modulos/ModuloProductos';
 import { ModuloInventario } from './perfil-artesano/modulos/ModuloInventario';
 import { ModuloPedidos } from './perfil-artesano/modulos/ModuloPedidos';
@@ -26,7 +25,7 @@ const Alert = ({ msg, type }: { msg: string; type: 'success' | 'info' | 'error' 
 };
 
 export default function PerfilArtesano() {
-  const [tab, setTab] = useState<Tab>('catalogo');
+  const [tab, setTab] = useState<Tab>('productos');
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [kardex, setKardex] = useState<Kardex[]>([]);
@@ -86,7 +85,6 @@ export default function PerfilArtesano() {
             <>
               {tab === 'perfil' && <ModuloPerfil />}
               {tab === 'catalogo' && <ModuloCatalogo productos={productos} imagenes={imagenes} setProductos={setProductos} />}
-              {tab === 'contable' && <ModuloContable productos={productos} />}
               {tab === 'productos' && (
                 <ModuloProductos
                   productos={productos} setProductos={setProductos}

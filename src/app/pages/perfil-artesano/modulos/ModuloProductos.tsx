@@ -26,6 +26,23 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
   </div>
 );
 
+const BannerCategoria = ({ categoria }: { categoria: Categoria | undefined }) => {
+  if (!categoria) return (
+    <div className="p-3 bg-orange-50 border border-orange-200 rounded-xl text-sm text-orange-700 mb-4">
+      ⚠️ Aún no tienes una categoría asignada. Contacta al administrador.
+    </div>
+  );
+  return (
+    <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl mb-4">
+      <span className="text-xl">🏷️</span>
+      <p className="text-sm text-stone-700">
+        Tu categoría: <strong className="text-amber-800">{categoria.nombre}</strong>
+        <span className="text-stone-400"> — todos tus productos se registran aquí automáticamente</span>
+      </p>
+    </div>
+  );
+};
+
 function StockBadge({ p }: { p: Producto }) {
   const reservado = p.cantidad_reservada ?? 0;
   const disponible = p.cantidad - reservado;
@@ -49,6 +66,18 @@ function generarLote(): string {
   const timestamp = Date.now().toString().slice(-4);
   return `${anio}${mes}-${timestamp}`;
 }
+
+const formatMiles = (valor: number | string): string => {
+  if (valor === undefined || valor === null || valor === '') return '';
+  const num = typeof valor === 'string' ? parseFloat(valor) : valor;
+  if (!num || isNaN(num) || num === 0) return '';
+  return Math.round(num).toLocaleString('es-CO');
+};
+
+const parseMiles = (valor: string): number => {
+  const limpio = valor.replace(/\D/g, '');
+  return limpio ? Number(limpio) : 0;
+};
 
 const COLOR_MAP: Record<string, string> = {
   'rojo': '#ff0000', 'verde': '#00ff00', 'azul': '#0000ff',
@@ -74,7 +103,8 @@ export function ModuloProductos({
   productos, setProductos, categorias, setCategorias,
   imagenes, setImagenes, onIrAInventario,
 }: ModuloProductosProps) {
-  const [tabLocal, setTabLocal] = useState<'producto' | 'categoria' | 'lista'>('categoria');
+  const [tabLocal, setTabLocal] = useState<'producto' | 'lista'>('producto');
+  const [busqueda, setBusqueda] = useState('');
   const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [modalStockProd, setModalStockProd] = useState<Producto | null>(null);
   const [editandoId, setEditandoId] = useState<number | null>(null);
@@ -108,6 +138,7 @@ export function ModuloProductos({
 
   const handleAddProducto = async () => {
     if (!prod.nombre || !prod.precio_neto) return showAlert('Nombre y precio son obligatorios', 'error');
+    if (!editandoId && (!prod.cantidad || prod.cantidad <= 0)) return showAlert('La cantidad inicial es obligatoria y debe ser mayor a 0', 'error');
     if (prod.stock_maximo > 0 && prod.stock_minimo > prod.stock_maximo)
       return showAlert('El stock mínimo no puede ser mayor al máximo', 'error');
     if (prod.descuento && (prod.valor_descuento ?? 0) <= 0)
@@ -161,6 +192,7 @@ export function ModuloProductos({
       codigo_barra: producto.codigo_barra, lote: producto.lote,
       nombre: producto.nombre, categoria: producto.categoria,
       precio_neto: producto.precio_neto, iva: producto.iva,
+      precio_pvp: (producto as any).precio_pvp ?? 0,
       descuento: producto.descuento, valor_descuento: producto.valor_descuento,
       cantidad: producto.cantidad, stock_minimo: producto.stock_minimo,
       stock_maximo: producto.stock_maximo, artesano: ARTESANO_ID,
@@ -192,6 +224,10 @@ export function ModuloProductos({
   const tabCls = (t: string) =>
     `px-4 py-2 rounded-xl text-sm font-semibold transition ${tabLocal === t ? 'bg-amber-700 text-white shadow' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`;
 
+  const productosFiltrados = productos.filter(p =>
+    p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+    (p.codigo_barra ?? '').toLowerCase().includes(busqueda.toLowerCase())
+  );
   return (
     <div className="space-y-5">
       {modalStockProd && (
@@ -205,13 +241,13 @@ export function ModuloProductos({
       {alert && <Alert msg={alert.msg} type={alert.type} />}
 
       <div className="flex gap-3 flex-wrap">
-        <button className={tabCls('categoria')} onClick={() => setTabLocal('categoria')}>🏷️ Mi Categoría</button>
         <button className={tabCls('producto')} onClick={() => setTabLocal('producto')}>➕ Nuevo Producto</button>
         <button className={tabCls('lista')} onClick={() => setTabLocal('lista')}>📋 Ver todo</button>
       </div>
 
       {tabLocal === 'producto' && (
         <div className="space-y-5">
+          <BannerCategoria categoria={categorias[0]} />
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h2 className="font-serif text-xl text-amber-800 mb-4">📂 Seleccionar Imagen</h2>
             <div onClick={() => document.getElementById('input-imagen')?.click()}
@@ -227,15 +263,18 @@ export function ModuloProductos({
 
           <div className="bg-white rounded-2xl shadow-sm p-6">
             <h2 className="font-serif text-xl text-amber-800 mb-5">{editandoId ? '✏️ Editar Producto' : '➕ Crear Producto'}</h2>
+            <p className="text-xs text-stone-400 mb-5">Los campos marcados con <span className="text-red-500 font-semibold">*</span> son obligatorios</p>
             <div className="space-y-4">
               <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
                 <p className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-3">🔖 Identificación</p>
                 <div className="flex flex-wrap gap-4">
-                  <Field label="Código de barra / QR">
+                  <Field label="Código de barra / QR 🔒">
                     <input className={`${inputCls} bg-amber-100 cursor-not-allowed`} value={prod.codigo_barra || ''} readOnly />
+                    <span className="text-xs text-stone-400">Generado automáticamente</span>
                   </Field>
-                  <Field label="Lote">
+                  <Field label="Lote 🔒">
                     <input className={`${inputCls} bg-amber-100 cursor-not-allowed`} value={prod.lote || ''} readOnly />
+                    <span className="text-xs text-stone-400">Generado automáticamente</span>
                   </Field>
                 </div>
               </div>
@@ -252,17 +291,24 @@ export function ModuloProductos({
 
               <div className="flex flex-wrap gap-4">
                 <Field label="Precio neto *">
-                  <input className={inputCls} type="number" min="0" value={prod.precio_neto || ''} onChange={e => setProd({ ...prod, precio_neto: Number(e.target.value) })} placeholder="0" />
+                  <input
+                    className={inputCls}
+                    type="text"
+                    inputMode="numeric"
+                    value={formatMiles(prod.precio_neto)}
+                    onChange={e => setProd({ ...prod, precio_neto: parseMiles(e.target.value) })}
+                    placeholder="0"
+                  />
                 </Field>
                 <Field label="Precio venta al público (PVP)">
-                  <input className={inputCls} type="number" min="0" value={(prod as any).precio_pvp || ''} onChange={e => setProd({ ...prod, precio_pvp: Number(e.target.value) } as any)} placeholder="Ej: 25000" />
-                </Field>
-                <Field label="IVA (%)">
-                  <select className={inputCls} value={prod.iva} onChange={e => setProd({ ...prod, iva: Number(e.target.value) })}>
-                    <option value={0}>0% — Excluido</option>
-                    <option value={5}>5%</option>
-                    <option value={19}>19%</option>
-                  </select>
+                  <input
+                    className={inputCls}
+                    type="text"
+                    inputMode="numeric"
+                    value={formatMiles((prod as any).precio_pvp)}
+                    onChange={e => setProd({ ...prod, precio_pvp: parseMiles(e.target.value) } as any)}
+                    placeholder="Ej: 25.000"
+                  />
                 </Field>
               </div>
 
@@ -294,7 +340,7 @@ export function ModuloProductos({
                     </>
                   ) : (
                     <>
-                      <Field label="Cantidad inicial">
+                      <Field label="Cantidad inicial *">
                         <input className={inputCls} type="number" min="0" value={prod.cantidad || ''} onChange={e => setProd({ ...prod, cantidad: Number(e.target.value) })} placeholder="0" />
                       </Field>
                       <Field label="Stock mínimo">
@@ -323,50 +369,34 @@ export function ModuloProductos({
         </div>
       )}
 
-      {tabLocal === 'categoria' && (
-        <div className="bg-white rounded-2xl shadow-sm p-6">
-          {categorias.length === 0 ? (
-            <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl text-sm text-orange-700">
-              ⚠️ Aún no tienes una categoría asignada. Contacta al administrador.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="p-5 bg-amber-50 border border-amber-200 rounded-2xl">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-2xl">🏷️</span>
-                  <div>
-                    <p className="font-semibold text-stone-800 text-lg">{categorias[0].nombre}</p>
-                    <p className="text-xs text-amber-600 font-semibold">Tu categoría artesanal</p>
-                  </div>
-                </div>
-                {categorias[0].descripcion && <p className="text-sm text-stone-500 mt-2 leading-relaxed">{categorias[0].descripcion}</p>}
-              </div>
-              <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700">
-                ℹ️ Cada artesano maneja una única categoría. Tus productos se registran automáticamente bajo <strong>{categorias[0].nombre}</strong>.
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {tabLocal === 'lista' && (
         <div className="bg-white rounded-2xl shadow-sm p-6">
+          <BannerCategoria categoria={categorias[0]} />
           <h2 className="font-serif text-xl text-amber-800 mb-4">📦 Productos registrados</h2>
+          <div className="flex flex-wrap gap-3 mb-4">
+            <input
+              className={`${inputCls} flex-1 min-w-[200px]`}
+              type="text"
+              placeholder="Buscar por nombre o código..."
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+            />
+          </div>
           <div className="overflow-x-auto rounded-xl border border-amber-100">
             <table className="w-full text-sm">
               <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
-                <tr>{['Código', 'Lote', 'Nombre', 'Categoría', 'Precio', 'IVA', 'Desc.', 'Stock', 'Mín.', 'Máx.', 'Acciones'].map(h => (
+                <tr>{['Código', 'Lote', 'Nombre', 'Precio', 'IVA', 'Desc.', 'Stock', 'Mín.', 'Máx.', 'Acciones'].map(h => (
                   <th key={h} className="px-3 py-3 text-left font-semibold">{h}</th>
                 ))}</tr>
               </thead>
               <tbody>
-                {productos.map(p => (
+                {productosFiltrados.map(p => (
                   <tr key={p.id} className={`border-t border-amber-50 transition ${(p.cantidad - (p.cantidad_reservada ?? 0)) <= p.stock_minimo ? 'bg-red-50/60 hover:bg-red-50' : 'hover:bg-amber-50/50'}`}>
                     <td className="px-3 py-3 font-mono text-xs">{p.codigo_barra || '—'}</td>
                     <td className="px-3 py-3 text-xs">{p.lote || '—'}</td>
                     <td className="px-3 py-3 font-semibold">{p.nombre}</td>
-                    <td className="px-3 py-3"><Badge color="bg-amber-100 text-amber-800">{p.categoria_nombre ?? '—'}</Badge></td>
-                    <td className="px-3 py-3">${Number(p.precio_neto).toLocaleString()}</td>
+                    <td className="px-3 py-3">${Number(p.precio_neto).toLocaleString('es-CO')}</td>
                     <td className="px-3 py-3">{p.iva}%</td>
                     <td className="px-3 py-3">{p.descuento ? <Badge color="bg-green-100 text-green-700">Sí</Badge> : '—'}</td>
                     <td className="px-3 py-3"><StockBadge p={p} /></td>
@@ -380,7 +410,6 @@ export function ModuloProductos({
                     </td>
                   </tr>
                 ))}
-                {productos.length === 0 && <tr><td colSpan={11} className="px-4 py-6 text-center text-stone-400">Sin productos</td></tr>}
               </tbody>
             </table>
           </div>

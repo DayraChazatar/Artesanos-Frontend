@@ -38,4 +38,4 @@ export interface Pedido {
   fecha_entrega?: string;
 }
 
-export type Tab = 'perfil' | 'catalogo' | 'contable' | 'productos' | 'inventario' | 'pedidos' | 'reportes';
+export type Tab = 'perfil' | 'catalogo' | 'productos' | 'inventario' | 'pedidos' | 'reportes';
