@@ -62,7 +62,7 @@ export function Home() {
       <section
         className="relative h-[700px] bg-cover"
         style={{
-          backgroundImage: `url('/hero.jpg')`,
+          backgroundImage: `url('/hero.jpeg')`,
           backgroundPosition: 'center 30%',
         }}
       >
@@ -75,16 +75,18 @@ export function Home() {
             <p className="text-lg mb-6 text-white/90 drop-shadow">
               Productos unicos creados por artesanos talentosos. Cada pieza cuenta una historia.
             </p>
-            <div className="flex gap-4">
-              <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
-                <Link to="/catalogo">Ver Catálogo</Link>
-              </Button>
-              {!isAuthenticated && (
-                <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
-                  <Link to="/registro">Registrarse</Link>
-                </Button>
-              )}
-            </div>
+<div className="flex gap-4">
+  {isAuthenticated && (
+    <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
+      <Link to="/catalogo">Ver Catálogo</Link>
+    </Button>
+  )}
+  {!isAuthenticated && (
+    <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
+      <Link to="/registro">Registrarse</Link>
+    </Button>
+  )}
+</div>
           </div>
         </div>
       </section>

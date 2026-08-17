@@ -58,6 +58,12 @@ const STATUS_ICONS: Record<string, string> = {
   Rechazado: '🚫',
 };
 
+// Intervalo de refresco de notificaciones (ms)
+const POLL_INTERVAL = 15000;
+
+// Clave usada en localStorage para recordar el último estado visto por pedido
+const SEEN_MAP_KEY = 'orders_seen_map';
+
 export function Navbar({ activeTab, onTabChange }: NavbarProps) {
   const { totalItems } = useCart();
   const { user, logout, isAuthenticated } = useAuth();
@@ -73,27 +79,49 @@ export function Navbar({ activeTab, onTabChange }: NavbarProps) {
 
   const isArtisan = user?.role === 'artisan';
 
-  // ── Cargar pedidos desde el backend ──────────────────────────────────────
+  // ── Calcula cuántos pedidos tienen un estado distinto al último visto ──────
+  const computeUnseen = (data: any[]) => {
+    let seenMap: Record<string, string> = {};
+    try {
+      seenMap = JSON.parse(localStorage.getItem(SEEN_MAP_KEY) || '{}');
+    } catch {
+      seenMap = {};
+    }
+    const changed = data.filter((o: any) => seenMap[String(o.id)] !== o.estado);
+    return changed.length;
+  };
+
+  // ── Cargar pedidos desde el backend (con polling) ───────────────────────────
   useEffect(() => {
     if (!user?.id || user?.role === 'artisan') return;
     const token = localStorage.getItem('token') ?? '';
-    fetch(`http://localhost:8000/api/inventario/pedidos/cliente/${user.id}/`, {
-      headers: token ? { Authorization: `Token ${token}` } : {},
-    })
-      .then(res => res.ok ? res.json() : [])
-      .then(data => {
-        setOrders(data);
-        const seen = parseInt(localStorage.getItem('orders_seen') || '0');
-        setUnseenCount(Math.max(0, data.length - seen));
+
+    const fetchOrders = () => {
+      fetch(`http://localhost:8000/api/inventario/pedidos/cliente/${user.id}/`, {
+        headers: token ? { Authorization: `Token ${token}` } : {},
       })
-      .catch(() => setOrders([]));
+        .then(res => (res.ok ? res.json() : []))
+        .then(data => {
+          setOrders(data);
+          setUnseenCount(computeUnseen(data));
+        })
+        .catch(() => setOrders([]));
+    };
+
+    fetchOrders();
+    const interval = setInterval(fetchOrders, POLL_INTERVAL);
+    return () => clearInterval(interval);
   }, [user?.id]);
 
   // ── Marcar notificaciones como vistas ─────────────────────────────────────
   useEffect(() => {
     if (bellOpen) {
+      const map: Record<string, string> = {};
+      orders.forEach((o: any) => {
+        map[String(o.id)] = o.estado;
+      });
+      localStorage.setItem(SEEN_MAP_KEY, JSON.stringify(map));
       setUnseenCount(0);
-      localStorage.setItem('orders_seen', orders.length.toString());
     }
   }, [bellOpen]);
 
