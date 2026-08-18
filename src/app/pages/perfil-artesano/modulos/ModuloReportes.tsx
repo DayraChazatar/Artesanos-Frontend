@@ -74,7 +74,12 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
     return ['venta', 'reposicion', 'ajuste_manual', 'devolucion_cliente', 'stock_inicial'].includes(sub);
   });
 
-  const totalVentas = ventasFiltradas.reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0);
+  const kardexDevoluciones = kardex.filter(k => String((k as any).subtipo ?? '').toLowerCase() === 'devolucion_cliente');
+  const totalDevoluciones = kardexDevoluciones
+    .filter(k => enRango(k.fecha, fVentas.desde, fVentas.hasta) && (!fVentas.producto || String(k.producto) === fVentas.producto))
+    .reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0);
+
+  const totalVentas = ventasFiltradas.reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0) - totalDevoluciones;
   const totalEntradas = inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'entrada').reduce((a, k) => a + k.cantidad, 0);
   const totalSalidas = inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'salida').reduce((a, k) => a + k.cantidad, 0);
   const valorContable = contableFiltrado.reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0);

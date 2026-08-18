@@ -11,6 +11,8 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
+const BASE = 'http://localhost:8000/api';
+
 // ── Estrellas visuales ────────────────────────────────────────────────────────
 function StarRating({ value }: { value: number }) {
   return (
@@ -298,10 +300,27 @@ export function ProductDetail() {
     navigate('/carrito');
   };
 
-  const handleContactArtisan = () => {
-    const message = encodeURIComponent(`Hola, estoy interesado en el producto: ${product.nombre}`);
-    window.open(`https://wa.me/573001234567?text=${message}`, '_blank');
-  };
+  const handleContactArtisan = async () => {
+  if (!product.artesano_telefono) {
+    toast.error('Este artesano no tiene un número de contacto registrado');
+    return;
+  }
+
+  // Registrar el evento de contacto para métricas de visibilidad
+  await fetch(`${BASE}/contactos/registrar/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      artesano_id: product.artesano,
+      cliente_id: user?.id ?? null,
+      producto_id: product.id,
+    }),
+  });
+
+  const telefono = product.artesano_telefono.replace(/\D/g, ''); // solo números
+  const message = encodeURIComponent(`Hola, estoy interesado en el producto: ${product.nombre}`);
+  window.open(`https://wa.me/57${telefono}?text=${message}`, '_blank');
+};
   
 
   return (
@@ -406,14 +425,18 @@ export function ProductDetail() {
   </Button>
 
 )}
-                    <Button onClick={handleBuyNow} disabled={stock === 0}
-                      variant="outline" className="flex-1">
-                      Comprar Ahora
-                    </Button>
+                    {user?.role !== 'artisan' && (
+                      <Button onClick={handleBuyNow} disabled={stock === 0}
+                        variant="outline" className="flex-1">
+                        Comprar Ahora
+                      </Button>
+                    )}
                   </div>
-                  <Button onClick={handleContactArtisan} variant="outline" className="w-full">
-                    <MessageCircle className="mr-2 h-4 w-4" /> Contactar al Artesano
-                  </Button>
+                  {user?.role !== 'artisan' && (
+                    <Button onClick={handleContactArtisan} variant="outline" className="w-full">
+                      <MessageCircle className="mr-2 h-4 w-4" /> Contactar al Artesano
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

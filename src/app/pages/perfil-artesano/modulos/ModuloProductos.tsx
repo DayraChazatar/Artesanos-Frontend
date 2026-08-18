@@ -114,6 +114,8 @@ export function ModuloProductos({
   const [imagenFile, setImagenFile] = useState<File | null>(null);
   const colorPickerRef = useRef<HTMLInputElement>(null);
   const colorNombreRef = useRef<HTMLInputElement>(null);
+  const [tallaInput, setTallaInput] = useState('');
+  const [colorHexActual, setColorHexActual] = useState('#b45309');
 
   const showAlert = (msg: string, type: 'success' | 'error' = 'success') => {
     setAlert({ msg, type }); setTimeout(() => setAlert(null), 3500);
@@ -165,6 +167,9 @@ export function ModuloProductos({
         formData.append('artesano', String(prod.artesano));
         formData.append('descuento', String(prod.descuento));
         formData.append('valor_descuento', String(prod.valor_descuento));
+        formData.append('maneja_tallas', String(prod.maneja_tallas));
+        formData.append('colores', JSON.stringify(prod.colores ?? []));
+        (prod.tallas ?? []).forEach(t => formData.append('tallas', t));
         const categoriaId = categorias[0]?.id;
         if (categoriaId) formData.append('categoria', String(categoriaId));
         if (imagenFile) formData.append('imagen', imagenFile);
@@ -179,9 +184,37 @@ export function ModuloProductos({
         setProd({ codigo_barra: generarCodigo(), lote: generarLote(), nombre: '', categoria: categorias[0]?.id ?? null, precio_neto: 0, iva: 0, descuento: false, valor_descuento: 0, cantidad: 0, stock_minimo: 0, stock_maximo: 0, artesano: ARTESANO_ID, colores: [], maneja_tallas: false, tallas: [] });
         showAlert('✓ Producto creado correctamente');
       }
+
     } catch (err: any) {
       showAlert(`Error: ${err?.message ?? 'Error desconocido'}`, 'error');
     } finally { setLoading(false); }
+  };
+
+  const agregarColor = () => {
+    const hex = colorHexActual;
+    const nombreManual = colorNombreRef.current?.value.trim();
+    const nombreFinal = nombreManual || HEX_MAP[hex.toLowerCase()] || hex;
+    if (!nombreFinal) return;
+    if ((prod.colores ?? []).some(c => c.nombre === nombreFinal)) return;
+    setProd({ ...prod, colores: [...(prod.colores ?? []), { hex, nombre: nombreFinal }] });
+    if (colorNombreRef.current) colorNombreRef.current.value = '';
+    setColorHexActual('#b45309');
+  };
+
+  const quitarColor = (nombre: string) => {
+    setProd({ ...prod, colores: (prod.colores ?? []).filter(c => c.nombre !== nombre) });
+  };
+
+  const agregarTalla = () => {
+    const valor = tallaInput.trim();
+    if (!valor) return;
+    if ((prod.tallas ?? []).includes(valor)) return;
+    setProd({ ...prod, tallas: [...(prod.tallas ?? []), valor] });
+    setTallaInput('');
+  };
+
+  const quitarTalla = (talla: string) => {
+    setProd({ ...prod, tallas: (prod.tallas ?? []).filter(t => t !== talla) });
   };
 
   const handleEditProducto = (id: number) => {
@@ -321,6 +354,89 @@ export function ModuloProductos({
                   <input className={inputCls} type="number" min="1" max="99" value={prod.valor_descuento || ''} onChange={e => setProd({ ...prod, valor_descuento: Number(e.target.value) })} placeholder="Ej: 10" />
                 </Field>
               )}
+
+              <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 space-y-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-700">🎨 Variantes (opcional)</p>
+
+                {/* Colores */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer mb-2">
+                    <input
+                      type="checkbox"
+                      checked={(prod.colores ?? []).length > 0 || (prod as any)._mostrarColores}
+                      onChange={e => {
+                        if (!e.target.checked) setProd({ ...prod, colores: [] });
+                        setProd(p => ({ ...p, _mostrarColores: e.target.checked } as any));
+                      }}
+                      className="w-4 h-4 accent-orange-600"
+                    />
+                    <span>¿Maneja colores?</span>
+                  </label>
+                  {((prod.colores ?? []).length > 0 || (prod as any)._mostrarColores) && (
+                    <div className="pl-6 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input ref={colorPickerRef} type="color" value={colorHexActual} onChange={e => setColorHexActual(e.target.value)} className="w-10 h-10 rounded-lg border border-amber-200 cursor-pointer" />
+                        <input
+                          ref={colorNombreRef}
+                          type="text"
+                          placeholder="Nombre del color (ej: Rojo)"
+                          className={`${inputCls} flex-1 min-w-[160px]`}
+                          onChange={e => {
+                            const hexEncontrado = COLOR_MAP[e.target.value.trim().toLowerCase()];
+                            if (hexEncontrado) setColorHexActual(hexEncontrado);
+                          }}
+                        />
+                        <button type="button" onClick={agregarColor} className="px-3 py-2 rounded-xl bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 transition">+ Agregar</button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {(prod.colores ?? []).map(color => (
+                          <span key={color.nombre} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-amber-200 text-sm text-stone-700">
+                            <span className="w-3 h-3 rounded-full border border-stone-200" style={{ backgroundColor: color.hex }} />
+                            {color.nombre}
+                            <button type="button" onClick={() => quitarColor(color.nombre)} className="text-stone-400 hover:text-red-500 transition">✕</button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tallas */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer mb-2">
+                    <input
+                      type="checkbox"
+                      checked={prod.maneja_tallas}
+                      onChange={e => setProd({ ...prod, maneja_tallas: e.target.checked, tallas: e.target.checked ? prod.tallas : [] })}
+                      className="w-4 h-4 accent-orange-600"
+                    />
+                    <span>¿Maneja tallas?</span>
+                  </label>
+                  {prod.maneja_tallas && (
+                    <div className="pl-6 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="text"
+                          value={tallaInput}
+                          onChange={e => setTallaInput(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarTalla(); } }}
+                          placeholder="Ej: S, M, L o 16, 17, 18"
+                          className={`${inputCls} flex-1 min-w-[160px]`}
+                        />
+                        <button type="button" onClick={agregarTalla} className="px-3 py-2 rounded-xl bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 transition">+ Agregar</button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {(prod.tallas ?? []).map(talla => (
+                          <span key={talla} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-amber-200 text-sm text-stone-700">
+                            {talla}
+                            <button type="button" onClick={() => quitarTalla(talla)} className="text-stone-400 hover:text-red-500 transition">✕</button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
                 <p className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-1">📦 Control de stock</p>
