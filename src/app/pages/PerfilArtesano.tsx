@@ -1,19 +1,37 @@
-import { useState, useEffect, useCallback } from 'react';
-import { getProductos, getCategorias, getKardex, type Producto, type Categoria, type Kardex } from '../data/artesanoApi';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { generarGuiaEnvio } from '../utils/guiaEnvio';
+import {
+} from 'recharts';
+import { Link, useNavigate } from 'react-router-dom';
+import { RefreshCw, Bell, User, House } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart,
+  Line, PieChart, Pie, Cell
+} from 'recharts';
 
-import { Tab } from './perfil-artesano/types';
-import { useNotificaciones } from './perfil-artesano/hooks/useNotificaciones';
-import { Topbar } from './perfil-artesano/components/Topbar';
-import { Sidebar } from './perfil-artesano/components/Sidebar';
-import { SidebarNotificaciones } from './perfil-artesano/components/SidebarNotificaciones';
-import { ModuloCatalogo } from './perfil-artesano/modulos/ModuloCatalogo';
-import { ModuloProductos } from './perfil-artesano/modulos/ModuloProductos';
-import { ModuloInventario } from './perfil-artesano/modulos/ModuloInventario';
-import { ModuloPedidos } from './perfil-artesano/modulos/ModuloPedidos';
-import { ModuloReportes } from './perfil-artesano/modulos/ModuloReportes';
-import { ModuloPerfil } from './perfil-artesano/modulos/ModuloPerfil';
 
-const ARTESANO_ID = Number(localStorage.getItem('usuario_id') ?? 1);
+
+import { useAuth } from '../context/AuthContext';
+import {
+  getCategorias, createCategoria, deleteCategoria, updateCategoria,
+  getProductos, createProducto, deleteProducto, updateProducto,
+  getKardex, createKardex, reponerStock, getResumenInventario,
+  descargarReporte,
+  type Categoria, type Producto, type Kardex, type ResumenInventario,
+} from '../data/artesanoApi';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONSTANTES
+// ─────────────────────────────────────────────────────────────────────────────
+const ARTESANO_ID: number = Number(localStorage.getItem('usuario_id') ?? 1);
+const BASE = 'http://localhost:8000/api';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UI HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+const Badge = ({ children, color }: { children: React.ReactNode; color: string }) => (
+  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${color}`}>{children}</span>
+);
 
 const Alert = ({ msg, type }: { msg: string; type: 'success' | 'info' | 'error' }) => {
   const colors = {
@@ -24,8 +42,3292 @@ const Alert = ({ msg, type }: { msg: string; type: 'success' | 'info' | 'error' 
   return <div className={`mb-4 p-3 rounded-lg border text-sm font-medium ${colors[type]}`}>{msg}</div>;
 };
 
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
+    <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">{label}</label>
+    {children}
+  </div>
+);
+
+const inputCls =
+  'px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-base text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition';
+
+function StockBadge({ p }: { p: Producto }) {
+  const reservado = p.cantidad_reservada ?? 0;
+  const disponible = p.cantidad - reservado;
+
+  if (disponible <= p.stock_minimo)
+    return (
+      <span className="inline-flex flex-col gap-0.5">
+        <Badge color="bg-red-100 text-red-700">⚠️ {disponible} disp.</Badge>
+        {reservado > 0 && <span className="text-[10px] text-stone-400">{reservado} reservados</span>}
+      </span>
+    );
+
+  if (p.stock_maximo > 0 && disponible >= p.stock_maximo)
+    return (
+      <span className="inline-flex flex-col gap-0.5">
+        <Badge color="bg-blue-100 text-blue-700">📦 {disponible} (máx)</Badge>
+        {reservado > 0 && <span className="text-[10px] text-stone-400">{reservado} reservados</span>}
+      </span>
+    );
+
+  return (
+    <span className="inline-flex flex-col gap-0.5">
+      <Badge color="bg-green-100 text-green-700">{disponible}</Badge>
+      {reservado > 0 && <span className="text-[10px] text-amber-600 font-semibold">{reservado} reservados</span>}
+    </span>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HOOK NOTIFICACIONES
+// ─────────────────────────────────────────────────────────────────────────────
+export interface Notificacion {
+  id: number;
+  tipo: string;
+  titulo: string;
+  detalle: string;
+  leida: boolean;
+  fecha: string;
+  referencia_id?: number;
+  ruta?: string;
+}
+
+export function useNotificaciones() {
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>(() => {
+
+    const guardadas = localStorage.getItem('notificaciones');
+
+
+    return guardadas
+      ? JSON.parse(guardadas)
+      : [];
+
+  });
+
+  const cargar = useCallback(async () => {
+    try {
+      const res = await fetch(`${BASE}/notificaciones/`);
+      const data = await res.json();
+
+      //setNotificaciones(Array.isArray(data) ? data : []);
+
+    } catch (e) {
+      console.error('Error cargando notificaciones', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    cargar();
+    const interval = setInterval(cargar, 30_000);
+    return () => clearInterval(interval);
+  }, [cargar]);
+
+  useEffect(() => {
+
+    localStorage.setItem(
+      'notificaciones',
+      JSON.stringify(notificaciones)
+    );
+
+  }, [notificaciones]);
+
+  const marcarLeida = async (id: number) => {
+    await fetch(`${BASE}/notificaciones/${id}/leer/`, { method: 'PATCH' });
+    setNotificaciones(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
+  };
+
+  const marcarTodasLeidas = async () => {
+    await fetch(`${BASE}/notificaciones/leer-todas/`, { method: 'PATCH' });
+    setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
+  };
+
+  return {
+    notificaciones,
+    setNotificaciones,
+    marcarLeida,
+    marcarTodasLeidas,
+    recargar: cargar
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TOPBAR
+// ─────────────────────────────────────────────────────────────────────────────
+function Topbar({ noLeidas, onVerPerfil }: { noLeidas: number; onVerPerfil: () => void }) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    logout(); navigate('/');
+  };
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <nav className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-sm">
+
+      <div className="max-w-7xl mx-auto h-16 px-6 flex items-center justify-between">
+
+        {/* LOGO */}
+        <Link to="/" className="flex items-center gap-2">
+          <img
+            src="/logo.png"
+            alt="Pakari Shop"
+            className="w-10 h-10 object-contain"
+          />
+
+          <span className="font-serif text-2xl font-bold text-orange-600">
+            Pakari Shop
+          </span>
+        </Link>
+
+        {/* MENÚ */}
+        <div className="hidden md:flex items-center gap-2">
+          <Link
+            to="/"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
+          >
+            <House className="h-4 w-4" />
+            Inicio
+          </Link>
+        </div>
+
+        {/* NOTIFICACIONES Y PERFIL */}
+        <div className="flex items-center gap-3">
+
+          {/* NOTIFICACIONES */}
+          <Link
+            to="/perfil-artesano#notificaciones"
+            className="relative"
+          >
+
+            <div className="relative w-10 h-10 flex items-center justify-center rounded-xl border border-amber-100 bg-amber-50">
+
+              <span className="text-xl">🔔</span>
+
+              {noLeidas > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 animate-pulse text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
+                  {noLeidas}
+                </span>
+              )}
+
+            </div>
+
+          </Link>
+
+          {/* PERFIL */}
+          <div className="relative" ref={menuRef}>
+
+            <button
+              onClick={() => setOpen(prev => !prev)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-100 bg-amber-50 hover:bg-amber-100 transition"
+            >
+
+              <div className="w-7 h-7 rounded-full bg-amber-600 flex items-center justify-center text-white text-xs font-bold">
+                {user?.name?.slice(0, 2).toUpperCase()}
+              </div>
+
+              <span className="text-sm text-stone-700 font-medium hidden sm:block">
+                {user?.name}
+              </span>
+
+              <span className="w-2 h-2 rounded-full bg-green-400" />
+
+            </button>
+
+            {open && (
+              <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+
+                <div className="px-4 py-3 border-b border-gray-100">
+
+                  <p className="font-semibold text-sm truncate">
+                    {user?.name}
+                  </p>
+
+                  <p className="text-xs text-gray-500 truncate">
+                    {user?.email}
+                  </p>
+
+                  <span className="inline-block mt-1.5 text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                    🧵 Artesano
+                  </span>
+
+                </div>
+
+                <button
+                  onClick={() => { onVerPerfil(); setOpen(false); }}
+                  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-stone-700 hover:bg-amber-50 transition"
+                >
+                  <span>👤</span>
+                  Perfil Artesano
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
+                >
+                  <span>↩</span>
+                  Cerrar Sesión
+                </button>
+
+              </div>
+            )}
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </nav>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SIDEBAR
+// ─────────────────────────────────────────────────────────────────────────────
+type Tab = 'perfil' | 'catalogo' | 'contable' | 'productos' | 'inventario' | 'pedidos' | 'reportes';
+const NAV_ITEMS: { tab: Tab; icon: string; label: string }[] = [
+  { tab: 'catalogo', icon: '📋', label: 'Catálogo' },
+  { tab: 'contable', icon: '📒', label: 'Contable' },
+  { tab: 'productos', icon: '🛍️', label: 'Productos' },
+  { tab: 'inventario', icon: '📊', label: 'Inventario' },
+  { tab: 'pedidos', icon: '🛒', label: 'Pedidos' },
+  { tab: 'reportes', icon: '📈', label: 'Reportes' },
+];
+
+function Sidebar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
+  return (
+    <aside className="fixed top-16 left-0 bottom-0 z-20 w-40 bg-white border-r border-amber-100 flex flex-col items-center py-8 gap-4 shadow-sm overflow-y-auto">
+      {NAV_ITEMS.map(({ tab, icon, label }) => (
+        <button
+          key={tab}
+          onClick={() => onChange(tab)}
+          title={label}
+          className={`flex flex-col items-center gap-2 w-24 py-4 rounded-2xl text-center transition
+            ${active === tab ? 'bg-amber-600 text-white shadow-md' : 'text-amber-800 hover:bg-amber-50'}`}
+        >
+          <span className="text-4xl leading-none">{icon}</span>
+          <span className={`text-sm font-semibold leading-tight ${active === tab ? 'text-white' : 'text-stone-500'}`}>
+            {label}
+          </span>
+        </button>
+      ))}
+    </aside>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SIDEBAR NOTIFICACIONES
+// ─────────────────────────────────────────────────────────────────────────────
+function SidebarNotificaciones({
+  notificaciones, marcarLeida, marcarTodasLeidas, onNavegar,
+}: {
+  notificaciones: Notificacion[];
+  marcarLeida: (id: number) => Promise<void>;
+  marcarTodasLeidas: () => Promise<void>;
+  onNavegar: (tab: Tab, productoId?: number) => void;
+}) {
+  const [detalle, setDetalle] = useState<Notificacion | null>(null);
+  const [filtro, setFiltro] = useState<'todas' | 'pedido' | 'stock'>('todas');
+  const iconoTipo = (tipo: string) =>
+    tipo === 'stock' ? '📦' : tipo === 'pedido' ? '🛍️' : '🔔';
+
+  const handleClick = async (n: Notificacion) => {
+    await marcarLeida(n.id);
+    setDetalle(n);
+  };
+  const filtradas =
+    filtro === 'todas'
+      ? notificaciones
+      : notificaciones.filter(n => n.tipo === filtro);
+
+
+
+  return (
+    <aside className="fixed top-16 right-0 bottom-0 z-20 w-64 bg-white border-l border-amber-100 flex flex-col shadow-sm">
+      <div className="flex items-center justify-between px-5 py-5 border-b border-amber-100">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">🔔</span>
+          <span className="font-serif text-base font-bold text-amber-800">Notificaciones</span>
+        </div>
+        {notificaciones.filter(n => !n.leida).length > 0 && (
+          <span className="w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+            {notificaciones.filter(n => !n.leida).length}
+          </span>
+        )}
+      </div>
+      {detalle ? (
+        <div className="flex-1 overflow-y-auto p-5">
+          <button onClick={() => setDetalle(null)}
+            className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800 mb-4 font-semibold transition">
+            ← Volver
+          </button>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-3xl">{iconoTipo(detalle.tipo)}</span>
+            <span className="font-semibold text-stone-800 text-sm">{detalle.titulo}</span>
+          </div>
+          <p className="text-sm text-stone-600 leading-relaxed mb-4">{detalle.detalle}</p>
+          <p className="text-xs text-stone-400 mb-5">{detalle.fecha}</p>
+          {detalle.ruta && (
+            <button
+              onClick={() => {
+                if (detalle.tipo === 'stock' && detalle.referencia_id) {
+                  onNavegar('inventario', detalle.referencia_id);
+                } else {
+                  onNavegar(detalle.ruta!.replace('/', '') as Tab);
+                }
+                setDetalle(null);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors shadow-sm"
+            >
+              {detalle.tipo === 'pedido' ? '🛍️ Ir a pedidos' : '📦 Ir a inventario'} →
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto py-3">
+
+          {/* FILTROS */}
+          <div className="flex gap-2 px-4 pb-3">
+
+            <button
+              onClick={() => setFiltro('todas')}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition
+      ${filtro === 'todas'
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-amber-50 text-amber-700'
+                }`}
+            >
+              Todas
+            </button>
+
+            <button
+              onClick={() => setFiltro('pedido')}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition
+      ${filtro === 'pedido'
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-amber-50 text-amber-700'
+                }`}
+            >
+              Pedidos
+            </button>
+
+            <button
+              onClick={() => setFiltro('stock')}
+              className={`px-3 py-1 rounded-full text-xs font-semibold transition
+      ${filtro === 'stock'
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-amber-50 text-amber-700'
+                }`}
+            >
+              Inventario
+            </button>
+
+          </div>
+
+          {/* SIN NOTIFICACIONES */}
+          {filtradas.length === 0 ? (
+
+            <div className="flex flex-col items-center justify-center h-full gap-3 px-6 py-10 text-center">
+              <span className="text-5xl">🔔</span>
+              <p className="text-sm font-semibold text-stone-500">Todo al día por ahora</p>
+              <p className="text-xs text-stone-400 leading-relaxed">
+                Aquí verás alertas de nuevos pedidos, stock bajo y devoluciones en tiempo real.
+              </p>
+              <div className="mt-2 flex flex-col gap-2 w-full">
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-700">
+                  <span>🛍️</span> Nuevos pedidos de clientes
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-700">
+                  <span>📦</span> Alertas de stock bajo
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-xl border border-amber-100 text-xs text-amber-700">
+                  <span>↩️</span> Solicitudes de devolución
+                </div>
+              </div>
+            </div>
+
+          ) : (
+
+
+            <>
+              <p className="text-red-500">
+                Total: {filtradas.length}
+              </p>
+              {filtradas.filter(n => !n.leida).length > 0 && (
+                <button
+                  onClick={marcarTodasLeidas}
+                  className="w-full text-xs text-amber-600 hover:text-amber-800 font-semibold px-5 py-2 text-right transition"
+                >
+                  Marcar todas como leídas
+                </button>
+              )}
+
+              {filtradas.map(n => (
+
+                <button
+                  key={n.id}
+                  onClick={() => handleClick(n)}
+                  className={`w-full text-left px-5 py-4 flex items-start gap-3 hover:bg-amber-50 transition border-b border-amber-50 last:border-0 ${!n.leida ? 'bg-amber-50/60' : ''
+                    }`}
+                >
+
+                  <span className="text-2xl mt-0.5 leading-none">
+                    {iconoTipo(n.tipo)}
+                  </span>
+
+                  <div className="flex-1 min-w-0">
+
+                    <div className="flex items-center justify-between gap-1 mb-1">
+
+                      <span
+                        className={`text-sm font-semibold truncate ${!n.leida
+                          ? 'text-stone-800'
+                          : 'text-stone-400'
+                          }`}
+                      >
+                        {n.titulo}
+                      </span>
+
+                      {!n.leida && (
+                        <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
+                      )}
+
+                    </div>
+
+                    <p className="text-xs text-stone-400 line-clamp-2 leading-relaxed">
+                      {n.detalle}
+                    </p>
+
+                    {n.ruta && (
+                      <span className="text-xs text-amber-500 font-semibold mt-1 inline-block">
+                        Toca para ver →
+                      </span>
+                    )}
+
+                    <p className="text-xs text-stone-300 mt-1">
+                      {n.fecha}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </aside>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO CATÁLOGO
+// ─────────────────────────────────────────────────────────────────────────────
+function ModuloCatalogo({
+  productos,
+  imagenes,
+  setProductos,
+}: {
+  productos: Producto[];
+  imagenes: Record<number, string>;
+  setProductos: React.Dispatch<React.SetStateAction<Producto[]>>;
+}) {
+
+  const [modalImg, setModalImg] = useState<{ nombre: string; src: string } | null>(null);
+
+
+  const toggleVisible = async (id: number) => {
+    const producto = productos.find(p => p.id === id);
+    if (!producto) return;
+
+    const nuevoVisible = !(producto.visible ?? true);
+
+    const res = await fetch(`http://localhost:8000/api/productos/${id}/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ visible: nuevoVisible }),
+    });
+
+    if (!res.ok) {
+      alert(`No se pudo cambiar la visibilidad. Código: ${res.status}`);
+      return;
+    }
+
+    const actualizado = await res.json();
+    setProductos(prev =>
+      prev.map(p => p.id === id ? { ...p, visible: actualizado.visible } : p)
+    );
+  };
+
+  return (
+    <div className="space-y-5">
+      {modalImg && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setModalImg(null)}>
+          <div style={{ background: 'white', borderRadius: '1rem', padding: '1.25rem', maxWidth: '480px', width: '90%' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{modalImg.nombre}</span>
+              <button onClick={() => setModalImg(null)} style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer' }}>✕</button>
+            </div>
+            <img src={modalImg.src} alt={modalImg.nombre} style={{ width: '100%', maxHeight: '420px', objectFit: 'contain', borderRadius: '0.75rem' }} />
+          </div>
+        </div>
+      )}
+      <div className="bg-white rounded-2xl shadow-sm p-6">
+        <h2 className="font-serif text-xl text-amber-800 mb-4">📋 Productos en catálogo</h2>
+        <div className="overflow-x-auto rounded-xl border border-amber-100">
+          <table className="w-full text-base">
+            <thead className="bg-amber-50 text-sm uppercase tracking-wider text-amber-900/60">
+              <tr>
+                {['Código', 'Lote', 'Producto', 'Categoría', 'Precio neto', 'Precio Final', 'IVA', 'Desc.', 'Stock', 'Imagen', 'Visible'].map(h => (
+                  <th key={h} className="px-3 py-3 text-left font-semibold">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {productos.map(p => {
+                const esVisible = p.visible ?? true;
+                return (
+                  <tr key={p.id} className={`border-t border-amber-50 transition ${esVisible ? 'hover:bg-amber-50/50' : 'opacity-40 bg-stone-50'}`}>
+                    <td className="px-3 py-3 font-mono text-sm">{p.codigo_barra || '—'}</td>
+                    <td className="px-3 py-3 text-sm">{p.lote || '—'}</td>
+                    <td className="px-3 py-3 font-semibold">{p.nombre}</td>
+                    <td className="px-3 py-3"><Badge color="bg-amber-100 text-amber-800">{p.categoria_nombre ?? '—'}</Badge></td>
+                    <td className="px-3 py-3">${Number(p.precio_neto).toLocaleString()}</td>
+                    <td className="px-3 py-3">
+                      {p.precio_final
+                        ? <span className="font-semibold text-green-700">${Number(p.precio_final).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                        : <span className="text-stone-300 text-xs italic">Sin definir</span>}
+                    </td>
+                    <td className="px-3 py-3">{p.iva}%</td>
+                    <td className="px-3 py-3">{p.descuento ? <Badge color="bg-green-100 text-green-700">Sí</Badge> : '—'}</td>
+                    <td className="px-3 py-3"><StockBadge p={p} /></td>
+                    <td className="px-3 py-3">
+                      {imagenes[p.id!] ? (
+                        <button onClick={() => setModalImg({ nombre: p.nombre, src: imagenes[p.id!] })} className="relative group">
+                          <img src={imagenes[p.id!]} alt={p.nombre} className="w-9 h-9 rounded-lg object-cover border border-amber-200 group-hover:ring-2 group-hover:ring-amber-400 transition cursor-pointer" />
+                        </button>
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg border-2 border-dashed border-amber-200 flex items-center justify-center text-stone-300 text-lg">🖼️</div>
+                      )}
+                    </td>
+                    <td className="px-3 py-3">
+                      <button onClick={() => toggleVisible(p.id!)}
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg transition shadow-sm ${esVisible ? 'bg-green-100 hover:bg-green-200 text-green-700' : 'bg-stone-100 hover:bg-stone-200 text-stone-400'}`}>
+                        {esVisible ? '👁️' : '🚫'}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {productos.length === 0 && (
+                <tr><td colSpan={11} className="px-4 py-6 text-center text-stone-400">Sin productos</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO CONTABLE
+// ─────────────────────────────────────────────────────────────────────────────
+function ModuloContable({ productos }: { productos: Producto[] }) {
+  const [selId, setSelId] = useState<number>(productos[0]?.id ?? 0);
+  const producto = productos.find(p => p.id === selId);
+
+  return (
+    <div className="space-y-5">
+      <div className="bg-white rounded-3xl shadow-md p-6">
+        <h2 className="font-serif text-xl text-amber-800 mb-5">🧾 Detalle de Artículo</h2>
+        <Field label="Seleccionar artículo">
+          <select className={inputCls} value={selId} onChange={e => setSelId(Number(e.target.value))}>
+            {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </select>
+        </Field>
+        {producto && (
+          <div className="mt-6 space-y-4">
+            <div className="flex flex-wrap gap-4">
+              {[
+                { label: 'Código de barra', value: producto.codigo_barra || '—' },
+                { label: 'Lote', value: producto.lote || '—' },
+                { label: 'Nombre', value: producto.nombre },
+                { label: 'Categoría', value: producto.categoria_nombre ?? '—' },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex-1 min-w-[130px] bg-amber-50 rounded-xl px-4 py-3">
+                  <div className="text-xs uppercase tracking-wider text-amber-900/60 font-semibold mb-1">{label}</div>
+                  <div className="text-sm font-semibold text-stone-800 font-mono">{value}</div>
+                </div>
+              ))}
+            </div>
+            <div className="bg-gradient-to-br from-amber-700 to-amber-500 rounded-2xl p-5 text-white">
+              <div className="text-xs uppercase tracking-wider opacity-70 font-semibold mb-3">Resumen de precios</div>
+              <div className="flex gap-8 flex-wrap">
+                <div>
+                  <div className="text-xs opacity-70">Precio + IVA</div>
+                  <div className="text-2xl font-serif font-bold">${(producto.precio_con_iva ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                </div>
+                {producto.descuento && (
+                  <div>
+                    <div className="text-xs opacity-70">Con descuento ({producto.valor_descuento}%)</div>
+                    <div className="text-2xl font-serif font-bold text-green-200">${(producto.precio_final ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        {productos.length === 0 && <p className="text-sm text-stone-400 mt-4">No hay productos registrados.</p>}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODAL +STOCK
+// ─────────────────────────────────────────────────────────────────────────────
+function ModalReposicion({
+  producto, onClose, onConfirm,
+}: {
+  producto: Producto;
+  onClose: () => void;
+  onConfirm: (cantidad: number, nota: string, fecha: string) => Promise<void>;
+}) {
+  const [cantidad, setCantidad] = useState(0);
+  const [nota, setNota] = useState('');
+  const hoy = new Date().toISOString().split('T')[0];
+  const [fecha, setFecha] = useState(hoy);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const stockNuevo = producto.cantidad + (cantidad > 0 ? cantidad : 0);
+  const superaMaximo = producto.stock_maximo > 0 && stockNuevo > producto.stock_maximo;
+
+  const handleConfirm = async () => {
+    if (cantidad <= 0) return setError('La cantidad debe ser mayor a 0.');
+    if (superaMaximo) return setError(`Superaría el stock máximo (${producto.stock_maximo}).`);
+    if (!fecha) return setError('La fecha es obligatoria.');
+    if (fecha > hoy) {
+      return setError('La fecha no puede ser mayor a la actual.');
+    }
+    setLoading(true);
+    try {
+      await onConfirm(cantidad, nota, fecha);
+      onClose();
+    } catch (e: any) {
+      setError(e?.message ?? 'Error al registrar la reposición.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+        <div className="flex items-center gap-3 mb-1">
+          <span className="text-2xl">📦</span>
+          <div>
+            <h3 className="font-semibold text-stone-800 text-sm">Agregar stock — {producto.nombre}</h3>
+            <p className="text-xs text-stone-400">{producto.codigo_barra} · ${Number(producto.precio_neto).toLocaleString()}</p>
+          </div>
+        </div>
+        <div className="mt-3 mb-4 p-3 bg-stone-50 rounded-xl text-xs text-stone-500 flex gap-4">
+          <span>Stock actual: <strong className="text-green-700">{producto.cantidad}</strong></span>
+          <span>Mín: <strong>{producto.stock_minimo}</strong></span>
+          <span>Máx: <strong>{producto.stock_maximo || '—'}</strong></span>
+        </div>
+        <div className="space-y-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Cantidad a ingresar *</label>
+            <input type="number" min={1} value={cantidad || ''}
+              onChange={e => { setCantidad(Number(e.target.value)); setError(''); }}
+              placeholder="Ej: 5"
+              className="px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-base text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
+          </div>
+          {cantidad > 0 && (
+            <div className={`text-xs px-3 py-2 rounded-lg font-medium ${superaMaximo ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`}>
+              Stock resultante: <strong>{stockNuevo} uds.</strong>{superaMaximo && ' — supera el máximo'}
+            </div>
+          )}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Nota u observación</label>
+            <textarea value={nota} onChange={e => setNota(e.target.value)}
+              placeholder="Ej: Compra feria artesanal junio 2025" rows={2}
+              className="px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-stone-800 focus:outline-none focus:border-amber-500 resize-none" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">
+              Fecha de ingreso *
+            </label>
+
+            <input
+              type="date"
+              value={fecha}
+              max={hoy}
+              onChange={e => {
+                setFecha(e.target.value);
+                setError('');
+              }}
+              className="px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+            />
+          </div>
+          {error && <p className="text-xs text-red-600 font-medium">{error}</p>}
+          <div className="flex gap-3 pt-1">
+            <button onClick={onClose}
+              className="flex-1 py-2 rounded-xl border border-stone-200 text-stone-500 text-sm font-semibold hover:bg-stone-50 transition">
+              Cancelar
+            </button>
+            <button onClick={handleConfirm} disabled={loading || superaMaximo || cantidad <= 0}
+              className="flex-1 py-2 rounded-xl bg-gradient-to-r from-green-700 to-green-500 text-white text-sm font-semibold shadow hover:shadow-md transition disabled:opacity-60">
+              {loading ? 'Registrando...' : '✓ Registrar entrada'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO PRODUCTOS
+// ─────────────────────────────────────────────────────────────────────────────
+const COLOR_MAP: Record<string, string> = {
+  'rojo': '#ff0000', 'verde': '#00ff00', 'azul': '#0000ff',
+  'amarillo': '#ffff00', 'naranja': '#ffa500', 'morado': '#800080',
+  'rosado': '#ffc0cb', 'rosa': '#ff69b4', 'café': '#a52a2a',
+  'cafe': '#a52a2a', 'gris': '#808080', 'negro': '#000000',
+  'blanco': '#ffffff', 'dorado': '#c8a96e', 'turquesa': '#40e0d0',
+  'azul marino': '#001f5b', 'azul cielo': '#87ceeb',
+  'verde oscuro': '#006400', 'verde claro': '#90ee90',
+  'rojo oscuro': '#8b0000', 'beige': '#f5f5dc', 'crema': '#fffdd0',
+  'lila': '#c8a2c8', 'coral': '#ff7f50', 'salmon': '#fa8072',
+  'magenta': '#ff00ff', 'cian': '#00ffff',
+};
+const HEX_MAP: Record<string, string> = Object.fromEntries(
+  Object.entries(COLOR_MAP).map(([nombre, hex]) => [hex, nombre])
+);
+
+function generarCodigo(productos: Producto[]): string {
+  // Genera un código único basado en timestamp para evitar duplicados globales
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  return `PROD-${timestamp}${random}`;
+}
+
+function generarLote(productos: Producto[]): string {
+  const hoy = new Date();
+  const anio = hoy.getFullYear();
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const timestamp = Date.now().toString().slice(-4);
+  return `${anio}${mes}-${timestamp}`;
+}
+
+function ModuloProductos({ productos, setProductos, categorias, setCategorias, imagenes, setImagenes, onIrAInventario }: {
+  productos: Producto[];
+  setProductos: React.Dispatch<React.SetStateAction<Producto[]>>;
+  categorias: Categoria[];
+  setCategorias: React.Dispatch<React.SetStateAction<Categoria[]>>;
+  imagenes: Record<number, string>;
+  setImagenes: React.Dispatch<React.SetStateAction<Record<number, string>>>;
+  onIrAInventario: (productoId: number) => void;
+}) {
+  const [tabLocal, setTabLocal] = useState<'producto' | 'categoria' | 'lista'>('categoria');
+  const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  // ✅ ERROR 3 CORREGIDO: modalStockProd como estado dentro del componente
+  const [modalStockProd, setModalStockProd] = useState<Producto | null>(null);
+  const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [editandoCatId, setEditandoCatId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [archivos, setArchivos] = useState<string[]>([]);
+  const [imagenFile, setImagenFile] = useState<File | null>(null);
+  const colorPickerRef = useRef<HTMLInputElement>(null);
+  const colorNombreRef = useRef<HTMLInputElement>(null);
+
+
+
+  const showAlert = (msg: string, type: 'success' | 'error' = 'success') => {
+    setAlert({ msg, type }); setTimeout(() => setAlert(null), 3500);
+  };
+
+  const [prod, setProd] = useState<Omit<Producto, 'id'>>({
+    codigo_barra: '', lote: '', nombre: '', categoria: null,
+    precio_neto: 0, iva: 0, descuento: false, valor_descuento: 0,
+    cantidad: 0, stock_minimo: 0, stock_maximo: 0,
+    artesano: ARTESANO_ID, colores: [], maneja_tallas: false, tallas: [], precio_pvp: 0,
+  });
+
+  useEffect(() => {
+    const codigo = generarCodigo(productos);
+    const lote = generarLote(productos);
+    setProd(prev => ({
+      ...prev,
+      codigo_barra: prev.codigo_barra || codigo,
+      lote: prev.lote || lote,
+    }));
+  }, [productos]);
+
+  const handleAddProducto = async () => {
+    if (!prod.nombre || !prod.precio_neto) return showAlert('Nombre y precio son obligatorios', 'error');
+    if (prod.stock_maximo > 0 && prod.stock_minimo > prod.stock_maximo)
+      return showAlert('El stock mínimo no puede ser mayor al máximo', 'error');
+    if (prod.descuento && (prod.valor_descuento ?? 0) <= 0)
+      return showAlert('El porcentaje de descuento debe ser mayor a 0', 'error');
+
+    setLoading(true);
+    try {
+      if (editandoId !== null) {
+        const actualizado = await updateProducto(editandoId, prod);
+        setProductos(prev => prev.map(p => p.id === editandoId ? actualizado : p));
+        setEditandoId(null);
+        showAlert('✓ Producto actualizado correctamente');
+      } else {
+
+        const formData = new FormData();
+        console.log('imagenFile al guardar:', imagenFile);
+        formData.append('codigo_barra', prod.codigo_barra || '');  // ← agregar
+        formData.append('lote', prod.lote || '');
+        formData.append('nombre', prod.nombre);
+        formData.append('precio_neto', String(prod.precio_neto));
+        formData.append('precio_pvp', String((prod as any).precio_pvp || ''));
+        formData.append('iva', String(prod.iva));
+        formData.append('cantidad', String(prod.cantidad));
+        formData.append('stock_minimo', String(prod.stock_minimo));
+        formData.append('stock_maximo', String(prod.stock_maximo));
+        formData.append('artesano', String(prod.artesano));
+
+        if ((prod as any).precio_pvp) {
+          formData.append('precio_pvp', String((prod as any).precio_pvp));
+        }
+
+        const categoriaId = categorias[0]?.id;
+        if (categoriaId) {
+          formData.append('categoria', String(categoriaId));
+        }
+
+        formData.append('descuento', String(prod.descuento));
+        formData.append('valor_descuento', String(prod.valor_descuento));
+
+        // Obtener imagen seleccionada
+        if (imagenFile) {
+          formData.append('imagen', imagenFile);
+        }
+
+        const response = await fetch(
+          'http://127.0.0.1:8000/api/productos/',
+          {
+            method: 'POST',
+            body: formData,
+          }
+        );
+
+        const nuevo = await response.json();
+        const productosActualizados = [...productos, nuevo];
+
+        setProductos(prev => [...prev, nuevo]);
+
+        if (nuevo.id && nuevo.imagen_url) {
+          setImagenes(prev => ({ ...prev, [nuevo.id]: nuevo.imagen_url }));
+        }
+        setImagenFile(null);
+        setArchivos([]);
+
+        const nuevoCodigo = generarCodigo(productosActualizados);
+        const nuevoLote = generarLote(productosActualizados);
+        setProd({
+          codigo_barra: nuevoCodigo, lote: nuevoLote, nombre: '', categoria: categorias[0]?.id ?? null,
+          precio_neto: 0, iva: 0, descuento: false, valor_descuento: 0,
+          cantidad: 0, stock_minimo: 0, stock_maximo: 0,
+          artesano: ARTESANO_ID, colores: [], maneja_tallas: false, tallas: [],
+        });
+        showAlert('✓ Producto creado correctamente');
+      }
+    } catch (err: any) {
+      showAlert(`Error: ${err?.message ?? 'Error desconocido'}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditProducto = (id: number) => {
+    const producto = productos.find(p => p.id === id);
+    if (!producto) return;
+    setEditandoId(id);
+    setProd({
+      codigo_barra: producto.codigo_barra, lote: producto.lote,
+      nombre: producto.nombre, categoria: producto.categoria,
+      precio_neto: producto.precio_neto, iva: producto.iva,
+      descuento: producto.descuento, valor_descuento: producto.valor_descuento,
+      cantidad: producto.cantidad, stock_minimo: producto.stock_minimo,
+      stock_maximo: producto.stock_maximo, artesano: ARTESANO_ID,
+      colores: producto.colores ?? [], maneja_tallas: producto.maneja_tallas ?? false,
+      tallas: producto.tallas ?? [],
+    });
+    setTabLocal('producto');
+  };
+
+  const [cat, setCat] = useState({ nombre: '', descripcion: '' });
+
+  const handleAddCategoria = async () => {
+    if (!cat.nombre) return showAlert('El nombre es obligatorio', 'error');
+    setLoading(true);
+    try {
+      if (editandoCatId !== null) {
+        const actualizada = await updateCategoria(editandoCatId, { ...cat, artesano: ARTESANO_ID });
+        setCategorias(prev => prev.map(c => c.id === editandoCatId ? actualizada : c));
+        setEditandoCatId(null);
+        showAlert('✓ Categoría actualizada correctamente');
+      } else {
+        const nueva = await createCategoria({ ...cat, artesano: ARTESANO_ID });
+        setCategorias(prev => [...prev, nueva]);
+        showAlert('✓ Categoría creada correctamente');
+      }
+      setCat({ nombre: '', descripcion: '' });
+    } catch {
+      showAlert('Error al guardar la categoría', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditCategoria = (id: number) => {
+    const categoria = categorias.find(c => c.id === id);
+    if (!categoria) return;
+    setEditandoCatId(id);
+    setCat({ nombre: categoria.nombre, descripcion: categoria.descripcion });
+    setTabLocal('categoria');
+  };
+
+  const handleAgregarColor = () => {
+    const nombre = colorNombreRef.current?.value.trim() ?? '';
+    const hex = colorPickerRef.current?.value ?? '#c8a96e';
+    if (!nombre) return;
+    setProd(prev => ({ ...prev, colores: [...(prev.colores ?? []), { hex, nombre }] }));
+    if (colorNombreRef.current) colorNombreRef.current.value = '';
+    if (colorPickerRef.current) colorPickerRef.current.value = '#c8a96e';
+  };
+
+  const handlePickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const hex = e.target.value.toLowerCase();
+    const nombreConocido = HEX_MAP[hex];
+    if (nombreConocido && colorNombreRef.current && colorNombreRef.current.value === '')
+      colorNombreRef.current.value = nombreConocido;
+  };
+
+  const handleNombreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nombre = e.target.value.trim().toLowerCase();
+    const hexConocido = COLOR_MAP[nombre];
+    if (hexConocido && colorPickerRef.current) colorPickerRef.current.value = hexConocido;
+  };
+
+  const tabCls = (t: string) =>
+    `px-4 py-2 rounded-xl text-sm font-semibold transition ${tabLocal === t ? 'bg-amber-700 text-white shadow' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`;
+
+  // ✅ ERROR 3 CORREGIDO: modal DENTRO del return, no fuera
+  return (
+    <div className="space-y-5">
+      {/* Modal +Stock dentro del return */}
+      {modalStockProd && (
+        <ModalReposicion
+          producto={modalStockProd}
+          onClose={() => setModalStockProd(null)}
+
+          onConfirm={async (cantidad, nota) => {
+            const movimiento = await reponerStock({
+              producto: modalStockProd.id!,
+              cantidad,
+              nota
+            });
+
+            setProductos(prev =>
+              prev.map(p =>
+                p.id === modalStockProd.id
+                  ? { ...p, cantidad: movimiento.stock_resultante ?? p.cantidad }
+                  : p
+              )
+            );
+
+          }}
+        />
+      )}
+
+      {alert && <Alert msg={alert.msg} type={alert.type} />}
+      <div className="flex gap-3 flex-wrap">
+        <button className={tabCls('categoria')} onClick={() => setTabLocal('categoria')}>🏷️Mi Categoría</button>
+        <button className={tabCls('producto')} onClick={() => setTabLocal('producto')}>➕ Nuevo Producto</button>
+        <button className={tabCls('lista')} onClick={() => setTabLocal('lista')}>📋 Ver todo</button>
+      </div>
+
+      {tabLocal === 'producto' && (
+        <div className="space-y-5">
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h2 className="font-serif text-xl text-amber-800 mb-4">📂 Seleccionar Imagen</h2>
+            <div
+              onClick={() => document.getElementById('input-imagen')?.click()}
+              className="flex flex-col items-center justify-center border-2 border-dashed border-amber-300 rounded-xl p-8 cursor-pointer hover:bg-amber-50 transition text-stone-500"
+            >
+              <span className="text-4xl mb-2">🖼️</span>
+              <p className="text-sm">
+                {archivos.length > 0 ? archivos[0] : 'Arrastra imágenes o haz clic para seleccionar'}
+              </p>
+              <span className="text-xs opacity-60 mt-1">JPG, PNG — máx. 10 MB</span>
+              {imagenFile && (
+                <img
+                  src={URL.createObjectURL(imagenFile)}
+                  className="mt-3 h-24 w-24 object-cover rounded-xl border border-amber-200"
+                />
+              )}
+            </div>
+            <input
+              id="input-imagen"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  console.log('✅ Imagen seleccionada:', file.name);
+                  setImagenFile(file);
+                  setArchivos([file.name]);
+                }
+              }}
+            />
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h2 className="font-serif text-xl text-amber-800 mb-5">
+              {editandoId ? '✏️ Editar Producto' : '➕ Crear Producto'}
+            </h2>
+            <div className="space-y-4">
+              <div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-3">🔖 Identificación</p>
+                <div className="flex flex-wrap gap-4">
+                  <Field label="Código de barra / QR">
+                    <input className={`${inputCls} bg-amber-100 cursor-not-allowed`} value={prod.codigo_barra || ''} readOnly />
+                  </Field>
+                  <Field label="Lote">
+                    <input className={`${inputCls} bg-amber-100 cursor-not-allowed`} value={prod.lote || ''} readOnly />
+                  </Field>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-4">
+                <Field label="Nombre *">
+                  <input className={inputCls} value={prod.nombre}
+                    onChange={e => setProd({ ...prod, nombre: e.target.value })} placeholder="Ej: Mochila wayuu" />
+                </Field>
+
+                <Field label="Categoría">
+                  <div className={`${inputCls} bg-amber-100 cursor-not-allowed text-stone-600`}>
+                    {categorias[0]?.nombre ?? '—'}
+                  </div>
+                  <span className="text-xs text-stone-400">
+                    Asignada automáticamente a tu perfil
+                  </span>
+                </Field>
+              </div>
+
+              {/* ── COLORES ── */}
+<div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+  <p className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-3">🎨 Colores disponibles</p>
+  <div className="flex gap-2 items-center mb-3">
+    <input
+      type="color"
+      ref={colorPickerRef}
+      onChange={handlePickerChange}
+      defaultValue="#c8a96e"
+      className="w-10 h-10 rounded cursor-pointer border border-amber-200"
+    />
+    <input
+      ref={colorNombreRef}
+      onChange={handleNombreChange}
+      placeholder="Ej. Rojo, Azul marino..."
+      className={`${inputCls} flex-1`}
+    />
+    <button
+      type="button"
+      onClick={handleAgregarColor}
+      className="px-4 py-2 rounded-xl bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 transition"
+    >
+      + Agregar
+    </button>
+  </div>
+  {(prod.colores ?? []).length === 0 ? (
+    <p className="text-xs text-stone-400">Sin colores agregados aún</p>
+  ) : (
+    <div className="flex flex-wrap gap-2">
+      {(prod.colores ?? []).map((c, i) => (
+        <span key={i} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border border-amber-200 bg-white">
+          <span className="w-3 h-3 rounded-full border border-stone-200" style={{ background: c.hex }} />
+          {c.nombre}
+          <button
+            type="button"
+            onClick={() => setProd(prev => ({ ...prev, colores: prev.colores?.filter((_, j) => j !== i) }))}
+            className="text-stone-400 hover:text-red-500 transition ml-1"
+          >
+            ✕
+          </button>
+        </span>
+      ))}
+    </div>
+  )}
+</div>
+
+{/* ── TALLAS ── */}
+<div className="p-4 bg-amber-50 rounded-xl border border-amber-100">
+  <label className="flex items-center gap-2 text-sm cursor-pointer mb-3">
+    <input
+      type="checkbox"
+      checked={prod.maneja_tallas ?? false}
+      onChange={e => setProd({ ...prod, maneja_tallas: e.target.checked, tallas: [] })}
+      className="w-4 h-4 accent-orange-600"
+    />
+    <span className="font-semibold text-amber-800">¿Maneja tallas?</span>
+  </label>
+  {prod.maneja_tallas && (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input
+          id="input-talla"
+          placeholder="Ej. S, M, L, XL, 38..."
+          className={`${inputCls} flex-1`}
+        />
+        <button
+          type="button"
+          onClick={() => {
+            const input = document.getElementById('input-talla') as HTMLInputElement;
+            const talla = input?.value.trim();
+            if (!talla) return;
+            setProd(prev => ({ ...prev, tallas: [...(prev.tallas ?? []), talla] }));
+            input.value = '';
+          }}
+          className="px-4 py-2 rounded-xl bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 transition"
+        >
+          + Agregar
+        </button>
+      </div>
+      {(prod.tallas ?? []).length === 0 ? (
+        <p className="text-xs text-stone-400">Sin tallas agregadas aún</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {(prod.tallas ?? []).map((t, i) => (
+            <span key={i} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border border-amber-200 bg-white">
+              {t}
+              <button
+                type="button"
+                onClick={() => setProd(prev => ({ ...prev, tallas: prev.tallas?.filter((_, j) => j !== i) }))}
+                className="text-stone-400 hover:text-red-500 transition ml-1"
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )}
+</div>
+
+              <div className="flex flex-wrap gap-4">
+                <Field label="Precio neto *">
+                  <input className={inputCls} type="number" min="0" value={prod.precio_neto || ''}
+                    onChange={e => setProd({ ...prod, precio_neto: Number(e.target.value) })} placeholder="0" />
+                </Field>
+                <Field label="Precio venta al público (PVP)">
+                  <input className={inputCls} type="number" min="0" value={(prod as any).precio_pvp || ''}
+                    onChange={e => setProd({ ...prod, precio_pvp: Number(e.target.value) } as any)}
+                    placeholder="Ej: 25000" />
+                  <span className="text-xs text-stone-400">Precio que ve el cliente</span>
+                </Field>
+                <Field label="IVA (%)">
+                  <select className={inputCls} value={prod.iva}
+                    onChange={e => setProd({ ...prod, iva: Number(e.target.value) })}>
+                    <option value={0}>0% — Excluido</option>
+                    <option value={5}>5%</option>
+                    <option value={19}>19%</option>
+                  </select>
+                </Field>
+              </div>
+
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={prod.descuento}
+                  onChange={e => setProd({ ...prod, descuento: e.target.checked, valor_descuento: 0 })}
+                  className="w-4 h-4 accent-orange-600" />
+                <span>¿Obtiene descuento?</span>
+              </label>
+              {prod.descuento && (
+                <Field label="Porcentaje de descuento (%) *">
+                  <input className={inputCls} type="number" min="1" max="99"
+                    value={prod.valor_descuento || ''}
+                    onChange={e => setProd({ ...prod, valor_descuento: Number(e.target.value) })} placeholder="Ej: 10" />
+                </Field>
+              )}
+
+              {/* Control de stock — bloqueado si se está editando */}
+              <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-1">📦 Control de stock</p>
+                <div className="flex flex-wrap gap-4">
+                  {editandoId ? (
+                    // Al editar: stock actual bloqueado, mín y máx editables
+                    <>
+                      <div className="flex-1 min-w-[120px] bg-amber-100 rounded-xl px-4 py-3 border border-amber-200">
+                        <div className="text-xs uppercase tracking-wider text-amber-700/60 font-semibold mb-1">Stock actual (solo lectura)</div>
+                        <div className="text-lg font-bold text-stone-600">{prod.cantidad} uds.</div>
+                        <div className="text-xs text-stone-400 mt-1">Usa el botón + Stock para reponer</div>
+                      </div>
+                      <Field label="Stock mínimo">
+                        <input className={inputCls} type="number" min="0" value={prod.stock_minimo || ''}
+                          onChange={e => setProd({ ...prod, stock_minimo: Number(e.target.value) })} />
+                      </Field>
+                      <Field label="Stock máximo">
+                        <input className={inputCls} type="number" min="0" value={prod.stock_maximo || ''}
+                          onChange={e => setProd({ ...prod, stock_maximo: Number(e.target.value) })} />
+                      </Field>
+                    </>
+                  ) : (
+                    // Al crear: todos editables
+                    <>
+                      <Field label="Cantidad inicial">
+                        <input className={inputCls} type="number" min="0" value={prod.cantidad || ''}
+                          onChange={e => setProd({ ...prod, cantidad: Number(e.target.value) })} placeholder="0" />
+                        <span className="text-xs text-stone-400">Solo para el primer registro</span>
+                      </Field>
+                      <Field label="Stock mínimo">
+                        <input className={inputCls} type="number" min="0" value={prod.stock_minimo || ''}
+                          onChange={e => setProd({ ...prod, stock_minimo: Number(e.target.value) })} placeholder="0" />
+                      </Field>
+                      <Field label="Stock máximo">
+                        <input className={inputCls} type="number" min="0" value={prod.stock_maximo || ''}
+                          onChange={e => setProd({ ...prod, stock_maximo: Number(e.target.value) })} placeholder="0" />
+                      </Field>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-2">
+                <button onClick={handleAddProducto} disabled={loading}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white text-sm font-semibold shadow hover:shadow-md transition disabled:opacity-60">
+                  {loading ? 'Guardando...' : editandoId ? 'Actualizar producto' : 'Guardar producto'}
+                </button>
+                <button onClick={() => {
+                  setEditandoId(null);
+                  setProd({
+                    codigo_barra: generarCodigo(productos), lote: generarLote(productos),
+                    nombre: '', categoria: null, precio_neto: 0, iva: 0,
+                    descuento: false, valor_descuento: 0, cantidad: 0,
+                    stock_minimo: 0, stock_maximo: 0, artesano: ARTESANO_ID,
+                    colores: [], maneja_tallas: false, tallas: [],
+                  });
+                }} className="px-5 py-2 rounded-xl bg-amber-100 text-amber-800 text-sm font-semibold hover:bg-amber-200 transition">
+                  Limpiar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DESPUÉS — muestra la categoría del artesano, no permite crear más */}
+      {tabLocal === 'categoria' && (
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+
+          {categorias.length === 0 ? (
+            <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl text-sm text-orange-700">
+              ⚠️ Aún no tienes una categoría asignada. Contacta al administrador.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Muestra la única categoría del artesano */}
+              <div className="p-5 bg-amber-50 border border-amber-200 rounded-2xl">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-2xl">🏷️</span>
+                  <div>
+                    <p className="font-semibold text-stone-800 text-lg">{categorias[0].nombre}</p>
+                    <p className="text-xs text-amber-600 font-semibold">Tu categoría artesanal</p>
+                  </div>
+                </div>
+                {categorias[0].descripcion && (
+                  <p className="text-sm text-stone-500 mt-2 leading-relaxed">
+                    {categorias[0].descripcion}
+                  </p>
+                )}
+              </div>
+
+              <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700">
+                ℹ️ Cada artesano maneja una única categoría. Tus productos se registran automáticamente bajo <strong>{categorias[0].nombre}</strong>.
+                Si necesitas cambiarla, contacta al administrador.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tabLocal === 'lista' && (
+        <>
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h2 className="font-serif text-xl text-amber-800 mb-4">📦 Productos registrados</h2>
+            <div className="overflow-x-auto rounded-xl border border-amber-100">
+              <table className="w-full text-sm">
+                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+                  <tr>{['Código', 'Lote', 'Nombre', 'Categoría', 'Precio', 'IVA', 'Desc.', 'Stock', 'Mín.', 'Máx.', 'Acciones'].map(h => (
+                    <th key={h} className="px-3 py-3 text-left font-semibold">{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody>
+                  {productos.map(p => (
+                    <tr key={p.id} className={`border-t border-amber-50 transition ${(p.cantidad - (p.cantidad_reservada ?? 0)) <= p.stock_minimo
+                      ? 'bg-red-50/60 hover:bg-red-50'
+                      : 'hover:bg-amber-50/50'
+                      }`}>
+                      <td className="px-3 py-3 font-mono text-xs">{p.codigo_barra || '—'}</td>
+                      <td className="px-3 py-3 text-xs">{p.lote || '—'}</td>
+                      <td className="px-3 py-3 font-semibold">{p.nombre}</td>
+                      <td className="px-3 py-3"><Badge color="bg-amber-100 text-amber-800">{p.categoria_nombre ?? '—'}</Badge></td>
+                      <td className="px-3 py-3">${Number(p.precio_neto).toLocaleString()}</td>
+                      <td className="px-3 py-3">{p.iva}%</td>
+                      <td className="px-3 py-3">{p.descuento ? <Badge color="bg-green-100 text-green-700">Sí</Badge> : '—'}</td>
+                      <td className="px-3 py-3"><StockBadge p={p} /></td>
+                      <td className="px-3 py-3 text-xs text-stone-400">{p.stock_minimo}</td>
+                      <td className="px-3 py-3 text-xs text-stone-400">{p.stock_maximo}</td>
+                      <td className="px-3 py-3">
+                        <div className="flex gap-2">
+                          <button onClick={() => handleEditProducto(p.id!)}
+                            className="px-3 py-1 rounded-lg bg-amber-100 text-amber-800 text-xs font-semibold hover:bg-amber-200 transition">
+                            Editar
+                          </button>
+                          <button onClick={() => onIrAInventario(p.id!)}
+                            className="px-3 py-1 rounded-lg bg-stone-100 text-stone-600 text-xs font-semibold hover:bg-stone-200 transition">
+                            Inventario →
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {productos.length === 0 && (
+                    <tr><td colSpan={11} className="px-4 py-6 text-center text-stone-400">Sin productos</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h2 className="font-serif text-xl text-amber-800 mb-4">🏷️ Categorías</h2>
+            <div className="overflow-x-auto rounded-xl border border-amber-100">
+              <table className="w-full text-sm">
+                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+                  <tr>{['Nombre', 'Descripción', ''].map(h => (
+                    <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>
+                  ))}</tr>
+                </thead>
+                <tbody>
+                  {categorias.map(c => (
+                    <tr key={c.id} className="border-t border-amber-50 hover:bg-amber-50/50">
+                      <td className="px-4 py-3 font-semibold">{c.nombre}</td>
+                      <td className="px-4 py-3 text-stone-500">{c.descripcion || '—'}</td>
+                      <td className="px-4 py-3">
+                        <button onClick={() => handleEditCategoria(c.id!)}
+                          className="px-3 py-1 rounded-lg bg-amber-100 text-amber-800 text-xs font-semibold hover:bg-amber-200 transition">
+                          Editar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {categorias.length === 0 && (
+                    <tr><td colSpan={3} className="px-4 py-6 text-center text-stone-400">Sin categorías</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO INVENTARIO
+// ─────────────────────────────────────────────────────────────────────────────
+function ModuloInventario({
+  productos, kardex, setKardex, setProductos,
+  filtroProductoInicial = 'todos',
+  onFiltroUsado,
+}: {
+  productos: Producto[];
+  kardex: Kardex[];
+  setKardex: React.Dispatch<React.SetStateAction<Kardex[]>>;
+  setProductos: React.Dispatch<React.SetStateAction<Producto[]>>;
+  filtroProductoInicial?: string;
+  onFiltroUsado?: () => void;
+}) {
+  const [form, setForm] = useState({
+    producto: productos[0]?.id ?? 0,
+    fecha: '',
+    cantidad: '',
+    precio_pvp: '',
+    nota: '',
+  });
+
+  const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [modalProd, setModalProd] = useState<Producto | null>(null);
+  const [resumen, setResumen] = useState<ResumenInventario | null>(null);
+  // ── NUEVO: tab activo ────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<'entrada' | 'historial'>('entrada');
+
+  const [filtros, setFiltros] = useState({
+    desde: '',
+    hasta: '',
+    tipo: 'todos',
+    origen: 'todos',
+    producto: filtroProductoInicial,
+  });
+
+  useEffect(() => {
+    if (filtroProductoInicial !== 'todos') {
+      setFiltros(prev => ({ ...prev, producto: filtroProductoInicial }));
+      const prod = productos.find(p => String(p.id) === filtroProductoInicial);
+      if (prod?.id) setForm(prev => ({ ...prev, producto: prod.id! }));
+      onFiltroUsado?.();
+    }
+  }, [filtroProductoInicial]);
+
+  const showAlert = (msg: string, type: 'success' | 'error' = 'success') => {
+    setAlert({ msg, type });
+    setTimeout(() => setAlert(null), 3500);
+  };
+
+  useEffect(() => {
+    getResumenInventario().then(setResumen).catch(() => { });
+  }, [kardex]);
+
+  const productoSeleccionado = productos.find(p => p.id === form.producto);
+
+  const handleAdd = async () => {
+    if (!form.producto || !form.fecha)
+      return showAlert('Producto y fecha son obligatorios', 'error');
+    const cantidad = parseInt(form.cantidad);
+    if (!cantidad || cantidad <= 0)
+      return showAlert('La cantidad debe ser mayor a 0', 'error');
+    setLoading(true);
+    try {
+      const nuevo = await createKardex({
+        producto: form.producto,
+        cantidad,
+        fecha: form.fecha,
+        nota: form.nota,
+        ...(form.precio_pvp ? { precio_pvp: parseFloat(form.precio_pvp) } : {}),
+      });
+      setKardex(prev => [nuevo, ...prev]);
+      if (nuevo.stock_resultante !== undefined) {
+        setProductos(prev =>
+          prev.map(p =>
+            p.id === form.producto
+              ? { ...p, cantidad: nuevo.stock_resultante!, ...(form.precio_pvp ? { precio_pvp: parseFloat(form.precio_pvp) } : {}) }
+              : p
+          )
+        );
+      }
+      try {
+        const kardexActualizado = await getKardex();
+        setKardex(kardexActualizado);
+      } catch { }
+      setForm({ producto: productos[0]?.id ?? 0, fecha: '', cantidad: '', precio_pvp: '', nota: '' });
+      showAlert('✓ Entrada registrada correctamente');
+    } catch (err: any) {
+      let msg = 'Error al registrar el movimiento';
+      try { msg = JSON.parse(err?.message ?? '').error ?? msg; } catch { msg = err?.message ?? msg; }
+      showAlert(msg, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReposicion = async (cantidad: number, nota: string) => {
+    if (!modalProd?.id) return;
+    const movimiento = await reponerStock({ producto: modalProd.id, cantidad, nota });
+    setKardex(prev => [movimiento, ...prev]);
+    setProductos(prev =>
+      prev.map(p =>
+        p.id === modalProd.id
+          ? { ...p, cantidad: movimiento.stock_resultante ?? p.cantidad }
+          : p
+      )
+    );
+    try {
+      const kardexActualizado = await getKardex();
+      setKardex(kardexActualizado);
+    } catch { }
+    showAlert(`✓ Entrada registrada — nuevo stock: ${movimiento.stock_resultante}`);
+  };
+
+  const kardexFiltrado = kardex.filter(k => {
+    if (!k || !k.tipo) return false;
+    if (filtros.desde && k.fecha < filtros.desde) return false;
+    if (filtros.hasta && k.fecha > filtros.hasta) return false;
+    if (filtros.tipo !== 'todos') {
+      if (String(k.tipo ?? '').toLowerCase() !== filtros.tipo) return false;
+    }
+    if (filtros.origen !== 'todos') {
+      if (String((k as any).origen ?? '') !== filtros.origen) return false;
+    }
+    if (filtros.producto !== 'todos' && String(k.producto) !== filtros.producto) return false;
+    return true;
+  })
+
+  const labelCls = "block text-[10px] font-semibold tracking-widest uppercase text-stone-500 mb-1";
+  const inputCls =
+    "w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent transition";
+
+  // ── Estilos de tabs — idénticos a ModuloProductos ────────────────────────
+  const tabCls = (t: string) =>
+    `px-4 py-2 rounded-xl text-sm font-semibold transition ${activeTab === t
+      ? 'bg-amber-700 text-white shadow'
+      : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+    }`;
+
+  return (
+    <div className="space-y-5 font-sans">
+
+      {modalProd && (
+        <ModalReposicion
+          producto={modalProd}
+          onClose={() => setModalProd(null)}
+          onConfirm={handleReposicion}
+        />
+      )}
+
+      {alert && <Alert msg={alert.msg} type={alert.type} />}
+
+      {/* ── TABS DE NAVEGACIÓN ── */}
+      <div className="flex gap-3 flex-wrap">
+        <button className={tabCls('entrada')} onClick={() => setActiveTab('entrada')}>
+          📦 Registrar entrada
+        </button>
+        <button className={tabCls('historial')} onClick={() => setActiveTab('historial')}>
+          📊 Historial de movimientos
+        </button>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          TAB 1: REGISTRAR ENTRADA + STOCK
+      ══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'entrada' && (
+        <>
+          {/* ── FORMULARIO ENTRADA MANUAL ── */}
+          <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-6">
+            <h2 className="font-serif text-lg text-amber-800 font-semibold mb-1 flex items-center gap-2">
+              📦 Registrar entrada de mercancía
+            </h2>
+            <p className="text-xs text-stone-400 mb-5">
+              El sistema registra automáticamente el tipo, subtipo y quién lo registró.
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className={labelCls}>Producto</label>
+                <select
+                  className={inputCls}
+                  value={form.producto}
+                  onChange={e => setForm({ ...form, producto: Number(e.target.value) })}
+                >
+                  {productos.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.nombre} [PROD-{String(p.id).padStart(4, '0')}]
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-wrap gap-4">
+                <div className="flex-1 min-w-[140px]">
+                  <label className={labelCls}>Cantidad <span className="text-red-400">*</span></label>
+                  <input
+                    type="number" min={1} className={inputCls} placeholder="Ej: 10"
+                    value={form.cantidad}
+                    onChange={e => setForm({ ...form, cantidad: e.target.value })}
+                  />
+                </div>
+                <div className="flex-1 min-w-[140px]">
+                  <label className={labelCls}>Fecha <span className="text-red-400">*</span></label>
+                  <input
+                    type="date" className={inputCls}
+                    value={form.fecha}
+                    onChange={e => setForm({ ...form, fecha: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={labelCls}>Nota u observación</label>
+                <input
+                  className={inputCls} placeholder="Ej: Compra feria artesanal mayo 2026"
+                  value={form.nota}
+                  onChange={e => setForm({ ...form, nota: e.target.value })}
+                />
+              </div>
+
+              <button
+                onClick={handleAdd} disabled={loading}
+                className="px-5 py-2 rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-sm font-semibold transition"
+              >
+                {loading ? 'Guardando...' : '✓ Registrar entrada'}
+              </button>
+            </div>
+          </div>
+
+          {/* ── STOCK DEL PRODUCTO ── */}
+          {productoSeleccionado && (() => {
+            const reservado = productoSeleccionado.cantidad_reservada ?? 0;
+            const disponible = productoSeleccionado.cantidad - reservado;
+            const bajo = disponible <= productoSeleccionado.stock_minimo;
+            const alto = productoSeleccionado.stock_maximo > 0 && disponible >= productoSeleccionado.stock_maximo;
+
+            return (
+              <div className={`bg-white rounded-xl border p-5 ${bajo ? 'border-red-200' : alto ? 'border-blue-200' : 'border-amber-100'}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-sm font-semibold text-stone-700">
+                      📦 Stock de &quot;{productoSeleccionado.nombre.toUpperCase()}&quot;{' '}
+                      <span className="text-xs font-normal text-stone-400">(solo lectura)</span>
+                    </p>
+                    {bajo && <p className="text-xs text-red-500 font-semibold mt-0.5">⚠️ Stock disponible por debajo del mínimo</p>}
+                    {alto && <p className="text-xs text-blue-500 font-semibold mt-0.5">📦 Stock en máximo</p>}
+                  </div>
+                  <button
+                    onClick={() => setModalProd(productoSeleccionado)}
+                    className="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 text-xs font-semibold rounded-lg transition"
+                  >
+                    + Stock
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-5 gap-2 text-center">
+                  {[
+                    { label: 'Stock Total', value: productoSeleccionado.cantidad, color: 'text-stone-700' },
+                    { label: 'Reservado', value: reservado, color: 'text-amber-600' },
+                    { label: 'Disponible', value: disponible, color: bajo ? 'text-red-600' : 'text-green-600' },
+                    { label: 'Mínimo', value: productoSeleccionado.stock_minimo, color: 'text-stone-400' },
+                    { label: 'Máximo', value: productoSeleccionado.stock_maximo || '—', color: 'text-stone-400' },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="bg-stone-50 rounded-lg py-3 border border-stone-100">
+                      <p className="text-[9px] uppercase tracking-widest text-stone-400 mb-1">{label}</p>
+                      <p className={`text-xl font-bold ${color}`}>{value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {productoSeleccionado.stock_maximo > 0 && (
+                  <div className="mt-3">
+                    <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${bajo ? 'bg-red-400' : alto ? 'bg-blue-400' : 'bg-green-400'}`}
+                        style={{ width: `${Math.min(100, (disponible / productoSeleccionado.stock_maximo) * 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[9px] text-stone-300 mt-0.5">
+                      <span>0</span>
+                      <span>{productoSeleccionado.stock_maximo}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          TAB 2: HISTORIAL DE MOVIMIENTOS
+      ══════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'historial' && (
+        <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-6">
+          <h2 className="font-serif text-lg text-amber-800 font-semibold mb-4 flex items-center gap-2">
+            📊 Historial de movimientos
+          </h2>
+
+          {/* Filtros */}
+          <div className="flex flex-wrap items-center gap-2 mb-4 text-xs text-stone-500">
+            <span className="font-semibold">FILTRAR:</span>
+            <span>Desde</span>
+            <input type="date"
+              className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-amber-300"
+              value={filtros.desde} onChange={e => setFiltros({ ...filtros, desde: e.target.value })} />
+            <span>Hasta</span>
+            <input type="date"
+              className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none focus:ring-1 focus:ring-amber-300"
+              value={filtros.hasta} onChange={e => setFiltros({ ...filtros, hasta: e.target.value })} />
+            <select className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none"
+              value={filtros.tipo} onChange={e => setFiltros({ ...filtros, tipo: e.target.value })}>
+              <option value="todos">Tipo: todos</option>
+              <option value="entrada">Entrada</option>
+              <option value="salida">Salida</option>
+              <option value="devolucion">Devolución</option>
+              <option value="ajuste">Ajuste</option>
+            </select>
+            <select className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none"
+              value={filtros.origen} onChange={e => setFiltros({ ...filtros, origen: e.target.value })}>
+              <option value="todos">Origen: todos</option>
+              <option value="manual">Manual</option>
+              <option value="automatico">Automático</option>
+            </select>
+            <select className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs text-stone-700 focus:outline-none"
+              value={filtros.producto} onChange={e => setFiltros({ ...filtros, producto: e.target.value })}>
+              <option value="todos">Producto: todos</option>
+              {productos.map(p => (
+                <option key={p.id} value={String(p.id)}>{p.nombre}</option>
+              ))}
+            </select>
+            {Object.values(filtros).some(v => v !== 'todos' && v !== '') && (
+              <button
+                onClick={() => setFiltros({ desde: '', hasta: '', tipo: 'todos', origen: 'todos', producto: 'todos' })}
+                className="px-2 py-1 rounded-lg bg-stone-100 text-stone-500 text-xs hover:bg-stone-200 transition"
+              >
+                ✕ Limpiar
+              </button>
+            )}
+          </div>
+
+          {/* Tabla */}
+          <div className="overflow-x-auto rounded-xl border border-amber-100">
+            <table className="w-full text-sm">
+              <thead className="bg-amber-50 text-[10px] font-semibold uppercase tracking-widest text-amber-900/60">
+                <tr>
+                  <th className="px-3 py-3 text-left">Fecha</th>
+                  <th className="px-3 py-3 text-left">Producto</th>
+                  <th className="px-3 py-3 text-left">Tipo</th>
+                  <th className="px-3 py-3 text-left">Subtipo</th>
+                  <th className="px-3 py-3 text-left">Origen</th>
+                  <th className="px-3 py-3 text-left">Cant.</th>
+                  <th className="px-3 py-3 text-left">Stock Result.</th>
+                  <th className="px-3 py-3 text-left">PVP Unit.</th>
+                  <th className="px-3 py-3 text-left">Pedido ref.</th>
+                  <th className="px-3 py-3 text-left">Registrado por</th>
+                  <th className="px-3 py-3 text-left">Nota</th>
+                </tr>
+              </thead>
+              <tbody>
+                {kardexFiltrado.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} className="px-4 py-8 text-center text-stone-400 text-sm">
+                      Sin movimientos
+                    </td>
+                  </tr>
+                ) : (
+                  kardexFiltrado.map(k => (
+                    <tr key={k.id} className="border-t border-amber-50 hover:bg-amber-50/50 transition">
+                      <td className="px-3 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
+                      <td className="px-3 py-3 font-semibold text-stone-800">{k.producto_nombre}</td>
+                      <td className="px-3 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${(k.tipo as string).toLowerCase() === 'entrada' ? 'bg-green-100 text-green-700' :
+                          (k.tipo as string).toLowerCase() === 'salida' ? 'bg-red-100 text-red-600' :
+                            (k.tipo as string).toLowerCase() === 'devolucion' ? 'bg-blue-100 text-blue-600' :
+                              'bg-stone-100 text-stone-500'
+                          }`}>
+                          {k.tipo}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className="text-xs text-stone-500 bg-stone-50 px-2 py-0.5 rounded-full border border-stone-100">
+                          {(k as any).subtipo ?? '—'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${(k as any).origen === 'automatico'
+                          ? 'bg-purple-50 text-purple-600'
+                          : 'bg-amber-50 text-amber-600'
+                          }`}>
+                          {(k as any).origen === 'automatico' ? '⚡ auto' : '✍️ manual'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 font-bold text-stone-800">{k.cantidad}</td>
+                      <td className="px-3 py-3 font-semibold text-green-700">{k.stock_resultante}</td>
+                      <td className="px-3 py-3 text-stone-600">
+                        {(k as any).precio_unitario
+                          ? `$${Number((k as any).precio_unitario).toLocaleString()}`
+                          : '—'}
+                      </td>
+                      <td className="px-3 py-3 text-xs text-stone-400 font-mono">
+                        {(k as any).pedido_ref ?? '—'}
+                      </td>
+                      <td className="px-3 py-3 text-xs text-stone-400">
+                        {(k as any).creado_por ?? '—'}
+                      </td>
+                      <td className="px-3 py-3 text-xs text-stone-400">{k.nota ?? '—'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="text-xs text-stone-400 mt-2">
+            {kardexFiltrado.length} movimiento{kardexFiltrado.length !== 1 ? 's' : ''}
+            {kardexFiltrado.length !== kardex.length && ` de ${kardex.length} total`}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+interface DetallePedido {
+  id: number;
+  producto: number;
+  producto_nombre: string;
+  cantidad: number;
+  precio: number;
+  subtotal: number;
+}
+
+interface Pedido {
+  id: number;
+  codigo: string;
+  cliente: number;
+  cliente_nombre: string;
+  artesano: number;
+  artesano_nombre: string;
+  estado: string;
+  total: number;
+  direccion: string;
+  telefono: string;
+  fecha: string;
+  updated: string;
+  detalles: DetallePedido[];
+  numero_guia?: string;
+  transportadora?: string;
+  fecha_envio?: string;
+  fecha_entrega?: string;
+}
+
+const ESTADO_COLOR: Record<string, string> = {
+  Pendiente: 'bg-yellow-100 text-yellow-700',
+  'En proceso': 'bg-orange-100 text-orange-700',
+  Enviado: 'bg-blue-100 text-blue-700',
+  Entregado: 'bg-green-100 text-green-700',
+  Cancelado: 'bg-red-100 text-red-700',
+  Devolucion: 'bg-purple-100 text-purple-700',
+  'Devolucion solicitada': 'bg-purple-100 text-purple-700',
+  Devuelto: 'bg-teal-100 text-teal-700',
+  Rechazado: 'bg-red-200 text-red-800',
+};
+
+const ESTADO_ICONO: Record<string, string> = {
+  Pendiente: '🕐',
+  'En proceso': '⚙️',
+  Enviado: '🚚',
+  Entregado: '✅',
+  Cancelado: '❌',
+  Devolucion: '↩️',
+  'Devolucion solicitada': '🔄',
+  Devuelto: '↩️',
+  Rechazado: '🚫',
+};
+
+const SIGUIENTES: Record<string, string[]> = {
+  'Pendiente': ['En proceso'],
+  'En proceso': ['Enviado'],
+  'Enviado': ['Entregado'],
+  'Entregado': [],
+  'Devolucion solicitada': ['Devolucion aprobada', 'Devolucion rechazada'],
+  'Cancelado': [],
+  'Devolucion aprobada': [],
+  'Devolucion rechazada': [],
+  'Devuelto': [],
+};
+
+const BTN_COLOR: Record<string, string> = {
+  'En proceso': 'bg-orange-100 text-orange-700 hover:bg-orange-200',
+  Enviado: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
+  Entregado: 'bg-green-100 text-green-700 hover:bg-green-200',
+  Cancelado: 'bg-red-100 text-red-700 hover:bg-red-200',
+  Devolucion: 'bg-purple-100 text-purple-700 hover:bg-purple-200',
+  Devuelto: 'bg-teal-100 text-teal-700 hover:bg-teal-200',
+  Rechazado: 'bg-red-200 text-red-800 hover:bg-red-300',
+};
+
+const MENSAJES_ESTADO: Record<string, string> = {
+  'En proceso': '⚙️ Pedido en preparación',
+  Enviado: '🚚 Pedido marcado como enviado',
+  Entregado: '✅ Entregado — stock descontado',
+  Cancelado: '❌ Cancelado — stock liberado',
+  Devolucion: '↩️ Devolución registrada — stock repuesto',
+  Devuelto: '↩️ Devolución aprobada — stock repuesto',
+  Rechazado: '🚫 Devolución rechazada',
+};
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO PEDIDOS 
+// ─────────────────────────────────────────────────────────────────────────────
+const ACCIONES_ARTESANO: Record<string, string[]> = {
+  'Pendiente': ['En proceso'],
+  'En proceso': ['Enviado'],
+  'Enviado': ['Entregado'],
+  'Devolucion solicitada': [
+    'Devolucion aprobada',
+    'Devolucion rechazada'
+  ],
+};
+function ModuloPedidosArtesano({
+  productos,
+  setProductos,
+  setKardex,
+}: {
+  productos: Producto[];
+  setProductos: React.Dispatch<React.SetStateAction<Producto[]>>;
+  setKardex: React.Dispatch<React.SetStateAction<Kardex[]>>;
+}) {
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingId, setLoadingId] = useState<number | null>(null);
+  const [filtroEstado, setFiltroEstado] = useState('');
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroDesde, setFiltroDesde] = useState('');
+  const [filtroHasta, setFiltroHasta] = useState('');
+  const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  const [devolucionSeleccionada, setDevolucionSeleccionada] = useState<Pedido | null>(null);
+  const [pedidoExpandido, setPedidoExpandido] = useState<number | null>(null);
+
+  const showAlert = (msg: string, type: 'success' | 'error' = 'success') => {
+    setAlert({ msg, type });
+    setTimeout(() => setAlert(null), 3500);
+  };
+
+  // ── Obtener ID del artesano desde localStorage (igual que el AuthContext) ──
+  const artesanoId = ARTESANO_ID;
+
+  // ── Cargar pedidos desde el backend ────────────────────────────────────────
+  const fetchPedidos = useCallback(async () => {
+    if (!artesanoId) return;
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token') ?? '';
+      const res = await fetch(`${BASE}/inventario/pedidos/artesano/${artesanoId}/`, {
+        headers: token ? { Authorization: `Token ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Error al cargar pedidos');
+      const data: Pedido[] = await res.json();
+      setPedidos(data);
+    } catch (e) {
+      showAlert('No se pudieron cargar los pedidos', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [artesanoId]);
+
+  useEffect(() => { fetchPedidos(); }, [fetchPedidos]);
+
+  // ── Cambiar estado ──────────────────────────────────────────────────────────
+  const actualizarEstado = async (pedido: Pedido, estadoNuevo: string) => {
+    if (pedido.estado === estadoNuevo) return;
+    setLoadingId(pedido.id);
+
+    try {
+      const token = localStorage.getItem('token') ?? '';
+      const res = await fetch(`${BASE}/inventario/pedido/estado/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Token ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          pedido_id: pedido.id,
+          estado_nuevo: estadoNuevo,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        showAlert(data.error ?? 'Error al actualizar el pedido', 'error');
+        return;
+      }
+
+      if (data.stock_actual !== undefined) {
+        const productosAfectados = new Set(pedido.detalles.map(d => d.producto));
+        setProductos(prev =>
+          prev.map(p => {
+            if (!p.id || !productosAfectados.has(p.id)) return p;
+            if (pedido.detalles.length === 1 || pedido.detalles[0].producto === p.id) {
+              return {
+                ...p,
+                cantidad: data.stock_actual ?? p.cantidad,
+                cantidad_reservada: data.stock_reservado ?? p.cantidad_reservada ?? 0,
+              };
+            }
+            return p;
+          })
+        );
+      }
+
+      showAlert(MENSAJES_ESTADO[estadoNuevo] ?? 'Estado actualizado');
+      await fetchPedidos();
+
+      try {
+        const kardexActualizado = await getKardex();
+        setKardex(kardexActualizado);
+      } catch { }
+
+    } catch {
+      showAlert('Error de conexión con el servidor', 'error');
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  // ── Filtros ─────────────────────────────────────────────────────────────────
+  const pedidosFiltrados = pedidos.filter(p => {
+    const matchEstado = filtroEstado === '' || p.estado === filtroEstado;
+    const q = busqueda.toLowerCase();
+    const matchBusqueda = q === ''
+      || p.cliente_nombre.toLowerCase().includes(q)
+      || p.codigo.toLowerCase().includes(q)
+      || p.detalles.some(d => d.producto_nombre.toLowerCase().includes(q));
+    const fechaPedido = p.fecha.split('T')[0];
+    const matchDesde = filtroDesde === '' || fechaPedido >= filtroDesde;
+    const matchHasta = filtroHasta === '' || fechaPedido <= filtroHasta;
+    return matchEstado && matchBusqueda && matchDesde && matchHasta;
+
+  });
+
+  const inputCls =
+    'px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-base text-stone-800 ' +
+    'focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition';
+
+  // ── Resumen rápido ──────────────────────────────────────────────────────────
+  const resumen = {
+    total: pedidos.length,
+    pendiente: pedidos.filter(p => p.estado === 'Pendiente').length,
+    enviado: pedidos.filter(p => p.estado === 'Enviado').length,
+    entregado: pedidos.filter(p => p.estado === 'Entregado').length,
+    devoluciones: pedidos.filter(p => {
+      const estado = p.estado.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      return estado.startsWith('devolucion') || estado === 'devuelto';
+    }).length,
+    cancelado: pedidos.filter(p => p.estado === 'Cancelado').length,
+  };
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ──────────────────────────────────────────────────────────────────
+  return (
+    <div className="space-y-5">
+      {alert && <Alert msg={alert.msg} type={alert.type} />}
+
+      {/* Encabezado */}
+      <div className="bg-white rounded-2xl shadow-sm p-6 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-serif text-2xl text-amber-800">🛒 Gestión de Pedidos</h2>
+          <p className="text-stone-500 text-sm mt-1">
+            Los cambios de estado actualizan el inventario automáticamente
+          </p>
+        </div>
+        <button
+          onClick={fetchPedidos}
+          title="Actualizar"
+          className="p-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100 transition flex-shrink-0"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      {/* Tarjetas de resumen */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+        {[
+          { label: 'Total', value: resumen.total, color: 'text-stone-700', bg: 'bg-white', border: 'border-stone-200' },
+          { label: 'Pendiente', value: resumen.pendiente, color: 'text-yellow-700', bg: 'bg-yellow-50', border: 'border-yellow-200' },
+          { label: 'Enviado', value: resumen.enviado, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
+          { label: 'Entregado', value: resumen.entregado, color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200' },
+          { label: 'Cancelado', value: resumen.cancelado, color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' },
+          { label: 'Devoluciones', value: resumen.devoluciones, color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200' },
+        ].map(card => (
+          <div key={card.label} className={`${card.bg} rounded-xl border ${card.border} px-4 py-3 text-center shadow-sm`}>
+            <p className={`text-xl font-bold ${card.color}`}>{card.value}</p>
+            <p className="text-[11px] text-stone-400 mt-0.5 font-medium">{card.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Filtros */}
+      <div className="bg-white rounded-2xl shadow-sm p-6">
+        <div className="flex flex-wrap gap-4">
+          <input
+            type="text"
+            placeholder="Buscar cliente, código o producto..."
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            className={`${inputCls} flex-1 min-w-[200px]`}
+          />
+          <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className={inputCls}>
+            <option value="">Todos los estados</option>
+            <option>Pendiente</option>
+            <option>En proceso</option>
+            <option>Enviado</option>
+            <option>Entregado</option>
+            <option>Cancelado</option>
+            <option>Devolucion solicitada</option>
+            <option>Devuelto</option>
+            <option>Devolucion aprobada</option>
+            <option>Devolucion rechazada</option>
+          </select>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-stone-500">Desde</span>
+            <input type="date" max={new Date().toISOString().split('T')[0]} value={filtroDesde}
+              onChange={e => setFiltroDesde(e.target.value)} className={inputCls} />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-stone-500">Hasta</span>
+            <input type="date" max={new Date().toISOString().split('T')[0]} value={filtroHasta}
+              onChange={e => setFiltroHasta(e.target.value)} className={inputCls} />
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla */}
+      <div className="bg-white rounded-2xl shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-serif text-xl text-amber-800">📋 Lista de pedidos</h2>
+          <span className="text-xs text-stone-400">
+            {pedidosFiltrados.length} de {pedidos.length} pedido{pedidos.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-10 bg-amber-50 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-amber-100">
+            <table className="w-full text-sm">
+              <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+                <tr>
+                  {['Código / Estado', 'Cliente', 'Productos', 'Total', 'Fecha', 'Acciones'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {pedidosFiltrados.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-10 text-center text-stone-400">
+                      {pedidos.length === 0 ? 'Aún no tienes pedidos' : 'No hay pedidos con los filtros aplicados'}
+                    </td>
+                  </tr>
+                ) : pedidosFiltrados.map(pedido => {
+                  const isLoading = loadingId === pedido.id;
+                  return (
+                    <>
+                      <tr key={pedido.id} className="border-t border-amber-50 hover:bg-amber-50/40 transition-colors">
+
+                        {/* CÓDIGO + ESTADO */}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <p className="font-mono text-xs text-stone-400 mb-1">{pedido.codigo}</p>
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${pedido.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-700' :
+                            pedido.estado === 'En proceso' ? 'bg-orange-100 text-orange-700' :
+                              pedido.estado === 'Enviado' ? 'bg-blue-100 text-blue-700' :
+                                pedido.estado === 'Entregado' ? 'bg-green-100 text-green-700' :
+                                  pedido.estado === 'Cancelado' ? 'bg-red-100 text-red-700' :
+                                    pedido.estado?.includes('Devolucion') ? 'bg-purple-100 text-purple-700' :
+                                      'bg-stone-100 text-stone-500'
+                            }`}>
+                            {pedido.estado}
+                          </span>
+                        </td>
+
+                        {/* CLIENTE */}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <p className="font-semibold text-stone-800 text-sm">{pedido.cliente_nombre}</p>
+                          {pedido.telefono && <p className="text-xs text-stone-400">{pedido.telefono}</p>}
+                        </td>
+
+                        {/* PRODUCTOS */}
+                        <td className="px-4 py-3 max-w-[180px]">
+                          <p className="truncate text-stone-600 text-xs">
+                            {pedido.detalles.map(d => `${d.producto_nombre} x${d.cantidad}`).join(', ')}
+                          </p>
+                          <p className="text-xs text-stone-400 mt-0.5">
+                            {pedido.detalles.length} {pedido.detalles.length === 1 ? 'producto' : 'productos'}
+                          </p>
+                        </td>
+
+                        {/* TOTAL */}
+                        <td className="px-4 py-3 font-bold text-green-700 whitespace-nowrap text-sm">
+                          ${Number(pedido.total).toLocaleString('es-CO')}
+                        </td>
+
+                        {/* FECHA */}
+                        <td className="px-4 py-3 text-xs text-stone-400 whitespace-nowrap">
+                          {new Date(pedido.fecha).toLocaleDateString('es-CO', {
+                            day: '2-digit', month: 'short', year: 'numeric',
+                          })}
+                        </td>
+
+                        {/* ACCIONES */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+
+                            {(SIGUIENTES[pedido.estado] ?? []).length === 0 ? (
+                              <span className="text-xs text-stone-300 italic">Finalizado</span>
+                            ) : (
+                              (SIGUIENTES[pedido.estado] ?? []).map(siguiente => (
+                                <button
+                                  key={siguiente}
+                                  disabled={isLoading}
+                                  onClick={() => actualizarEstado(pedido, siguiente)}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition disabled:opacity-50
+                                    ${BTN_COLOR[siguiente] ?? 'bg-gray-100 text-gray-600'}`}
+                                >
+                                  {isLoading ? '⏳' : `→ ${siguiente}`}
+                                </button>
+                              ))
+                            )}
+
+                            {pedido.estado === 'Devolucion solicitada' && (
+                              <button
+                                onClick={() => setDevolucionSeleccionada(pedido)}
+                                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-100 text-purple-700 hover:bg-purple-200 transition"
+                              >
+                                👁 Ver
+                              </button>
+                            )}
+
+                            <button
+                              onClick={() => setPedidoExpandido(pedidoExpandido === pedido.id ? null : pedido.id)}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-stone-100 text-stone-600 hover:bg-stone-200 transition"
+                            >
+                              {pedidoExpandido === pedido.id ? '▲' : '▼ Ver'}
+                            </button>
+
+                            {!['Cancelado', 'Pendiente', 'En proceso'].includes(pedido.estado) && (
+                              <button
+                                onClick={() => generarGuiaEnvio(pedido)}
+                                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-500 hover:bg-red-100 transition"
+                              >
+                                📄 PDF
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+
+                      {/* FILA EXPANDIDA */}
+                      {pedidoExpandido === pedido.id && (
+                        <tr key={`exp-${pedido.id}`}>
+                          <td colSpan={6} className="bg-amber-50/30 px-6 py-4 border-b border-amber-100">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
+                                <h3 className="font-bold text-stone-700 text-sm mb-3">📦 Productos</h3>
+                                <div className="space-y-2">
+                                  {pedido.detalles.map((d, idx) => (
+                                    <div key={idx} className="flex justify-between text-sm border-b border-amber-50 pb-1.5">
+                                      <span className="text-stone-700">{d.producto_nombre}</span>
+                                      <span className="font-semibold text-stone-500">x{d.cantidad}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
+                                <h3 className="font-bold text-stone-700 text-sm mb-3">📋 Información</h3>
+                                <div className="space-y-1.5 text-sm text-stone-600">
+                                  <p><span className="font-semibold text-stone-700">Cliente:</span> {pedido.cliente_nombre}</p>
+                                  <p><span className="font-semibold text-stone-700">Dirección:</span> {pedido.direccion || '—'}</p>
+                                  <p><span className="font-semibold text-stone-700">Total:</span> ${Number(pedido.total).toLocaleString('es-CO')}</p>
+                                  {pedido.numero_guia && <p><span className="font-semibold text-stone-700">Guía:</span> {pedido.numero_guia}</p>}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {devolucionSeleccionada && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+
+          <div className="bg-white rounded-2xl p-6 w-[600px] max-h-[90vh] overflow-y-auto shadow-2xl">
+
+            {/* HEADER */}
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xl font-bold text-gray-800">
+                Detalle devolución
+              </h2>
+
+              <button
+                onClick={() => setDevolucionSeleccionada(null)}
+                className="text-gray-400 hover:text-black text-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* ESTADO */}
+            <div className="mb-4">
+              <span className="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-semibold">
+                {devolucionSeleccionada.estado}
+              </span>
+            </div>
+
+            {/* MOTIVO */}
+            <div className="mb-5">
+              <h3 className="font-semibold text-gray-700 mb-2">
+                Motivo
+              </h3>
+
+              <div className="bg-gray-50 border rounded-xl p-4 text-sm text-gray-700">
+                {(devolucionSeleccionada as any).devolucion?.motivo || 'Sin motivo'}
+              </div>
+            </div>
+
+            {/* BOTONES */}
+            <div className="flex justify-end gap-3">
+
+              <button
+                onClick={() => {
+                  actualizarEstado(devolucionSeleccionada!, 'Devolucion rechazada');
+                  setDevolucionSeleccionada(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-red-100 text-red-700 hover:bg-red-200 transition"
+              >
+                Rechazar
+              </button>
+
+              <button
+                onClick={() => {
+                  actualizarEstado(devolucionSeleccionada!, 'Devolucion aprobada');
+                  setDevolucionSeleccionada(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-green-100 text-green-700 hover:bg-green-200 transition"
+              >
+                Aprobar
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO REPORTES — con filtros, validación de fechas y tablas reales
+// ─────────────────────────────────────────────────────────────────────────────
+function ModuloReportes({
+  productos,
+  kardex,
+}: {
+  productos: Producto[];
+  kardex: Kardex[];
+}) {
+  const [tabReporte, setTabReporte] = useState<'ventas' | 'inventario' | 'productos' | 'contable'>('ventas');
+
+  // ── Vista por tab: 'tabla' | 'dashboard' ─────────────────────────────────
+  const [vista, setVista] = useState<Record<string, 'tabla' | 'dashboard'>>({
+    ventas: 'tabla', inventario: 'tabla', productos: 'tabla', contable: 'tabla',
+  });
+  const toggleVista = (tab: string) =>
+    setVista(prev => ({ ...prev, [tab]: prev[tab] === 'tabla' ? 'dashboard' : 'tabla' }));
+
+  const hoy = new Date().toISOString().split('T')[0];
+  const filtroVacio = {producto: '', desde: '', hasta: '' };
+  const filtroInventarioVacio = { producto: '', desde: '', hasta: '', tipo: 'todos', subtipo: 'todos' };
+
+  const [fVentas, setFVentas] = useState({ ...filtroVacio });
+  const [fInventario, setFInventario] = useState({ ...filtroInventarioVacio }); 
+  const [fProductos, setFProductos] = useState({ ...filtroVacio });
+  const [fContable, setFContable] = useState({ ...filtroVacio, subtipo: 'todos' });
+  const [errVentas, setErrVentas] = useState({ desde: '', hasta: '' });
+  const [errInventario, setErrInventario] = useState({ desde: '', hasta: '' });
+  const [errProductos, setErrProductos] = useState({ desde: '', hasta: '' });
+  const [errContable, setErrContable] = useState({ desde: '', hasta: '' });
+
+  const categorias = Array.from(
+    new Set(productos.map(p => p.categoria_nombre).filter(Boolean))
+  ) as string[];
+
+  function validarFechas(desde: string, hasta: string, setErr: React.Dispatch<React.SetStateAction<{ desde: string; hasta: string }>>): boolean {
+    const err = { desde: '', hasta: '' };
+    if (desde && desde > hoy) err.desde = 'No puede ser una fecha futura';
+    if (hasta && hasta > hoy) err.hasta = 'No puede ser una fecha futura';
+    if (desde && hasta && desde > hasta) err.desde = '"Desde" no puede ser mayor que "Hasta"';
+    setErr(err);
+    return !err.desde && !err.hasta;
+  }
+
+  function enRango(fecha: string, desde: string, hasta: string) {
+    const f = fecha.split('T')[0];
+    if (desde && f < desde) return false;
+    if (hasta && f > hasta) return false;
+    return true;
+  }
+
+  // ── Datos derivados ────────────────────────────────────────────────────────
+  const kardexVentas = kardex.filter(k => String((k as any).subtipo ?? '').toLowerCase() === 'venta');
+
+  const ventasFiltradas = kardexVentas.filter(k => {
+    const { producto, desde, hasta } = fVentas;
+    if (!enRango(k.fecha, desde, hasta)) return false;
+    if (producto && String(k.producto) !== producto) return false;
+    return true;
+  });
+
+
+
+const inventarioFiltrado = kardex.filter(k => {
+  const { producto, desde, hasta, tipo, subtipo } = fInventario;
+  if (!enRango(k.fecha, desde, hasta)) return false;
+  if (producto && String(k.producto) !== producto) return false;
+  if (tipo !== 'todos' && String(k.tipo ?? '').toLowerCase() !== tipo) return false;
+  if (subtipo !== 'todos' && String((k as any).subtipo ?? '').toLowerCase() !== subtipo) return false;
+  return true;
+});
+
+
+  const productosFiltrados = productos.filter(p => {
+    const { producto, desde, hasta } = fProductos;
+
+    if (producto && String(p.id) !== producto) return false;
+
+    if (desde || hasta) {
+      const movs = kardex.filter(k => k.producto === p.id);
+      if (movs.length > 0) {
+        const primero = movs.map(k => k.fecha).sort()[0];
+        if (!enRango(primero, desde, hasta)) return false;
+      }
+    }
+
+    return true;
+  });
+
+  const contableFiltrado = kardex.filter(k => {
+    const { producto, desde, hasta, subtipo } = fContable;
+    if (!enRango(k.fecha, desde, hasta)) return false;
+    if (producto && String(k.producto) !== producto) return false;
+    const sub = String((k as any).subtipo ?? '').toLowerCase();
+    if (subtipo !== 'todos' && sub !== subtipo) return false;
+    return ['venta', 'reposicion', 'ajuste_manual', 'devolucion_cliente', 'stock_inicial'].includes(sub);
+});
+
+  const totalVentas = ventasFiltradas.reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0);
+  const totalEntradas = inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'entrada').reduce((a, k) => a + k.cantidad, 0);
+  const totalSalidas = inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'salida').reduce((a, k) => a + k.cantidad, 0);
+  const valorContable = contableFiltrado.reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0);
+
+  const COLORS = ['#b45309', '#d97706', '#f59e0b', '#fbbf24', '#92400e', '#78350f', '#fde68a'];
+  const tooltipStyle = { backgroundColor: '#fff', border: '1px solid #fde68a', borderRadius: 8, fontSize: 12 };
+
+  // ── Datos gráficas VENTAS ──────────────────────────────────────────────────
+  const ventasPorProducto = Object.values(
+    ventasFiltradas.reduce((acc: Record<string, { nombre: string; ingresos: number }>, k) => {
+      const id = String(k.producto);
+      if (!acc[id]) acc[id] = { nombre: k.producto_nombre ?? '?', ingresos: 0 };
+      acc[id].ingresos += k.cantidad * Number((k as any).precio_unitario ?? 0);
+      return acc;
+    }, {})
+  ).sort((a, b) => b.ingresos - a.ingresos).slice(0, 6);
+
+  const ventasPorFecha = Object.entries(
+    ventasFiltradas.reduce((acc: Record<string, number>, k) => {
+      const f = k.fecha.split('T')[0];
+      acc[f] = (acc[f] ?? 0) + k.cantidad * Number((k as any).precio_unitario ?? 0);
+      return acc;
+    }, {})
+  ).sort(([a], [b]) => a.localeCompare(b)).slice(-10)
+    .map(([fecha, total]) => ({ fecha: fecha.slice(5), total }));
+
+  // ── Datos gráficas INVENTARIO ──────────────────────────────────────────────
+  const movPorTipo = [
+    { name: 'Entrada', value: inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'entrada').reduce((a, k) => a + k.cantidad, 0) },
+    { name: 'Salida', value: inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'salida').reduce((a, k) => a + k.cantidad, 0) },
+    { name: 'Devolución', value: inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'devolucion').reduce((a, k) => a + k.cantidad, 0) },
+  ].filter(d => d.value > 0);
+
+  const stockActual = productos
+    .map(p => ({
+      nombre: p.nombre.length > 13 ? p.nombre.slice(0, 13) + '…' : p.nombre,
+      stock: p.cantidad - (p.cantidad_reservada ?? 0),
+      minimo: p.stock_minimo,
+    }))
+    .sort((a, b) => b.stock - a.stock).slice(0, 8);
+
+  const movPorFecha = Object.entries(
+    inventarioFiltrado.reduce((acc: Record<string, number>, k) => {
+      const f = k.fecha.split('T')[0];
+      acc[f] = (acc[f] ?? 0) + k.cantidad;
+      return acc;
+    }, {})
+  ).sort(([a], [b]) => a.localeCompare(b)).slice(-10)
+    .map(([fecha, total]) => ({ fecha: fecha.slice(5), total }));
+
+  // ── Datos gráficas PRODUCTOS ───────────────────────────────────────────────
+  const prodsPorCategoria = Object.entries(
+    productosFiltrados.reduce((acc: Record<string, number>, p) => {
+      const cat = p.categoria_nombre ?? 'Sin categoría';
+      acc[cat] = (acc[cat] ?? 0) + 1;
+      return acc;
+    }, {})
+  ).map(([name, value]) => ({ name, value }));
+
+  const stockDisponible = productosFiltrados
+    .map(p => ({
+      nombre: p.nombre.length > 13 ? p.nombre.slice(0, 13) + '…' : p.nombre,
+      disponible: p.cantidad - (p.cantidad_reservada ?? 0),
+      bajo: (p.cantidad - (p.cantidad_reservada ?? 0)) <= p.stock_minimo,
+    }))
+    .sort((a, b) => a.disponible - b.disponible).slice(0, 8);
+
+  // ── Datos gráficas CONTABLE ────────────────────────────────────────────────
+  const contablePorFecha = Object.entries(
+    contableFiltrado.reduce((acc: Record<string, { ingreso: number; egreso: number }>, k) => {
+      const f = k.fecha.split('T')[0];
+      if (!acc[f]) acc[f] = { ingreso: 0, egreso: 0 };
+      const monto = k.cantidad * Number((k as any).precio_unitario ?? 0);
+      if (String((k as any).subtipo ?? '').toLowerCase() === 'venta') acc[f].ingreso += monto;
+      else acc[f].egreso += monto;
+      return acc;
+    }, {})
+  ).sort(([a], [b]) => a.localeCompare(b)).slice(-10)
+    .map(([fecha, v]) => ({ fecha: fecha.slice(5), ...v }));
+
+  const contablePorSubtipo = Object.entries(
+    contableFiltrado.reduce((acc: Record<string, number>, k) => {
+      const sub = (k as any).subtipo ?? 'otro';
+      acc[sub] = (acc[sub] ?? 0) + k.cantidad * Number((k as any).precio_unitario ?? 0);
+      return acc;
+    }, {})
+  ).map(([name, value]) => ({ name, value })).filter(d => d.value > 0);
+
+  // ── Estilos ────────────────────────────────────────────────────────────────
+  const tabCls = (t: string) =>
+    `px-5 py-2 rounded-xl text-sm font-semibold transition ${tabReporte === t ? 'bg-amber-700 text-white shadow' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`;
+
+  const selCls = 'px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 text-sm text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition';
+  const dateCls = (err: string) =>
+    `px-3 py-2 rounded-xl border text-sm text-stone-800 bg-amber-50 focus:outline-none focus:ring-2 transition ` +
+    (err ? 'border-red-400 focus:ring-red-200' : 'border-amber-200 focus:border-amber-500 focus:ring-amber-200');
+
+  type FiltroState = { categoria: string; producto: string; desde: string; hasta: string };
+  type ErrState = { desde: string; hasta: string };
+
+  // ── Componentes ────────────────────────────────────────────────────────────
+  function KPI({ label, value, sub, color = 'text-amber-900' }: { label: string; value: string | number; sub?: string; color?: string }) {
+    return (
+      <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-5 flex flex-col gap-1">
+        <p className="text-[10px] uppercase tracking-widest font-bold text-stone-400">{label}</p>
+        <p className={`text-2xl font-bold ${color}`}>{value}</p>
+        {sub && <p className="text-xs text-stone-400">{sub}</p>}
+      </div>
+    );
+  }
+
+  function Grafica({ title, children }: { title: string; children: React.ReactNode }) {
+    return (
+      <div className="bg-amber-50/50 rounded-xl border border-amber-100 p-4">
+        <p className="text-xs font-bold uppercase tracking-wider text-amber-800 mb-3">{title}</p>
+        {children}
+      </div>
+    );
+  }
+
+  const SinGrafica = () => (
+    <div className="h-48 flex items-center justify-center text-stone-400 text-sm">Sin datos suficientes</div>
+  );
+
+  // ── Pie chart con labels en leyenda externa (evita corte de texto) ─────────
+  function PieConLeyenda({ data }: { data: { name: string; value: number }[] }) {
+    return (
+      <div className="flex items-center gap-4">
+        <ResponsiveContainer width="55%" height={200}>
+          <PieChart>
+            <Pie data={data} cx="50%" cy="50%" outerRadius={80} dataKey="value" labelLine={false}>
+              {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+            </Pie>
+            <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [Number(v).toLocaleString('es-CO'), '']} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="flex flex-col gap-2 flex-1 min-w-0">
+          {data.map((entry, i) => (
+            <div key={entry.name} className="flex items-center gap-2 min-w-0">
+              <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: COLORS[i % COLORS.length] }} />
+              <span className="text-xs text-stone-600 truncate flex-1" title={entry.name}>{entry.name}</span>
+              <span className="text-xs font-semibold text-stone-700 flex-shrink-0">{Number(entry.value).toLocaleString('es-CO')}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function Filtros({
+  f, setF, err, setErr,
+}: {
+  f: any;
+  setF: React.Dispatch<React.SetStateAction<any>>;
+  err: any;
+  setErr: any;
+}) {
+  return (
+    <div className="flex flex-wrap items-end gap-3 mb-5 p-4 bg-amber-50 rounded-xl border border-amber-100">
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Producto</label>
+        <select className={selCls} value={f.producto ?? ''} onChange={e => setF({ ...f, producto: e.target.value })}>
+          <option value="">Todos</option>
+          {productos.map(p => <option key={p.id} value={String(p.id)}>{p.nombre}</option>)}
+        </select>
+      </div>
+      {f.tipo !== undefined && (
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Tipo</label>
+          <select className={selCls} value={f.tipo ?? 'todos'} onChange={e => setF({ ...f, tipo: e.target.value })}>
+            <option value="todos">Todos</option>
+            <option value="entrada">Entrada</option>
+            <option value="salida">Salida</option>
+            <option value="devolucion">Devolución</option>
+            <option value="ajuste">Ajuste</option>
+          </select>
+        </div>
+      )}
+      {f.subtipo !== undefined && (
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Subtipo</label>
+          <select className={selCls} value={f.subtipo ?? 'todos'} onChange={e => setF({ ...f, subtipo: e.target.value })}>
+            <option value="todos">Todos</option>
+            <option value="venta">Venta</option>
+            <option value="reposicion">Reposición</option>
+            <option value="ajuste_manual">Ajuste manual</option>
+            <option value="devolucion_cliente">Devolución cliente</option>
+            <option value="stock_inicial">Stock inicial</option>
+            <option value="reserva">Reserva</option>
+            <option value="cancelacion">Cancelación</option>
+          </select>
+        </div>
+      )}
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Desde</label>
+        <input type="date" max={hoy} className={dateCls(err.desde)} value={f.desde}
+          onChange={e => { setF({ ...f, desde: e.target.value }); validarFechas(e.target.value, f.hasta, setErr); }} />
+        {err.desde && <span className="text-xs text-red-500 font-medium">{err.desde}</span>}
+      </div>
+      <div className="flex flex-col gap-1">
+        <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Hasta</label>
+        <input type="date" max={hoy} className={dateCls(err.hasta)} value={f.hasta}
+          onChange={e => { setF({ ...f, hasta: e.target.value }); validarFechas(f.desde, e.target.value, setErr); }} />
+        {err.hasta && <span className="text-xs text-red-500 font-medium">{err.hasta}</span>}
+      </div>
+      {(f.producto || f.desde || f.hasta || (f.tipo && f.tipo !== 'todos') || (f.subtipo && f.subtipo !== 'todos')) && (
+        <button onClick={() => { setF({ producto: '', desde: '', hasta: '', ...(f.tipo !== undefined ? { tipo: 'todos' } : {}), ...(f.subtipo !== undefined ? { subtipo: 'todos' } : {}) }); setErr({ desde: '', hasta: '' }); }}
+          className="px-3 py-2 rounded-xl bg-stone-100 text-stone-500 text-xs font-semibold hover:bg-stone-200 transition">
+          ✕ Limpiar
+        </button>
+      )}
+    </div>
+  );
+}
+  // ── Barra de acciones con vista toggle ────────────────────────────────────
+  function Acciones({ tipo, tab }: { tipo: string; tab: string }) {
+    const esDash = vista[tab] === 'dashboard';
+    return (
+      <div className="flex gap-2 flex-wrap">
+        <button onClick={() => toggleVista(tab)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${esDash ? 'bg-amber-600 text-white border-amber-600 shadow-sm' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+            }`}>
+          {esDash ? '📋 Ver tabla' : '📊 Dashboard'}
+        </button>
+        <button onClick={() => descargarReporte(tipo, 'excel', ARTESANO_ID)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-xs font-semibold hover:bg-green-100 transition">
+          📊 Excel
+        </button>
+        <button onClick={() => descargarReporte(tipo, 'pdf', ARTESANO_ID)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-semibold hover:bg-red-100 transition">
+          📄 PDF
+        </button>
+      </div>
+    );
+  }
+
+  const TipoBadge = ({ tipo }: { tipo: string | undefined }) => {
+    const t = (tipo ?? '').toLowerCase();
+    const cls = t === 'entrada' ? 'bg-green-100 text-green-700' : t === 'salida' ? 'bg-red-100 text-red-600' : t === 'devolucion' ? 'bg-blue-100 text-blue-600' : 'bg-stone-100 text-stone-500';
+    return <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${cls}`}>{tipo}</span>;
+  };
+
+  const SinDatos = ({ cols }: { cols: number }) => (
+    <tr><td colSpan={cols} className="px-4 py-8 text-center text-stone-400 text-sm">Sin resultados</td></tr>
+  );
+
+  // ── RENDER ─────────────────────────────────────────────────────────────────
+  return (
+    <div className="space-y-5">
+      <div className="bg-white rounded-2xl shadow-sm p-6">
+        <h2 className="font-serif text-2xl text-amber-800 mb-1">📈 Reportería</h2>
+        <p className="text-stone-500 text-sm">Estadísticas y movimientos en tiempo real</p>
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <button className={tabCls('ventas')} onClick={() => setTabReporte('ventas')}>📈 Ventas</button>
+        <button className={tabCls('inventario')} onClick={() => setTabReporte('inventario')}>📦 Inventario</button>
+        <button className={tabCls('productos')} onClick={() => setTabReporte('productos')}>🛍️ Productos</button>
+        <button className={tabCls('contable')} onClick={() => setTabReporte('contable')}>📒 Contable</button>
+      </div>
+
+      {/* ══════ TAB VENTAS ══════ */}
+      {tabReporte === 'ventas' && (
+        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <h3 className="font-serif text-xl text-amber-800">📈 Reporte de Ventas</h3>
+            <Acciones tipo="kardex" tab="ventas" />
+          </div>
+
+          <Filtros f={fVentas} setF={setFVentas} err={errVentas} setErr={setErrVentas} />
+
+          {/* DASHBOARD */}
+          {vista['ventas'] === 'dashboard' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <KPI label="Ventas Totales" value={`$${totalVentas.toLocaleString('es-CO')}`} color="text-green-700" />
+                <KPI label="Productos vendidos" value={ventasFiltradas.reduce((a, k) => a + k.cantidad, 0)} color="text-amber-700" />
+                <KPI label="Pedidos realizados" value={ventasFiltradas.length} />
+                <KPI label="Promedio por pedido"
+                  value={ventasFiltradas.length > 0 ? `$${Math.round(totalVentas / ventasFiltradas.length).toLocaleString('es-CO')}` : '$0'}
+                  color="text-blue-700" />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Grafica title="Ingresos por fecha">
+                  {ventasPorFecha.length === 0 ? <SinGrafica /> : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={ventasPorFecha}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#fde68a" />
+                        <XAxis dataKey="fecha" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [`$${Number(v).toLocaleString('es-CO')}`, 'Ingresos']} />
+                        <Line type="monotone" dataKey="total" stroke="#b45309" strokeWidth={2} dot={{ fill: '#b45309', r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </Grafica>
+                <Grafica title="Top productos por ingresos">
+                  {ventasPorProducto.length === 0 ? <SinGrafica /> : (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={ventasPorProducto} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke="#fde68a" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                        <YAxis type="category" dataKey="nombre" tick={{ fontSize: 10 }} width={130} />
+                        <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [`$${Number(v).toLocaleString('es-CO')}`, 'Ingresos']} />
+                        <Bar dataKey="ingresos" fill="#b45309" radius={[0, 4, 4, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </Grafica>
+              </div>
+            </div>
+          )}
+
+          {/* TABLA */}
+          {vista['ventas'] === 'tabla' && (
+            <div className="overflow-x-auto rounded-xl border border-amber-100">
+              <table className="w-full text-sm">
+                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+                  <tr>{['Fecha', 'Producto', 'Tipo', 'Subtipo', 'Cantidad', 'PVP Unit.', 'Total', 'Pedido ref.', 'Registrado por'].map(
+                    h => <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
+                  )}</tr>
+                </thead>
+                <tbody>
+                  {ventasFiltradas.length === 0 ? <SinDatos cols={8} /> : ventasFiltradas.map(k => {
+                    const prod = productos.find(p => p.id === k.producto);
+                    const pvp = Number((k as any).precio_unitario ?? 0);
+                    return (
+                      <tr key={k.id} className="border-t border-amber-50 hover:bg-amber-50/50">
+                        <td className="px-4 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
+                        <td className="px-4 py-3 font-semibold">{k.producto_nombre}</td>
+                        <td className="px-4 py-3"><TipoBadge tipo={k.tipo} /></td>
+                        <td className="px-4 py-3"><span className="text-xs bg-stone-50 border border-stone-100 px-2 py-0.5 rounded-full text-stone-500">{(k as any).subtipo ?? '—'}</span></td>
+                        <td className="px-4 py-3 font-bold text-center">{k.cantidad}</td>
+                        <td className="px-4 py-3 text-stone-600">{pvp ? `$${pvp.toLocaleString('es-CO')}` : '—'}</td>
+                        <td className="px-4 py-3 font-semibold text-green-700">${(pvp * k.cantidad).toLocaleString('es-CO')}</td>
+                        <td className="px-4 py-3 text-xs text-stone-400 font-mono">{(k as any).pedido_ref ?? '—'}</td>
+                        <td className="px-4 py-3 text-xs text-stone-400">{(k as any).creado_por ?? '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <p className="text-xs text-stone-400 p-3">{ventasFiltradas.length} registro{ventasFiltradas.length !== 1 ? 's' : ''}{ventasFiltradas.length !== kardexVentas.length && ` de ${kardexVentas.length} total`}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══════ TAB INVENTARIO ══════ */}
+      {tabReporte === 'inventario' && (
+        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <h3 className="font-serif text-xl text-amber-800">📦 Reporte de Inventario</h3>
+            <Acciones tipo="inventario" tab="inventario" />
+          </div>
+
+          <Filtros f={fInventario} setF={setFInventario} err={errInventario} setErr={setErrInventario} />
+
+          {vista['inventario'] === 'dashboard' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <KPI label="Productos activos" value={productos.length} />
+                <KPI label="Stock bajo mínimo" value={productos.filter(p => (p.cantidad - (p.cantidad_reservada ?? 0)) <= p.stock_minimo).length} color="text-red-600" sub="requieren reposición" />
+                <KPI label="Entradas (uds)" value={`+${totalEntradas}`} color="text-green-700" />
+                <KPI label="Salidas (uds)" value={`-${totalSalidas}`} color="text-red-600" />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Grafica title="Stock disponible por producto">
+                  {stockActual.length === 0 ? <SinGrafica /> : (
+                    <ResponsiveContainer width="100%" height={240}>
+                      <BarChart data={stockActual}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#fde68a" />
+                        <XAxis dataKey="nombre" tick={{ fontSize: 10 }} angle={-30} textAnchor="end" height={60} />
+                        <YAxis tick={{ fontSize: 11 }} />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        <Bar dataKey="stock" name="Disponible" fill="#b45309" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="minimo" name="Mínimo" fill="#fde68a" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </Grafica>
+                <Grafica title="Movimientos por tipo">
+                  {movPorTipo.length === 0 ? <SinGrafica /> : <PieConLeyenda data={movPorTipo} />}
+                </Grafica>
+                <Grafica title="Movimientos por fecha">
+                  {movPorFecha.length === 0 ? <SinGrafica /> : (
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={movPorFecha}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#fde68a" />
+                        <XAxis dataKey="fecha" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        <Line type="monotone" dataKey="total" stroke="#b45309" strokeWidth={2} dot={{ fill: '#b45309', r: 3 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </Grafica>
+              </div>
+            </div>
+          )}
+
+          {vista['inventario'] === 'tabla' && (
+            <div className="overflow-x-auto rounded-xl border border-amber-100">
+              <table className="w-full text-sm">
+                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+                  <tr>{['Fecha', 'Producto', 'Categoría', 'Tipo', 'Subtipo', 'Origen', 'Cant.', 'Stock result.', 'PVP Unit.', 'Pedido ref.', 'Registrado por', 'Nota'].map(
+                    h => <th key={h} className="px-3 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
+                  )}</tr>
+                </thead>
+                <tbody>
+                  {inventarioFiltrado.length === 0 ? <SinDatos cols={12} /> : inventarioFiltrado.map(k => {
+                    const prod = productos.find(p => p.id === k.producto);
+                    return (
+                      <tr key={k.id} className="border-t border-amber-50 hover:bg-amber-50/50">
+                        <td className="px-3 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
+                        <td className="px-3 py-3 font-semibold">{k.producto_nombre}</td>
+                        <td className="px-3 py-3"><span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">{prod?.categoria_nombre ?? '—'}</span></td>
+                        <td className="px-3 py-3"><TipoBadge tipo={k.tipo} /></td>
+                        <td className="px-3 py-3"><span className="text-xs bg-stone-50 border border-stone-100 px-2 py-0.5 rounded-full text-stone-500">{(k as any).subtipo ?? '—'}</span></td>
+                        <td className="px-3 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${(k as any).origen === 'automatico' ? 'bg-purple-50 text-purple-600' : 'bg-amber-50 text-amber-600'}`}>{(k as any).origen === 'automatico' ? '⚡ auto' : '✍️ manual'}</span></td>
+                        <td className="px-3 py-3 font-bold text-center">{k.cantidad}</td>
+                        <td className="px-3 py-3 font-semibold text-green-700 text-center">{k.stock_resultante}</td>
+                        <td className="px-3 py-3 text-stone-600">{(k as any).precio_unitario ? `$${Number((k as any).precio_unitario).toLocaleString('es-CO')}` : '—'}</td>
+                        <td className="px-3 py-3 text-xs text-stone-400 font-mono">{(k as any).pedido_ref ?? '—'}</td>
+                        <td className="px-3 py-3 text-xs text-stone-400">{(k as any).creado_por ?? '—'}</td>
+                        <td className="px-3 py-3 text-xs text-stone-400">{k.nota ?? '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <p className="text-xs text-stone-400 p-3">{inventarioFiltrado.length} movimiento{inventarioFiltrado.length !== 1 ? 's' : ''}{inventarioFiltrado.length !== kardex.length && ` de ${kardex.length} total`}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══════ TAB PRODUCTOS ══════ */}
+      {tabReporte === 'productos' && (
+        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <h3 className="font-serif text-xl text-amber-800">🛍️ Reporte de Productos</h3>
+            <Acciones tipo="productos" tab="productos" />
+          </div>
+
+          <Filtros f={fProductos} setF={setFProductos} err={errProductos} setErr={setErrProductos} />
+
+          {vista['productos'] === 'dashboard' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <KPI label="Total productos" value={productosFiltrados.length} />
+                <KPI label="Stock total (uds)" value={productosFiltrados.reduce((a, p) => a + p.cantidad, 0)} color="text-amber-700" />
+                <KPI label="Valor en stock" value={`$${productosFiltrados.reduce((a, p) => a + p.cantidad * Number(p.precio_neto), 0).toLocaleString('es-CO')}`} color="text-green-700" />
+                <KPI label="Con stock bajo" value={productosFiltrados.filter(p => (p.cantidad - (p.cantidad_reservada ?? 0)) <= p.stock_minimo).length} color="text-red-600" sub="bajo mínimo" />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Grafica title="Stock disponible (menor a mayor)">
+                  {stockDisponible.length === 0 ? <SinGrafica /> : (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={stockDisponible} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" stroke="#fde68a" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 11 }} />
+                        <YAxis type="category" dataKey="nombre" tick={{ fontSize: 10 }} width={110} />
+                        <Tooltip contentStyle={tooltipStyle} />
+                        <Bar dataKey="disponible" name="Disponible" radius={[0, 4, 4, 0]}>
+                          {stockDisponible.map((entry, i) => <Cell key={i} fill={entry.bajo ? '#dc2626' : '#b45309'} />)}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </Grafica>
+              </div>
+            </div>
+          )}
+
+          {vista['productos'] === 'tabla' && (
+            <div className="overflow-x-auto rounded-xl border border-amber-100">
+              <table className="w-full text-sm">
+                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+                  <tr>{['Código', 'Lote', 'Producto', 'Categoría', 'Precio neto', 'PVP', 'IVA', 'Stock', 'Mín.', 'Máx.', 'Estado'].map(
+                    h => <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
+                  )}</tr>
+                </thead>
+                <tbody>
+                  {productosFiltrados.length === 0 ? <SinDatos cols={12} /> : productosFiltrados.map(p => {
+                    const disponible = p.cantidad - (p.cantidad_reservada ?? 0);
+                    const bajo = disponible <= p.stock_minimo;
+                    const alto = p.stock_maximo > 0 && disponible >= p.stock_maximo;
+                    return (
+                      <tr key={p.id} className={`border-t border-amber-50 hover:bg-amber-50/50 ${bajo ? 'bg-red-50/40' : ''}`}>
+                        <td className="px-4 py-3 font-mono text-xs text-stone-500">{p.codigo_barra || '—'}</td>
+                        <td className="px-4 py-3 text-xs text-stone-400">{p.lote || '—'}</td>
+                        <td className="px-4 py-3 font-semibold">{p.nombre}</td>
+                        <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">{p.categoria_nombre ?? '—'}</span></td>
+                        <td className="px-4 py-3 text-stone-600">${Number(p.precio_neto).toLocaleString('es-CO')}</td>
+                        <td className="px-4 py-3 text-green-700 font-semibold">{p.precio_final ? `$${Number(p.precio_final).toLocaleString('es-CO', { maximumFractionDigits: 0 })}` : '—'}</td>
+                        <td className="px-4 py-3 text-stone-500">{p.iva}%</td>
+                        <td className="px-4 py-3 font-bold text-center">{disponible}</td>
+                        <td className="px-4 py-3 text-center text-stone-400">{p.stock_minimo}</td>
+                        <td className="px-4 py-3 text-center text-stone-400">{p.stock_maximo || '—'}</td>
+                        <td className="px-4 py-3">
+                          {bajo ? <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">⚠️ Bajo</span>
+                            : alto ? <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">📦 Máximo</span>
+                              : <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">✓ OK</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <p className="text-xs text-stone-400 p-3">{productosFiltrados.length} producto{productosFiltrados.length !== 1 ? 's' : ''}{productosFiltrados.length !== productos.length && ` de ${productos.length} total`}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ══════ TAB CONTABLE ══════ */}
+      {tabReporte === 'contable' && (
+        <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+          <div className="flex items-center justify-between">
+            <h3 className="font-serif text-xl text-amber-800">📒 Reporte Contable</h3>
+            <Acciones tipo="contable" tab="contable" />
+          </div>
+
+          <Filtros f={fContable} setF={setFContable} err={errContable} setErr={setErrContable} />
+
+          {vista['contable'] === 'dashboard' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <KPI label="Valor Inventario" value={`$${valorContable.toLocaleString('es-CO')}`} color="text-green-700" />
+                <KPI label="Ingresos por ventas"
+                  value={`$${contableFiltrado.filter(k => String((k as any).subtipo).toLowerCase() === 'venta')
+                    .reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0)
+                    .toLocaleString('es-CO')}`}
+                  color="text-amber-700" />
+                <KPI label="Movimientos" value={contableFiltrado.length} />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Grafica title="Ventas e inventario por fecha">
+                  {contablePorFecha.length === 0 ? <SinGrafica /> : (
+                    <ResponsiveContainer width="100%" height={240}>
+                      <BarChart data={contablePorFecha}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#fde68a" />
+                        <XAxis dataKey="fecha" tick={{ fontSize: 11 }} />
+                        <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                        <Tooltip contentStyle={tooltipStyle} formatter={(v: any) => [`$${Number(v).toLocaleString('es-CO')}`, '']} />
+                        <Bar dataKey="ingreso" name="Ventas" fill="#16a34a" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="egreso" name="Inventario" fill="#b45309" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </Grafica>
+                <Grafica title="Por tipo de movimiento">
+                  {contablePorSubtipo.length === 0 ? <SinGrafica /> : <PieConLeyenda data={contablePorSubtipo} />}
+                </Grafica>
+              </div>
+            </div>
+          )}
+
+          {vista['contable'] === 'tabla' && (
+            <div className="overflow-x-auto rounded-xl border border-amber-100">
+              <table className="w-full text-sm">
+                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+                  <tr>{['Fecha', 'Producto', 'Categoría', 'Tipo', 'Subtipo', 'Cantidad', 'PVP Unit.', 'Ventas', 'Inventario', 'Pedido ref.', 'Registrado por', 'Nota'].map(
+                    h => <th key={h} className="px-3 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
+                  )}</tr>
+                </thead>
+                <tbody>
+                  {contableFiltrado.length === 0 ? <SinDatos cols={11} /> : contableFiltrado.map(k => {
+                    const prod = productos.find(p => p.id === k.producto);
+                    const pvp = Number((k as any).precio_unitario ?? 0);
+                    const esIngreso = String((k as any).subtipo ?? '').toLowerCase() === 'venta';
+                    return (
+                      <tr key={k.id} className="border-t border-amber-50 hover:bg-amber-50/50">
+                        <td className="px-3 py-3 text-stone-500 whitespace-nowrap">{k.fecha}</td>
+                        <td className="px-3 py-3 font-semibold">{k.producto_nombre}</td>
+                        <td className="px-3 py-3"><span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800">{prod?.categoria_nombre ?? '—'}</span></td>
+                        <td className="px-3 py-3"><TipoBadge tipo={k.tipo} /></td>
+                        <td className="px-3 py-3"><span className="text-xs bg-stone-50 border border-stone-100 px-2 py-0.5 rounded-full text-stone-500">{(k as any).subtipo ?? '—'}</span></td>
+                        <td className="px-3 py-3 font-bold text-center">{k.cantidad}</td>
+                        <td className="px-3 py-3 text-stone-600">{pvp ? `$${pvp.toLocaleString('es-CO')}` : '—'}</td>
+                        {/* VENTAS */}
+                        <td className="px-3 py-3 font-semibold text-green-700">
+                          {esIngreso && pvp
+                            ? `$${(pvp * k.cantidad).toLocaleString('es-CO')}`
+                            : '—'}
+                        </td>
+
+                        {/* INVENTARIO */}
+                        <td className="px-3 py-3 font-semibold text-amber-700">
+                          {!esIngreso && pvp
+                            ? `$${(pvp * k.cantidad).toLocaleString('es-CO')}`
+                            : '—'}
+                        </td>
+                        <td className="px-3 py-3 text-xs text-stone-400 font-mono">{(k as any).pedido_ref ?? '—'}</td>
+                        <td className="px-3 py-3 text-xs text-stone-400">{(k as any).creado_por ?? '—'}</td>
+                        <td className="px-3 py-3 text-xs text-stone-400">{k.nota ?? '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <p className="text-xs text-stone-400 p-3">{contableFiltrado.length} registro{contableFiltrado.length !== 1 ? 's' : ''}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+// PÁGINA PRINCIPAL
+// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// MÓDULO PERFIL
+// ─────────────────────────────────────────────────────────────────────────────
+function ModuloPerfil() {
+  const { user } = useAuth();
+  const artesanoId = Number(localStorage.getItem('usuario_id') ?? 1);
+
+  const [perfil, setPerfil] = useState({
+    nombre: '', correo: '', telefono: '',
+    especialidad: '', biografia: '', foto_url: '',
+  });
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string>('');
+  const [editando, setEditando] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [password, setPassword] = useState({
+    password_actual: '',
+    password_nueva: '',
+    password_confirmar: '',
+  });
+  const [loadingPass, setLoadingPass] = useState(false);
+
+  const handleCambiarPassword = async () => {
+    if (!password.password_actual || !password.password_nueva || !password.password_confirmar)
+      return setAlert({ msg: 'Todos los campos son obligatorios', type: 'error' });
+    if (password.password_nueva !== password.password_confirmar)
+      return setAlert({ msg: 'Las contraseñas nuevas no coinciden', type: 'error' });
+    if (password.password_nueva.length < 6)
+      return setAlert({ msg: 'La contraseña debe tener al menos 6 caracteres', type: 'error' });
+
+    setLoadingPass(true);
+    try {
+      const res = await fetch(`http://localhost:8000/api/perfil/cambiar-password/${artesanoId}/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(password),
+      });
+      const data = await res.json();
+      if (!res.ok) return setAlert({ msg: data.error ?? 'Error al cambiar contraseña', type: 'error' });
+      setPassword({ password_actual: '', password_nueva: '', password_confirmar: '' });
+      setAlert({ msg: '✓ Contraseña actualizada correctamente', type: 'success' });
+      setTimeout(() => setAlert(null), 3000);
+    } catch {
+      setAlert({ msg: 'Error de conexión', type: 'error' });
+    } finally {
+      setLoadingPass(false);
+    }
+  };
+
+
+  useEffect(() => {
+    fetch(`http://localhost:8000/api/perfil/artesano/${artesanoId}/`)
+      .then(r => r.json())
+      .then(data => setPerfil({
+        nombre: data.nombre ?? '',
+        correo: data.correo ?? '',
+        telefono: data.telefono ?? '',
+        especialidad: data.especialidad ?? '',
+        biografia: data.biografia ?? '',
+        foto_url: data.foto_url ?? '',
+      }));
+  }, [artesanoId]);
+
+  const handleGuardar = async () => {
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('telefono', perfil.telefono);
+      formData.append('especialidad', perfil.especialidad);
+      formData.append('biografia', perfil.biografia);
+      if (fotoFile) formData.append('foto', fotoFile);
+
+      const res = await fetch(`http://localhost:8000/api/perfil/artesano/${artesanoId}/`, {
+        method: 'PATCH',
+        body: formData,
+      });
+      const data = await res.json();
+      setPerfil(prev => ({ ...prev, foto_url: data.foto_url ?? prev.foto_url }));
+      setEditando(false);
+      setFotoFile(null);
+      setAlert({ msg: '✓ Perfil actualizado correctamente', type: 'success' });
+      setTimeout(() => setAlert(null), 3000);
+    } catch {
+      setAlert({ msg: 'Error al actualizar el perfil', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5 max-w-2xl mx-auto">
+      {alert && <Alert msg={alert.msg} type={alert.type} />}
+      <div className="bg-white rounded-2xl shadow-sm p-8">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="font-serif text-2xl text-amber-800">👤 Perfil del Artesano</h2>
+          <button
+            onClick={() => setEditando(!editando)}
+            className="px-4 py-2 rounded-xl bg-amber-100 text-amber-800 text-sm font-semibold hover:bg-amber-200 transition"
+          >
+            {editando ? '✕ Cancelar' : '✏️ Editar'}
+          </button>
+        </div>
+
+        <div className="flex flex-col items-center mb-8">
+          <div className="relative">
+            <div className="w-36 h-36 rounded-full border-4 border-amber-200 overflow-hidden bg-amber-50 flex items-center justify-center">
+              {preview || perfil.foto_url ? (
+                <img src={preview || perfil.foto_url} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-5xl">👤</span>
+              )}
+            </div>
+            {editando && (
+              <button
+                onClick={() => document.getElementById('input-foto')?.click()}
+                className="absolute bottom-0 right-0 w-8 h-8 bg-amber-600 rounded-full flex items-center justify-center text-white text-sm hover:bg-amber-700 transition"
+              >
+                📷
+              </button>
+            )}
+          </div>
+          <input id="input-foto" type="file" accept="image/*" className="hidden"
+            onChange={e => {
+              const file = e.target.files?.[0];
+              if (file) { setFotoFile(file); setPreview(URL.createObjectURL(file)); }
+            }}
+          />
+          <p className="mt-3 font-serif text-2xl font-bold text-stone-800">{perfil.nombre}</p>
+          <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-3 py-1 rounded-full mt-1">🧵 Artesano</span>
+        </div>
+
+        <div className="space-y-4">
+          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+            <p className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1">Correo</p>
+            <p className="text-stone-700">{perfil.correo}</p>
+          </div>
+          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+            <p className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1">Teléfono</p>
+            {editando ? (
+              <input className={inputCls} value={perfil.telefono}
+                onChange={e => setPerfil({ ...perfil, telefono: e.target.value })}
+                placeholder="Ej: 3001234567" />
+            ) : (
+              <p className="text-stone-700">{perfil.telefono || '—'}</p>
+            )}
+          </div>
+          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+            <p className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1">Especialidad</p>
+            {editando ? (
+              <input className={inputCls} value={perfil.especialidad}
+                onChange={e => setPerfil({ ...perfil, especialidad: e.target.value })}
+                placeholder="Ej: Cerámica, Joyería, Tejidos..." />
+            ) : (
+              <p className="text-stone-700">{perfil.especialidad || '—'}</p>
+            )}
+          </div>
+          <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+            <p className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1">Biografía</p>
+            {editando ? (
+              <textarea className={`${inputCls} min-h-[100px] resize-y`} value={perfil.biografia}
+                onChange={e => setPerfil({ ...perfil, biografia: e.target.value })}
+                placeholder="Cuéntanos sobre ti y tu arte..." />
+            ) : (
+              <p className="text-stone-700 leading-relaxed">{perfil.biografia || '—'}</p>
+            )}
+          </div>
+          {editando && (
+            <button onClick={handleGuardar} disabled={loading}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white font-semibold shadow hover:shadow-md transition disabled:opacity-60">
+              {loading ? 'Guardando...' : '✓ Guardar cambios'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PerfilArtesano() {
-  const [tab, setTab] = useState<Tab>('productos');
+  const ARTESANO_ID = Number(localStorage.getItem('usuario_id') ?? 1);
+  const [tab, setTab] = useState<Tab>('catalogo');
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [kardex, setKardex] = useState<Kardex[]>([]);
@@ -34,7 +3336,12 @@ export default function PerfilArtesano() {
   const [error, setError] = useState('');
   const [filtroInventarioProd, setFiltroInventarioProd] = useState<string>('todos');
 
-  const { notificaciones, marcarLeida, marcarTodasLeidas } = useNotificaciones();
+  const {
+    notificaciones,
+    setNotificaciones,
+    marcarLeida,
+    marcarTodasLeidas
+  } = useNotificaciones();
 
   const cargarDatos = useCallback(async () => {
     setLoading(true);
@@ -47,8 +3354,14 @@ export default function PerfilArtesano() {
       setProductos(prods);
       setCategorias(cats);
       setKardex(kard);
+
+      // ← AGREGAR ESTO: poblar imagenes desde imagen_url de cada producto
       const imgs: Record<number, string> = {};
-      prods.forEach((p: any) => { if (p.id && p.imagen_url) imgs[p.id] = p.imagen_url; });
+      prods.forEach((p: any) => {
+        if (p.id && p.imagen_url) {
+          imgs[p.id] = p.imagen_url;
+        }
+      });
       setImagenes(imgs);
     } catch {
       setError('No se pudo conectar con el servidor.');
@@ -61,15 +3374,18 @@ export default function PerfilArtesano() {
 
   return (
     <div className="min-h-screen bg-amber-50/60 font-sans text-base">
-      <Topbar noLeidas={notificaciones.filter(n => !n.leida).length} onVerPerfil={() => setTab('perfil')} />
+      <Topbar
+        noLeidas={notificaciones.filter(n => !n.leida).length}
+        onVerPerfil={() => setTab('perfil')}
+      />
       <Sidebar active={tab} onChange={setTab} />
       <SidebarNotificaciones
         notificaciones={notificaciones}
         marcarLeida={marcarLeida}
         marcarTodasLeidas={marcarTodasLeidas}
-        onNavegar={(t, productoId) => {
+        onNavegar={(tab, productoId) => {
           if (productoId) setFiltroInventarioProd(String(productoId));
-          setTab(t);
+          setTab(tab);
         }}
       />
       <main className="pt-16 pl-40 pr-64 min-h-screen text-base">
@@ -84,25 +3400,38 @@ export default function PerfilArtesano() {
           ) : (
             <>
               {tab === 'perfil' && <ModuloPerfil />}
-              {tab === 'catalogo' && <ModuloCatalogo productos={productos} imagenes={imagenes} setProductos={setProductos} />}
+              {tab === 'catalogo' && (
+                <ModuloCatalogo
+                  productos={productos}
+                  imagenes={imagenes}
+                  setProductos={setProductos}
+                />
+              )}
+              {tab === 'contable' && <ModuloContable productos={productos} />}
               {tab === 'productos' && (
                 <ModuloProductos
                   productos={productos} setProductos={setProductos}
                   categorias={categorias} setCategorias={setCategorias}
                   imagenes={imagenes} setImagenes={setImagenes}
-                  onIrAInventario={(productoId) => { setFiltroInventarioProd(String(productoId)); setTab('inventario'); }}
+                  onIrAInventario={(productoId) => {
+                    setFiltroInventarioProd(String(productoId));
+                    setTab('inventario');
+                  }}
                 />
               )}
+              {/* ✅ ERROR 2 CORREGIDO: setProductos ahora se pasa a ModuloInventario */}
               {tab === 'inventario' && (
                 <ModuloInventario
                   productos={productos} kardex={kardex}
                   setKardex={setKardex} setProductos={setProductos}
-                  filtroProductoInicial={filtroInventarioProd}
-                  onFiltroUsado={() => setFiltroInventarioProd('todos')}
                 />
               )}
               {tab === 'pedidos' && (
-                <ModuloPedidos productos={productos} setProductos={setProductos} setKardex={setKardex} />
+                <ModuloPedidosArtesano
+                  productos={productos}
+                  setProductos={setProductos}
+                  setKardex={setKardex}
+                />
               )}
               {tab === 'reportes' && <ModuloReportes productos={productos} kardex={kardex} />}
             </>
