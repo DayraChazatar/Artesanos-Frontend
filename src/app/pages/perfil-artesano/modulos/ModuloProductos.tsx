@@ -167,7 +167,7 @@ export function ModuloProductos({
         formData.append('artesano', String(prod.artesano));
         formData.append('descuento', String(prod.descuento));
         formData.append('valor_descuento', String(prod.valor_descuento));
-        formData.append('maneja_tallas', String(prod.maneja_tallas));
+        formData.append('tallas', JSON.stringify(prod.tallas ?? []));
         formData.append('colores', JSON.stringify(prod.colores ?? []));
         (prod.tallas ?? []).forEach(t => formData.append('tallas', t));
         const categoriaId = categorias[0]?.id;
