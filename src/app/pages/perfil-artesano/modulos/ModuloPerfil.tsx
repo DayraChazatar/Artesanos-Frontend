@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { API_BASE } from '../../../utils/config';
 
 const inputCls = 'px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-base text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition';
 
@@ -21,7 +22,7 @@ export function ModuloPerfil() {
   const [modalFoto, setModalFoto] = useState(false);
 
   useEffect(() => {
-    fetch(`http://localhost:8000/api/perfil/artesano/${artesanoId}/`)
+    fetch(`${API_BASE}/perfil/artesano/${artesanoId}/`)
       .then(r => r.json())
       .then(data => setPerfil({
         nombre: data.nombre ?? '', correo: data.correo ?? '',
@@ -29,11 +30,11 @@ export function ModuloPerfil() {
         biografia: data.biografia ?? '', foto_url: data.foto_url ?? '',
       }));
 
-    fetch(`http://localhost:8000/api/productos/?artesano=${artesanoId}`)
+    fetch(`${API_BASE}/productos/?artesano=${artesanoId}`)
       .then(r => r.json())
       .then(data => setStats(prev => ({ ...prev, productos: Array.isArray(data) ? data.length : 0 })));
 
-    fetch(`http://localhost:8000/api/inventario/pedidos/artesano/${artesanoId}/`, {
+    fetch(`${API_BASE}/inventario/pedidos/artesano/${artesanoId}/`, {
       headers: { Authorization: `Token ${localStorage.getItem('token') ?? ''}` }
     })
       .then(r => r.json())
@@ -50,7 +51,7 @@ export function ModuloPerfil() {
       return setAlert({ msg: 'La contraseña debe tener al menos 6 caracteres', type: 'error' });
     setLoadingPass(true);
     try {
-      const res = await fetch(`http://localhost:8000/api/perfil/cambiar-password/${artesanoId}/`, {
+      const res = await fetch(`${API_BASE}/perfil/cambiar-password/${artesanoId}/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(password),
@@ -73,7 +74,7 @@ export function ModuloPerfil() {
       const formData = new FormData();
       formData.append('telefono', perfil.telefono);
       formData.append('biografia', perfil.biografia);
-      const res = await fetch(`http://localhost:8000/api/perfil/artesano/${artesanoId}/`, {
+      const res = await fetch(`${API_BASE}/perfil/artesano/${artesanoId}/`, {
         method: 'PATCH', body: formData,
       });
       const data = await res.json();
@@ -124,7 +125,7 @@ export function ModuloPerfil() {
                   try {
                     const formData = new FormData();
                     formData.append('foto', file);
-                    const res = await fetch(`http://localhost:8000/api/perfil/artesano/${artesanoId}/`, {
+                    const res = await fetch(`${API_BASE}/perfil/artesano/${artesanoId}/`, {
                       method: 'PATCH', body: formData,
                     });
                     const data = await res.json();

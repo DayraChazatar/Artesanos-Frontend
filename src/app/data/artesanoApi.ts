@@ -1,6 +1,8 @@
 
 // src/app/data/artesanoApi.ts
-const BASE = 'http://localhost:8000/api';
+import { API_BASE } from '../utils/config';
+
+const BASE = API_BASE;
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -191,8 +193,7 @@ export const getResumenInventario = () =>
   request<ResumenInventario>(`${BASE}/inventario/resumen/`);
 
 // ── Reportes ──────────────────────────────────────────────────────────────────
-const REPORTES_BASE = 'http://localhost:8000/api/reportes';
-
+const REPORTES_BASE = `${API_BASE}/reportes`;
 export const descargarReporte = async (
   tipo: string,
   formato: 'excel' | 'pdf',

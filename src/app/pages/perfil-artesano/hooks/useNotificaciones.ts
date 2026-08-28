@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Notificacion } from '../types';
 
-const BASE = 'http://localhost:8000/api';
+import { API_BASE } from '../../../utils/config';
+
+const BASE = API_BASE;
 
 export function useNotificaciones() {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>(() => {

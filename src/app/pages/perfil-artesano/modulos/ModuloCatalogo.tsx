@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Producto } from '../../../data/artesanoApi';
+import { API_BASE } from '../../../utils/config';
 
 const Badge = ({ children, color }: { children: React.ReactNode; color: string }) => (
   <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${color}`}>{children}</span>
@@ -47,7 +48,7 @@ export function ModuloCatalogo({ productos, imagenes, setProductos }: ModuloCata
     const producto = productos.find(p => p.id === id);
     if (!producto) return;
     const nuevoVisible = !(producto.visible ?? true);
-    const res = await fetch(`http://localhost:8000/api/productos/${id}/visibilidad/`, {
+    const res = await fetch(`${API_BASE}/productos/${id}/visibilidad/`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ visible: nuevoVisible }),

@@ -4,7 +4,9 @@ import { Producto, Kardex, getKardex } from '../../../data/artesanoApi';
 import { Pedido } from '../types';
 import { generarGuiaEnvio } from '../../../utils/guiaEnvio';
 
-const BASE = 'http://localhost:8000/api';
+import { API_BASE } from '../../../utils/config';
+
+const BASE = API_BASE;
 
 const inputCls = 'px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-base text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition';
 
