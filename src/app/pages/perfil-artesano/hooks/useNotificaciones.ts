@@ -5,6 +5,10 @@ import { API_BASE } from '../../../utils/config';
 
 const BASE = API_BASE;
 
+const getAuthHeaders = () => ({
+  Authorization: `Token ${localStorage.getItem('token')}`,
+});
+
 export function useNotificaciones() {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>(() => {
     const guardadas = localStorage.getItem('notificaciones');
@@ -13,7 +17,7 @@ export function useNotificaciones() {
 
   const cargar = useCallback(async () => {
     try {
-      const res = await fetch(`${BASE}/notificaciones/`);
+      const res = await fetch(`${BASE}/notificaciones/`, { headers: getAuthHeaders() });
       const data = await res.json();
       // setNotificaciones(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -32,12 +36,12 @@ export function useNotificaciones() {
   }, [notificaciones]);
 
   const marcarLeida = async (id: number) => {
-    await fetch(`${BASE}/notificaciones/${id}/leer/`, { method: 'PATCH' });
+    await fetch(`${BASE}/notificaciones/${id}/leer/`, { method: 'PATCH', headers: getAuthHeaders() });
     setNotificaciones(prev => prev.map(n => n.id === id ? { ...n, leida: true } : n));
   };
 
   const marcarTodasLeidas = async () => {
-    await fetch(`${BASE}/notificaciones/leer-todas/`, { method: 'PATCH' });
+    await fetch(`${BASE}/notificaciones/leer-todas/`, { method: 'PATCH', headers: getAuthHeaders() });
     setNotificaciones(prev => prev.map(n => ({ ...n, leida: true })));
   };
 

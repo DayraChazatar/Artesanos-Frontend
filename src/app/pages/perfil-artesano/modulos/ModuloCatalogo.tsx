@@ -49,10 +49,13 @@ export function ModuloCatalogo({ productos, imagenes, setProductos }: ModuloCata
     if (!producto) return;
     const nuevoVisible = !(producto.visible ?? true);
     const res = await fetch(`${API_BASE}/productos/${id}/visibilidad/`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ visible: nuevoVisible }),
-    });
+  method: 'PATCH',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: `Token ${localStorage.getItem('token')}`,
+  },
+  body: JSON.stringify({ visible: nuevoVisible }),
+});
     if (!res.ok) { alert(`No se pudo cambiar la visibilidad. Código: ${res.status}`); return; }
     const actualizado = await res.json();
     setProductos(prev => prev.map(p => p.id === id ? { ...p, visible: actualizado.visible } : p));

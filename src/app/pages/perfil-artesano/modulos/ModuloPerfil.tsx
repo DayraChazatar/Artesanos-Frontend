@@ -22,7 +22,9 @@ export function ModuloPerfil() {
   const [modalFoto, setModalFoto] = useState(false);
 
   useEffect(() => {
-    fetch(`${API_BASE}/perfil/artesano/${artesanoId}/`)
+    fetch(`${API_BASE}/perfil/artesano/${artesanoId}/`, {
+  headers: { Authorization: `Token ${localStorage.getItem('token') ?? ''}` },
+})
       .then(r => r.json())
       .then(data => setPerfil({
         nombre: data.nombre ?? '', correo: data.correo ?? '',
@@ -30,7 +32,9 @@ export function ModuloPerfil() {
         biografia: data.biografia ?? '', foto_url: data.foto_url ?? '',
       }));
 
-    fetch(`${API_BASE}/productos/?artesano=${artesanoId}`)
+    fetch(`${API_BASE}/productos/?artesano=${artesanoId}`, {
+  headers: { Authorization: `Token ${localStorage.getItem('token') ?? ''}` },
+})
       .then(r => r.json())
       .then(data => setStats(prev => ({ ...prev, productos: Array.isArray(data) ? data.length : 0 })));
 
@@ -52,10 +56,13 @@ export function ModuloPerfil() {
     setLoadingPass(true);
     try {
       const res = await fetch(`${API_BASE}/perfil/cambiar-password/${artesanoId}/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(password),
-      });
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: `Token ${localStorage.getItem('token') ?? ''}`,
+  },
+  body: JSON.stringify(password),
+});
       const data = await res.json();
       if (!res.ok) return setAlert({ msg: data.error ?? 'Error al cambiar contraseña', type: 'error' });
       setPassword({ password_actual: '', password_nueva: '', password_confirmar: '' });
@@ -75,8 +82,10 @@ export function ModuloPerfil() {
       formData.append('telefono', perfil.telefono);
       formData.append('biografia', perfil.biografia);
       const res = await fetch(`${API_BASE}/perfil/artesano/${artesanoId}/`, {
-        method: 'PATCH', body: formData,
-      });
+  method: 'PATCH',
+  headers: { Authorization: `Token ${localStorage.getItem('token') ?? ''}` },
+  body: formData,
+});
       const data = await res.json();
       setPerfil(prev => ({ ...prev, foto_url: data.foto_url ?? prev.foto_url }));
       setEditando(false);
@@ -126,8 +135,10 @@ export function ModuloPerfil() {
                     const formData = new FormData();
                     formData.append('foto', file);
                     const res = await fetch(`${API_BASE}/perfil/artesano/${artesanoId}/`, {
-                      method: 'PATCH', body: formData,
-                    });
+  method: 'PATCH',
+  headers: { Authorization: `Token ${localStorage.getItem('token') ?? ''}` },
+  body: formData,
+});
                     const data = await res.json();
                     setPerfil(prev => ({ ...prev, foto_url: data.foto_url ?? prev.foto_url }));
                     setAlert({ msg: '✓ Foto actualizada correctamente', type: 'success' });

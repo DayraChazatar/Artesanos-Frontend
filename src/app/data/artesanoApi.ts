@@ -116,7 +116,10 @@ export const createCategoria = (data: Categoria) =>
   });
 
 export const deleteCategoria = (id: number) =>
-  fetch(`${BASE}/categorias/${id}/`, { method: 'DELETE' });
+  fetch(`${BASE}/categorias/${id}/`, {
+    method: 'DELETE',
+    headers: { Authorization: `Token ${localStorage.getItem('token')}` },
+  });
 
 export const updateCategoria = (id: number, data: Omit<Categoria, 'id'>) =>
   request<Categoria>(`${BASE}/categorias/${id}/`, {
@@ -135,7 +138,10 @@ export const createProducto = (data: Producto) =>
   });
 
 export const deleteProducto = (id: number) =>
-  fetch(`${BASE}/productos/${id}/`, { method: 'DELETE' });
+  fetch(`${BASE}/productos/${id}/`, {
+    method: 'DELETE',
+    headers: { Authorization: `Token ${localStorage.getItem('token')}` },
+  });
 
 export const updateProducto = (id: number, data: Omit<Producto, 'id'>) =>
   request<Producto>(`${BASE}/productos/${id}/`, {

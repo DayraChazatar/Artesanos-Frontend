@@ -5,6 +5,7 @@ import {
   updateProducto, reponerStock,
 } from '../../../data/artesanoApi';
 import { ModalReposicion } from '../components/ModalReposicion';
+import { API_BASE } from '../../../utils/config';
 
 const ARTESANO_ID = Number(localStorage.getItem('usuario_id') ?? 1);
 
@@ -174,7 +175,11 @@ export function ModuloProductos({
         if (categoriaId) formData.append('categoria', String(categoriaId));
         if (imagenFile) formData.append('imagen', imagenFile);
 
-        const response = await fetch('http://127.0.0.1:8000/api/productos/', { method: 'POST', body: formData });
+        const response = await fetch(`${API_BASE}/productos/`, {
+  method: 'POST',
+  headers: { Authorization: `Token ${localStorage.getItem('token')}` },
+  body: formData,
+});
         if (!response.ok) { const error = await response.json(); throw new Error(JSON.stringify(error)); }
         const nuevo = await response.json();
         setProductos(prev => [...prev, nuevo]);
