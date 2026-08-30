@@ -4,7 +4,7 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Heart, Truck, Shield, Star, Loader2 } from 'lucide-react'; // Agregamos Loader2 para la carga
 import { useAuth } from '../context/AuthContext';
-
+import { API_BASE } from '../utils/config';
 // 2. Definimos la estructura del Producto según tu base de datos/API
 interface Product {
   id: string | number;
@@ -26,7 +26,7 @@ export function Home() {
   // 4. Efecto para consultar la API al cargar el componente
   useEffect(() => {
     // URL Corregida funcionando con tu puerto 8000 local
-    const API_URL = 'http://localhost:8000/api/catalogo/';
+   const API_URL = `${API_BASE}/catalogo/`;
     fetch(API_URL)
       .then((res) => {
         if (!res.ok) {

@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { MapPin, User, CreditCard, FileText, CheckCircle, ShoppingBag } from 'lucide-react';
 import { generarFacturaPDF } from '../utils/facturas';
+import { API_BASE } from '../utils/config';
 
 const WOMPI_PUBLIC_KEY = 'pub_test_6jhHtUtNNHZ6HkikZE9139oIbmtsVXPk';
 
@@ -18,19 +19,19 @@ export function Checkout() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-const savedAddress = JSON.parse(
-  localStorage.getItem(`direccion_${user?.email}`) || '{}'
-);
+  const savedAddress = JSON.parse(
+    localStorage.getItem(`direccion_${user?.email}`) || '{}'
+  );
 
-const [formData, setFormData] = useState({
-  name: user?.name || '',
-  email: user?.email || '',
-  phone: savedAddress.phone || '',
-  address: savedAddress.address || '',
-  city: savedAddress.city || '',
-  postalCode: savedAddress.postalCode || '',
-  notes: savedAddress.notes || '',
-});
+  const [formData, setFormData] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+    phone: savedAddress.phone || '',
+    address: savedAddress.address || '',
+    city: savedAddress.city || '',
+    postalCode: savedAddress.postalCode || '',
+    notes: savedAddress.notes || '',
+  });
 
   const [formValid, setFormValid] = useState(false);
   const [orderConfirmed, setOrderConfirmed] = useState(false);
@@ -44,85 +45,108 @@ const [formData, setFormData] = useState({
     setFormValid(!!(name && email && phone && address && city && postalCode));
   }, [formData]);
 
-  if (cart.length === 0 && !orderConfirmed) {
-    navigate('/catalogo');
-    return null;
-  }
+ if (cart.length === 0 && !orderConfirmed && !currentOrder) {
+  navigate('/catalogo');
+  return null;
+}
 
-const handleInputChange = (
-  e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-) => {
-  const updatedData = {
-    ...formData,
-    [e.target.name]: e.target.value,
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const updatedData = {
+      ...formData,
+      [e.target.name]: e.target.value,
+    };
+
+    setFormData(updatedData);
+
+    // Guardar automáticamente dirección
+    localStorage.setItem(
+      `direccion_${user?.email}`,
+      JSON.stringify({
+        phone: updatedData.phone,
+        address: updatedData.address,
+        city: updatedData.city,
+        postalCode: updatedData.postalCode,
+        notes: updatedData.notes,
+      })
+    );
   };
-
-  setFormData(updatedData);
-
-  // Guardar automáticamente dirección
-  localStorage.setItem(
-    `direccion_${user?.email}`,
-    JSON.stringify({
-      phone: updatedData.phone,
-      address: updatedData.address,
-      city: updatedData.city,
-      postalCode: updatedData.postalCode,
-      notes: updatedData.notes,
-    })
-  );
-};
 
   const handleWompiPayment = async () => {
-  if (!formValid) {
-    toast.error('Por favor completa todos los campos obligatorios');
-    return;
-  }
+    if (!formValid) {
+      toast.error('Por favor completa todos los campos obligatorios');
+      return;
+    }
 
-  if (!user?.id) {
-    toast.error('Debes iniciar sesión para continuar');
-    return;
-  }
+    if (!user?.id) {
+      toast.error('Debes iniciar sesión para continuar');
+      return;
+    }
 
-  // ── Crear pedido en el backend ──────────────────────────────────────
-  const result = await checkout({
-    clienteId:  Number(user.id),
-    direccion:  `${formData.address}, ${formData.city} ${formData.postalCode}`,
-    telefono:   formData.phone,
-  });
+    // ── Crear pedido en el backend ──────────────────────────────────────
+    const result = await checkout({
+      clienteId: Number(user.id),
+      direccion: `${formData.address}, ${formData.city} ${formData.postalCode}`,
+      telefono: formData.phone,
+    });
 
-  if (!result.ok) {
-    toast.error(result.error ?? 'Error al crear el pedido');
-    return;
-  }
+    if (!result.ok) {
+      toast.error(result.error ?? 'Error al crear el pedido');
+      return;
+    }
 
-  const pedido = result.pedido;
+    const pedido = result.pedido;
+    // ── Solicitar firma de integridad a nuestro backend ────────────────
+    const integrityResponse = await fetch(
+      `${API_BASE}/inventario/wompi/integrity/`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reference: String(pedido.id),
+          amount_in_cents: Math.round(totalWithShipping * 100),
+          currency: 'COP',
+        }),
+      }
+    );
 
-  // ── Construir el objeto local para la pantalla de confirmación ──────
-  const newOrder = {
-    id:       String(pedido.id),
-    date:     pedido.fecha,
-    items:    cart,
-    total:    totalWithShipping,
-    customer: { name: formData.name, email: formData.email, phone: formData.phone },
-    status:   'Pendiente',
+    if (!integrityResponse.ok) {
+      toast.error('No se pudo validar la seguridad del pago');
+      return;
+    }
+
+    const { signature } = await integrityResponse.json();
+
+    // ── Construir el objeto local para la pantalla de confirmación ──────
+    const newOrder = {
+      id: String(pedido.id),
+      date: pedido.fecha,
+      items: cart,
+      total: totalWithShipping,
+      customer: { name: formData.name, email: formData.email, phone: formData.phone },
+      status: 'Pendiente',
+    };
+
+    // ── Redirigir a Wompi ───────────────────────────────────────────────
+    const params = new URLSearchParams({
+      'public-key': WOMPI_PUBLIC_KEY,
+      'currency': 'COP',
+      'amount-in-cents': String(totalWithShipping * 100),
+      'reference': String(pedido.id),
+      'signature:integrity': signature,
+      'customer-data:email': formData.email,
+      'customer-data:full-name': formData.name,
+      'customer-data:phone-number': formData.phone,
+    });
+
+    setCurrentOrder(newOrder);
+    setWompiUrl(`https://checkout.wompi.co/p/?${params.toString()}`);
+    console.log('URL WOMPI:', `https://checkout.wompi.co/p/?${params.toString()}`);
+    setOrderConfirmed(true);
   };
-
-  // ── Redirigir a Wompi ───────────────────────────────────────────────
-  const params = new URLSearchParams({
-    'public-key':               WOMPI_PUBLIC_KEY,
-    'currency':                 'COP',
-    'amount-in-cents':          String(totalWithShipping * 100),
-    'reference':                String(pedido.id),
-    'redirect-url':             'http://localhost:5173/',
-    'customer-data:email':      formData.email,
-    'customer-data:full-name':  formData.name,
-    'customer-data:phone-number': formData.phone,
-  });
-
-  setCurrentOrder(newOrder);
-  setWompiUrl(`https://checkout.wompi.co/p/?${params.toString()}`);
-  setOrderConfirmed(true);
-};
 
   const handleDescargarFactura = () => {
     try {

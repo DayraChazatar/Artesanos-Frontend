@@ -6,6 +6,7 @@ import { Input } from '../components/ui/input';
 import { Search, Edit, X, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import { API_BASE } from '../utils/config';
 
 export function Catalog() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -20,7 +21,7 @@ export function Catalog() {
 
   const obtenerProductos = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/catalogo/');
+      const response = await fetch(`${API_BASE}/catalogo/`);
       const data = await response.json();
       setProductos(data);
     } catch (error) {
@@ -117,7 +118,7 @@ export function Catalog() {
   const toggleVisibilidad = async (productoId: number) => {
     try {
       const response = await fetch(
-        `http://localhost:8000/api/productos/${productoId}/visibilidad/`,
+       `${API_BASE}/productos/${productoId}/visibilidad/`,
         {
           method: 'PATCH',
           headers: {

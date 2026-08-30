@@ -15,6 +15,7 @@ import {
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './ui/button';
+import { API_BASE } from '../utils/config';
 
 function perfilRoute(role?: string) {
   if (role === 'artisan') return '/perfil-artesano';
@@ -97,7 +98,7 @@ export function Navbar({ activeTab, onTabChange }: NavbarProps) {
     const token = localStorage.getItem('token') ?? '';
 
     const fetchOrders = () => {
-      fetch(`http://localhost:8000/api/inventario/pedidos/cliente/${user.id}/`, {
+      fetch(`${API_BASE}/inventario/pedidos/cliente/${user.id}/`, {
         headers: token ? { Authorization: `Token ${token}` } : {},
       })
         .then(res => (res.ok ? res.json() : []))
@@ -157,11 +158,10 @@ export function Navbar({ activeTab, onTabChange }: NavbarProps) {
             <div className="flex items-center gap-1 overflow-x-auto">
               {ARTESANO_TABS.map((tab) => (
                 <button key={tab.id} onClick={() => onTabChange(tab.id)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap flex items-center gap-1.5 transition-colors ${
-                    activeTab === tab.id
+                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap flex items-center gap-1.5 transition-colors ${activeTab === tab.id
                       ? 'bg-orange-600 text-white shadow-sm'
                       : 'text-gray-600 hover:bg-orange-50 hover:text-orange-600'
-                  }`}>
+                    }`}>
                   {tab.icon} {tab.label}
                 </button>
               ))}
@@ -245,7 +245,7 @@ export function Navbar({ activeTab, onTabChange }: NavbarProps) {
                           <p className="text-sm">No hay notificaciones</p>
                         </div>
                       ) : (
-                       orders.slice().sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((order: any) => {
+                        orders.slice().sort((a: any, b: any) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()).map((order: any) => {
                           const status = order.estado || 'Pendiente';
                           const icon = STATUS_ICONS[status] || '🕐';
                           return (

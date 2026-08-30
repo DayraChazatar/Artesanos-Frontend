@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-const BASE = 'http://localhost:8000/api';
+import { API_BASE } from '../utils/config';
+const BASE = API_BASE;
 
 export interface Product {
   id: string;
@@ -132,9 +132,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) {
         return { ok: false, error: data.error ?? 'Error al crear el pedido' };
       }
-
-      // Éxito → vaciar carrito
-      clearCart();
       return { ok: true, pedido: data };
     } catch (e) {
       return { ok: false, error: 'Error de conexión con el servidor' };

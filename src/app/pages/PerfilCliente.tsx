@@ -12,6 +12,7 @@ import {
   Lock, Heart, Star, Bell, ShoppingBag, Eye, EyeOff, Trash2,
   ChevronRight, Package2, TruckIcon, CheckCircle, AlertCircle
 } from 'lucide-react';
+import { API_BASE } from '../utils/config';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 interface FavoriteProduct {
@@ -413,7 +414,7 @@ function TabPedidos({ userId }: { userId: string }) {
   const [cancelando, setCancelando] = useState<number | null>(null);
   const [expandido, setExpandido] = useState<number | null>(null);
 
-  const BASE = 'http://localhost:8000/api';
+const BASE = API_BASE;
 
   useEffect(() => {
     const fetchPedidos = async () => {

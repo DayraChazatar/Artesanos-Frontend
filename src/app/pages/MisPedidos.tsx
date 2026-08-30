@@ -10,8 +10,8 @@ import {
 import { generarFacturaPDF } from '../utils/facturas';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
-
-const BASE = 'http://localhost:8000/api';
+import { API_BASE } from '../utils/config'; 
+const BASE = API_BASE;
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 

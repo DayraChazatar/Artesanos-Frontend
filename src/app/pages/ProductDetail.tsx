@@ -10,8 +10,10 @@ import { products } from '../data/products';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import { API_BASE } from '../utils/config';
 
-const BASE = 'http://localhost:8000/api';
+
+const BASE = API_BASE;
 
 // ── Estrellas visuales ────────────────────────────────────────────────────────
 function StarRating({ value }: { value: number }) {
@@ -211,7 +213,7 @@ export function ProductDetail() {
   useEffect(() => {
     const fetchProducto = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/productos/${id}/`);
+       const res = await fetch(`${API_BASE}/productos/${id}/`);
         if (!res.ok) throw new Error('No encontrado');
         const data = await res.json();
         setProduct(data);
