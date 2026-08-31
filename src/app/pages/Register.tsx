@@ -9,6 +9,7 @@ import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
 import { User, Palette } from 'lucide-react';
 import { getCategoriasDisponibles, registrarArtesano, type Categoria } from '../data/artesanoApi';
+import { API_BASE } from '../utils/config';
 
 export function Register() {
   // ── Estado cliente ──────────────────────────────────────────────────────────
@@ -56,7 +57,7 @@ export function Register() {
       return toast.error('La contraseña debe tener al menos 6 caracteres');
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/usuarios/', {
+     const res = await fetch(`${API_BASE}/usuarios/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

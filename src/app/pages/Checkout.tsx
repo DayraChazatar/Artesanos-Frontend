@@ -45,10 +45,10 @@ export function Checkout() {
     setFormValid(!!(name && email && phone && address && city && postalCode));
   }, [formData]);
 
- if (cart.length === 0 && !orderConfirmed && !currentOrder) {
-  navigate('/catalogo');
-  return null;
-}
+  if (cart.length === 0 && !orderConfirmed && !currentOrder) {
+    navigate('/catalogo');
+    return null;
+  }
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -137,6 +137,7 @@ export function Checkout() {
       'amount-in-cents': String(totalWithShipping * 100),
       'reference': String(pedido.id),
       'signature:integrity': signature,
+      'redirect-url': `${window.location.origin}/pedido-confirmado`,
       'customer-data:email': formData.email,
       'customer-data:full-name': formData.name,
       'customer-data:phone-number': formData.phone,
