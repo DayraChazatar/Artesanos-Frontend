@@ -78,6 +78,12 @@ export function Checkout() {
       toast.error('Por favor completa todos los campos obligatorios');
       return;
     }
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      toast.error('Tu sesión ha expirado. Por favor inicia sesión nuevamente');
+      return;
+    }
 
     if (!user?.id) {
       toast.error('Debes iniciar sesión para continuar');
@@ -104,6 +110,7 @@ export function Checkout() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           reference: String(pedido.id),
@@ -118,7 +125,7 @@ export function Checkout() {
       return;
     }
 
-    const { signature } = await integrityResponse.json();
+    const { signature, amount_in_cents } = await integrityResponse.json();
 
     // ── Construir el objeto local para la pantalla de confirmación ──────
     const newOrder = {
@@ -134,7 +141,7 @@ export function Checkout() {
     const params = new URLSearchParams({
       'public-key': WOMPI_PUBLIC_KEY,
       'currency': 'COP',
-      'amount-in-cents': String(totalWithShipping * 100),
+      'amount-in-cents': String(amount_in_cents),
       'reference': String(pedido.id),
       'signature:integrity': signature,
       'redirect-url': `${window.location.origin}/pedido-confirmado`,
