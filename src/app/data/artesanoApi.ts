@@ -43,6 +43,7 @@ export interface Producto {
   cantidad_reservada?: number
   cantidad_disponible?: number
   visible?: boolean;
+  visitas?: number;
 }
 
 export interface Kardex {

@@ -91,6 +91,10 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
   const stockActual = productos.map(p => ({ nombre: p.nombre.length > 13 ? p.nombre.slice(0, 13) + '…' : p.nombre, stock: p.cantidad - (p.cantidad_reservada ?? 0), minimo: p.stock_minimo })).sort((a, b) => b.stock - a.stock).slice(0, 8);
   const stockDisponible = productosFiltrados.map(p => ({ nombre: p.nombre.length > 13 ? p.nombre.slice(0, 13) + '…' : p.nombre, disponible: p.cantidad - (p.cantidad_reservada ?? 0), bajo: (p.cantidad - (p.cantidad_reservada ?? 0)) <= p.stock_minimo })).sort((a, b) => a.disponible - b.disponible).slice(0, 8);
 
+    const masVistos = [...productos]
+    .sort((a, b) => (b.visitas ?? 0) - (a.visitas ?? 0))
+    .slice(0, 8)
+    .map(p => ({ nombre: p.nombre.length > 13 ? p.nombre.slice(0, 13) + '…' : p.nombre, vistas: p.visitas ?? 0 }));
   const tabCls = (t: string) => `px-5 py-2 rounded-xl text-sm font-semibold transition ${tabReporte === t ? 'bg-amber-700 text-white shadow' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`;
 
   function KPI({ label, value, sub, color = 'text-amber-900' }: { label: string; value: string | number; sub?: string; color?: string }) {
@@ -344,7 +348,7 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
                 <KPI label="Valor en stock" value={`$${productosFiltrados.reduce((a, p) => a + p.cantidad * Number(p.precio_neto), 0).toLocaleString('es-CO')}`} color="text-green-700" />
                 <KPI label="Con stock bajo" value={productosFiltrados.filter(p => (p.cantidad - (p.cantidad_reservada ?? 0)) <= p.stock_minimo).length} color="text-red-600" sub="bajo mínimo" />
               </div>
-              <Grafica title="Stock disponible (menor a mayor)">
+                            <Grafica title="Stock disponible (menor a mayor)">
                 {stockDisponible.length === 0 ? <SinGrafica /> : (
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={stockDisponible} layout="vertical">
@@ -355,6 +359,19 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
                       <Bar dataKey="disponible" name="Disponible" radius={[0, 4, 4, 0]}>
                         {stockDisponible.map((entry, i) => <Cell key={i} fill={entry.bajo ? '#dc2626' : '#b45309'} />)}
                       </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </Grafica>
+              <Grafica title="Productos más vistos">
+                {masVistos.every(m => m.vistas === 0) ? <SinGrafica /> : (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <BarChart data={masVistos} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" stroke="#fde68a" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 11 }} />
+                      <YAxis type="category" dataKey="nombre" tick={{ fontSize: 10 }} width={110} />
+                      <Tooltip contentStyle={tooltipStyle} />
+                      <Bar dataKey="vistas" name="Vistas" radius={[0, 4, 4, 0]} fill="#0ea5e9" />
                     </BarChart>
                   </ResponsiveContainer>
                 )}

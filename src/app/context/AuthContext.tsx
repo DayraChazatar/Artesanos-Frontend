@@ -163,9 +163,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const updatedUser = { ...user, ...data };
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
+        const token = localStorage.getItem('token');
     await fetch(`${BASE}/usuarios/${user.id}/`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Token ${token}`,
+      },
       body: JSON.stringify({
         nombre:       data.name      ?? user.name,
         telefono:     data.phone     ?? user.phone,

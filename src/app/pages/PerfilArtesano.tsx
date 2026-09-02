@@ -26,7 +26,7 @@ const Alert = ({ msg, type }: { msg: string; type: 'success' | 'info' | 'error' 
 };
 
 export default function PerfilArtesano() {
-  const [tab, setTab] = useState<Tab>('catalogo');
+  const [tab, setTab] = useState<Tab>('productos');
   const [productos, setProductos] = useState<Producto[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [kardex, setKardex] = useState<Kardex[]>([]);
