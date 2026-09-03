@@ -16,6 +16,7 @@ const Alert = ({ msg, type }: { msg: string; type: 'success' | 'error' }) => {
 };
 
 const SIGUIENTES: Record<string, string[]> = {
+  'Pago confirmado': ['Pendiente'],
   'Pendiente': ['En proceso'],
   'En proceso': ['Enviado'],
   'Enviado': ['Entregado'],
@@ -27,7 +28,10 @@ const SIGUIENTES: Record<string, string[]> = {
   'Devuelto': [],
 };
 
+const FINALIZADOS = ['Entregado', 'Cancelado', 'Devolucion aprobada', 'Devolucion rechazada', 'Devuelto'];
+
 const BTN_COLOR: Record<string, string> = {
+  'Pendiente': 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200',
   'En proceso': 'bg-orange-100 text-orange-700 hover:bg-orange-200',
   Enviado: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
   Entregado: 'bg-green-100 text-green-700 hover:bg-green-200',
@@ -63,6 +67,8 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
   const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [devolucionSeleccionada, setDevolucionSeleccionada] = useState<Pedido | null>(null);
   const [pedidoExpandido, setPedidoExpandido] = useState<number | null>(null);
+  const [seleccionados, setSeleccionados] = useState<Set<number>>(new Set());
+  const [pestaña, setPestaña] = useState<'pedidos' | 'historial'>('pedidos');
 
   const showAlert = (msg: string, type: 'success' | 'error' = 'success') => {
     setAlert({ msg, type }); setTimeout(() => setAlert(null), 3500);
@@ -117,15 +123,64 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
     }
   };
 
-  const pedidosFiltrados = pedidos.filter(p => {
-    const matchEstado = filtroEstado === '' || p.estado === filtroEstado;
-    const q = busqueda.toLowerCase();
-    const matchBusqueda = q === '' || p.cliente_nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q) || p.detalles.some(d => d.producto_nombre.toLowerCase().includes(q));
-    const fechaPedido = p.fecha.split('T')[0];
-    const matchDesde = filtroDesde === '' || fechaPedido >= filtroDesde;
-    const matchHasta = filtroHasta === '' || fechaPedido <= filtroHasta;
-    return matchEstado && matchBusqueda && matchDesde && matchHasta;
-  });
+  const toggleSeleccionado = (id: number) => {
+    setSeleccionados(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSeleccionarTodos = () => {
+    if (seleccionados.size === pedidosFiltrados.length) {
+      setSeleccionados(new Set());
+    } else {
+      setSeleccionados(new Set(pedidosFiltrados.map(p => p.id)));
+    }
+  };
+
+  const actualizarEstadoMasivo = async (estadoNuevo: 'Enviado' | 'Entregado') => {
+    if (seleccionados.size === 0) return;
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token') ?? '';
+      const res = await fetch(`${BASE}/inventario/pedido/estado-masivo/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Token ${token}` } : {}) },
+        body: JSON.stringify({ pedido_ids: Array.from(seleccionados), estado_nuevo: estadoNuevo }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showAlert(data.error ?? 'Error al actualizar los pedidos', 'error'); return; }
+      const { exitosos, fallidos } = data;
+      if (fallidos.length === 0) {
+        showAlert(`${exitosos.length} pedido(s) marcados como ${estadoNuevo}`);
+      } else {
+        showAlert(`${exitosos.length} actualizados, ${fallidos.length} no se pudieron actualizar`, 'error');
+      }
+      setSeleccionados(new Set());
+      await fetchPedidos();
+    } catch {
+      showAlert('Error de conexión con el servidor', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const pedidosFiltrados = pedidos
+    .filter(p => {
+      const matchEstado = filtroEstado === '' || p.estado === filtroEstado;
+      const q = busqueda.toLowerCase();
+      const matchBusqueda = q === '' || p.cliente_nombre.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q) || p.detalles.some(d => d.producto_nombre.toLowerCase().includes(q));
+      const fechaPedido = p.fecha.split('T')[0];
+      const matchDesde = filtroDesde === '' || fechaPedido >= filtroDesde;
+      const matchHasta = filtroHasta === '' || fechaPedido <= filtroHasta;
+      const matchPestaña = pestaña === 'pedidos' ? !FINALIZADOS.includes(p.estado) : FINALIZADOS.includes(p.estado);
+      return matchEstado && matchBusqueda && matchDesde && matchHasta && matchPestaña;
+    })
+    .sort((a, b) => {
+      if (pestaña === 'pedidos') return new Date(a.fecha).getTime() - new Date(b.fecha).getTime();
+      return new Date(b.fecha).getTime() - new Date(a.fecha).getTime();
+    });
 
   const resumen = {
     total: pedidos.length,
@@ -190,26 +245,77 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
       <div className="bg-white rounded-2xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-serif text-xl text-amber-800">📋 Lista de pedidos</h2>
-          <span className="text-xs text-stone-400">{pedidosFiltrados.length} de {pedidos.length} pedido{pedidos.length !== 1 ? 's' : ''}</span>
+          <span className="text-xs text-stone-400">{pedidosFiltrados.length} pedido{pedidosFiltrados.length !== 1 ? 's' : ''}</span>
         </div>
+        <div className="flex gap-2 mb-4 border-b border-amber-100">
+          <button
+            onClick={() => { setPestaña('pedidos'); setSeleccionados(new Set()); }}
+            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${pestaña === 'pedidos' ? 'border-amber-600 text-amber-800' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
+          >
+            Pedidos ({pedidos.filter(p => !FINALIZADOS.includes(p.estado)).length})
+          </button>
+          <button
+            onClick={() => { setPestaña('historial'); setSeleccionados(new Set()); }}
+            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${pestaña === 'historial' ? 'border-amber-600 text-amber-800' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
+          >
+            Historial ({pedidos.filter(p => FINALIZADOS.includes(p.estado)).length})
+          </button>
+        </div>
+        {pestaña === 'pedidos' && seleccionados.size > 0 && (
+          <div className="flex items-center gap-2 mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">
+            <span className="text-sm text-amber-800 font-medium">{seleccionados.size} seleccionado(s)</span>
+            <button
+              onClick={() => actualizarEstadoMasivo('Enviado')}
+              className="ml-auto px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200"
+            >
+              Marcar como Enviado
+            </button>
+            <button
+              onClick={() => actualizarEstadoMasivo('Entregado')}
+              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-100 text-green-700 hover:bg-green-200"
+            >
+              Marcar como Entregado
+            </button>
+          </div>
+        )}
         {loading ? (
           <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-10 bg-amber-50 rounded-xl animate-pulse" />)}</div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-amber-100">
             <table className="w-full text-sm">
               <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
-                <tr>{['Código / Estado', 'Cliente', 'Productos', 'Total', 'Fecha', 'Acciones'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
-                ))}</tr>
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">
+                    {pestaña === 'pedidos' && (
+                      <input
+                        type="checkbox"
+                        checked={pedidosFiltrados.length > 0 && seleccionados.size === pedidosFiltrados.length}
+                        onChange={toggleSeleccionarTodos}
+                      />
+                    )}
+                  </th>
+                  {['Código / Estado', 'Cliente', 'Productos', 'Total', 'Fecha', 'Acciones'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
               </thead>
               <tbody>
                 {pedidosFiltrados.length === 0 ? (
-                  <tr><td colSpan={6} className="px-4 py-10 text-center text-stone-400">{pedidos.length === 0 ? 'Aún no tienes pedidos' : 'No hay pedidos con los filtros aplicados'}</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-10 text-center text-stone-400">{pedidos.length === 0 ? 'Aún no tienes pedidos' : 'No hay pedidos con los filtros aplicados'}</td></tr>
                 ) : pedidosFiltrados.map(pedido => {
                   const isLoading = loadingId === pedido.id;
                   return (
                     <>
                       <tr key={pedido.id} className="border-t border-amber-50 hover:bg-amber-50/40 transition-colors">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {pestaña === 'pedidos' && (
+                            <input
+                              type="checkbox"
+                              checked={seleccionados.has(pedido.id)}
+                              onChange={() => toggleSeleccionado(pedido.id)}
+                            />
+                          )}
+                        </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <p className="font-mono text-xs text-stone-400 mb-1">{pedido.codigo}</p>
                           <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${pedido.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-700' : pedido.estado === 'En proceso' ? 'bg-orange-100 text-orange-700' : pedido.estado === 'Enviado' ? 'bg-blue-100 text-blue-700' : pedido.estado === 'Entregado' ? 'bg-green-100 text-green-700' : pedido.estado === 'Cancelado' ? 'bg-red-100 text-red-700' : pedido.estado?.includes('Devolucion') ? 'bg-purple-100 text-purple-700' : 'bg-stone-100 text-stone-500'}`}>
@@ -257,7 +363,7 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
                       </tr>
                       {pedidoExpandido === pedido.id && (
                         <tr key={`exp-${pedido.id}`}>
-                          <td colSpan={6} className="bg-amber-50/30 px-6 py-4 border-b border-amber-100">
+                          <td colSpan={7} className="bg-amber-50/30 px-6 py-4 border-b border-amber-100">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
                                 <h3 className="font-bold text-stone-700 text-sm mb-3">📦 Productos</h3>
