@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react';
 import { Producto, Kardex, getKardex } from '../../../data/artesanoApi';
 import { Pedido } from '../types';
 import { generarGuiaEnvio } from '../../../utils/guiaEnvio';
+import { ModuloReferencias } from './ModuloReferencias';
 
 import { API_BASE } from '../../../utils/config';
 
@@ -15,11 +16,14 @@ const Alert = ({ msg, type }: { msg: string; type: 'success' | 'error' }) => {
   return <div className={`mb-4 p-3 rounded-lg border text-sm font-medium ${colors[type]}`}>{msg}</div>;
 };
 
+// "Enviado" y "Entregado" ya no se marcan desde aquí: ahora se gestionan
+// desde la pestaña "Referencias", donde queda registrado el número de
+// guía/ticket real que dio la transportadora.
 const SIGUIENTES: Record<string, string[]> = {
   'Pago confirmado': ['Pendiente'],
   'Pendiente': ['En proceso'],
-  'En proceso': ['Enviado'],
-  'Enviado': ['Entregado'],
+  'En proceso': [],
+  'Enviado': [],
   'Entregado': [],
   'Devolucion solicitada': ['Devolucion aprobada', 'Devolucion rechazada'],
   'Cancelado': [],
@@ -67,8 +71,13 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
   const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [devolucionSeleccionada, setDevolucionSeleccionada] = useState<Pedido | null>(null);
   const [pedidoExpandido, setPedidoExpandido] = useState<number | null>(null);
-  const [seleccionados, setSeleccionados] = useState<Set<number>>(new Set());
-  const [pestaña, setPestaña] = useState<'pedidos' | 'historial'>('pedidos');
+  const [pestaña, setPestaña] = useState<'pedidos' | 'historial' | 'referencias'>('pedidos');
+  const [refPrefill, setRefPrefill] = useState<{ codigo: string; accion: 'enviar' | 'confirmar' } | null>(null);
+
+  const irAReferencias = (codigoPedido: string, accion: 'enviar' | 'confirmar') => {
+    setRefPrefill({ codigo: codigoPedido, accion });
+    setPestaña('referencias');
+  };
 
   const showAlert = (msg: string, type: 'success' | 'error' = 'success') => {
     setAlert({ msg, type }); setTimeout(() => setAlert(null), 3500);
@@ -120,49 +129,6 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
       showAlert('Error de conexión con el servidor', 'error');
     } finally {
       setLoadingId(null);
-    }
-  };
-
-  const toggleSeleccionado = (id: number) => {
-    setSeleccionados(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleSeleccionarTodos = () => {
-    if (seleccionados.size === pedidosFiltrados.length) {
-      setSeleccionados(new Set());
-    } else {
-      setSeleccionados(new Set(pedidosFiltrados.map(p => p.id)));
-    }
-  };
-
-  const actualizarEstadoMasivo = async (estadoNuevo: 'Enviado' | 'Entregado') => {
-    if (seleccionados.size === 0) return;
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token') ?? '';
-      const res = await fetch(`${BASE}/inventario/pedido/estado-masivo/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Token ${token}` } : {}) },
-        body: JSON.stringify({ pedido_ids: Array.from(seleccionados), estado_nuevo: estadoNuevo }),
-      });
-      const data = await res.json();
-      if (!res.ok) { showAlert(data.error ?? 'Error al actualizar los pedidos', 'error'); return; }
-      const { exitosos, fallidos } = data;
-      if (fallidos.length === 0) {
-        showAlert(`${exitosos.length} pedido(s) marcados como ${estadoNuevo}`);
-      } else {
-        showAlert(`${exitosos.length} actualizados, ${fallidos.length} no se pudieron actualizar`, 'error');
-      }
-      setSeleccionados(new Set());
-      await fetchPedidos();
-    } catch {
-      showAlert('Error de conexión con el servidor', 'error');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -221,79 +187,72 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm p-6">
-        <div className="flex flex-wrap gap-4">
-          <input type="text" placeholder="Buscar cliente, código o producto..." value={busqueda}
-            onChange={e => setBusqueda(e.target.value)} className={`${inputCls} flex-1 min-w-[200px]`} />
-          <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className={inputCls}>
-            <option value="">Todos los estados</option>
-            {['Pendiente', 'En proceso', 'Enviado', 'Entregado', 'Cancelado', 'Devolucion solicitada', 'Devuelto', 'Devolucion aprobada', 'Devolucion rechazada'].map(e => (
-              <option key={e}>{e}</option>
-            ))}
-          </select>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-stone-500">Desde</span>
-            <input type="date" max={new Date().toISOString().split('T')[0]} value={filtroDesde} onChange={e => setFiltroDesde(e.target.value)} className={inputCls} />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-stone-500">Hasta</span>
-            <input type="date" max={new Date().toISOString().split('T')[0]} value={filtroHasta} onChange={e => setFiltroHasta(e.target.value)} className={inputCls} />
+      {pestaña !== 'referencias' && (
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+          <div className="flex flex-wrap gap-4">
+            <input type="text" placeholder="Buscar cliente, código o producto..." value={busqueda}
+              onChange={e => setBusqueda(e.target.value)} className={`${inputCls} flex-1 min-w-[200px]`} />
+            <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className={inputCls}>
+              <option value="">Todos los estados</option>
+              {['Pendiente', 'En proceso', 'Enviado', 'Entregado', 'Cancelado', 'Devolucion solicitada', 'Devuelto', 'Devolucion aprobada', 'Devolucion rechazada'].map(e => (
+                <option key={e}>{e}</option>
+              ))}
+            </select>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-stone-500">Desde</span>
+              <input type="date" max={new Date().toISOString().split('T')[0]} value={filtroDesde} onChange={e => setFiltroDesde(e.target.value)} className={inputCls} />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-stone-500">Hasta</span>
+              <input type="date" max={new Date().toISOString().split('T')[0]} value={filtroHasta} onChange={e => setFiltroHasta(e.target.value)} className={inputCls} />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className="bg-white rounded-2xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-serif text-xl text-amber-800">📋 Lista de pedidos</h2>
-          <span className="text-xs text-stone-400">{pedidosFiltrados.length} pedido{pedidosFiltrados.length !== 1 ? 's' : ''}</span>
+          {pestaña !== 'referencias' && (
+            <span className="text-xs text-stone-400">{pedidosFiltrados.length} pedido{pedidosFiltrados.length !== 1 ? 's' : ''}</span>
+          )}
         </div>
         <div className="flex gap-2 mb-4 border-b border-amber-100">
           <button
-            onClick={() => { setPestaña('pedidos'); setSeleccionados(new Set()); }}
+            onClick={() => setPestaña('pedidos')}
             className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${pestaña === 'pedidos' ? 'border-amber-600 text-amber-800' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
           >
             Pedidos ({pedidos.filter(p => !FINALIZADOS.includes(p.estado)).length})
           </button>
           <button
-            onClick={() => { setPestaña('historial'); setSeleccionados(new Set()); }}
+            onClick={() => setPestaña('historial')}
             className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${pestaña === 'historial' ? 'border-amber-600 text-amber-800' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
           >
             Historial ({pedidos.filter(p => FINALIZADOS.includes(p.estado)).length})
           </button>
+          <button
+            onClick={() => setPestaña('referencias')}
+            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${pestaña === 'referencias' ? 'border-amber-600 text-amber-800' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
+          >
+            📮 Referencias ({pedidos.filter(p => !!p.numero_guia).length})
+          </button>
         </div>
-        {pestaña === 'pedidos' && seleccionados.size > 0 && (
-          <div className="flex items-center gap-2 mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">
-            <span className="text-sm text-amber-800 font-medium">{seleccionados.size} seleccionado(s)</span>
-            <button
-              onClick={() => actualizarEstadoMasivo('Enviado')}
-              className="ml-auto px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200"
-            >
-              Marcar como Enviado
-            </button>
-            <button
-              onClick={() => actualizarEstadoMasivo('Entregado')}
-              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-100 text-green-700 hover:bg-green-200"
-            >
-              Marcar como Entregado
-            </button>
-          </div>
-        )}
-        {loading ? (
+        {pestaña === 'referencias' ? (
+          <ModuloReferencias
+            pedidos={pedidos}
+            onRefrescar={fetchPedidos}
+            setProductos={setProductos}
+            setKardex={setKardex}
+            prefill={refPrefill}
+            onPrefillUsado={() => setRefPrefill(null)}
+          />
+        ) : loading ? (
           <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-10 bg-amber-50 rounded-xl animate-pulse" />)}</div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-amber-100">
             <table className="w-full text-sm">
               <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold whitespace-nowrap">
-                    {pestaña === 'pedidos' && (
-                      <input
-                        type="checkbox"
-                        checked={pedidosFiltrados.length > 0 && seleccionados.size === pedidosFiltrados.length}
-                        onChange={toggleSeleccionarTodos}
-                      />
-                    )}
-                  </th>
                   {['Código / Estado', 'Cliente', 'Productos', 'Total', 'Fecha', 'Acciones'].map(h => (
                     <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
                   ))}
@@ -301,21 +260,12 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
               </thead>
               <tbody>
                 {pedidosFiltrados.length === 0 ? (
-                  <tr><td colSpan={7} className="px-4 py-10 text-center text-stone-400">{pedidos.length === 0 ? 'Aún no tienes pedidos' : 'No hay pedidos con los filtros aplicados'}</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-10 text-center text-stone-400">{pedidos.length === 0 ? 'Aún no tienes pedidos' : 'No hay pedidos con los filtros aplicados'}</td></tr>
                 ) : pedidosFiltrados.map(pedido => {
                   const isLoading = loadingId === pedido.id;
                   return (
                     <>
                       <tr key={pedido.id} className="border-t border-amber-50 hover:bg-amber-50/40 transition-colors">
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          {pestaña === 'pedidos' && (
-                            <input
-                              type="checkbox"
-                              checked={seleccionados.has(pedido.id)}
-                              onChange={() => toggleSeleccionado(pedido.id)}
-                            />
-                          )}
-                        </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <p className="font-mono text-xs text-stone-400 mb-1">{pedido.codigo}</p>
                           <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${pedido.estado === 'Pendiente' ? 'bg-yellow-100 text-yellow-700' : pedido.estado === 'En proceso' ? 'bg-orange-100 text-orange-700' : pedido.estado === 'Enviado' ? 'bg-blue-100 text-blue-700' : pedido.estado === 'Entregado' ? 'bg-green-100 text-green-700' : pedido.estado === 'Cancelado' ? 'bg-red-100 text-red-700' : pedido.estado?.includes('Devolucion') ? 'bg-purple-100 text-purple-700' : 'bg-stone-100 text-stone-500'}`}>
@@ -334,7 +284,17 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
                         <td className="px-4 py-3 text-xs text-stone-400 whitespace-nowrap">{new Date(pedido.fecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            {(SIGUIENTES[pedido.estado] ?? []).length === 0 ? (
+                            {pedido.estado === 'En proceso' ? (
+                              <button onClick={() => irAReferencias(pedido.codigo, 'enviar')}
+                                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200 transition">
+                                📮 Enviar
+                              </button>
+                            ) : pedido.estado === 'Enviado' ? (
+                              <button onClick={() => irAReferencias(pedido.codigo, 'confirmar')}
+                                className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-green-100 text-green-700 hover:bg-green-200 transition">
+                                📦 Confirmar entrega
+                              </button>
+                            ) : (SIGUIENTES[pedido.estado] ?? []).length === 0 ? (
                               <span className="text-xs text-stone-300 italic">Finalizado</span>
                             ) : (SIGUIENTES[pedido.estado] ?? []).map(siguiente => (
                               <button key={siguiente} disabled={isLoading} onClick={() => actualizarEstado(pedido, siguiente)}
@@ -363,7 +323,7 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
                       </tr>
                       {pedidoExpandido === pedido.id && (
                         <tr key={`exp-${pedido.id}`}>
-                          <td colSpan={7} className="bg-amber-50/30 px-6 py-4 border-b border-amber-100">
+                          <td colSpan={6} className="bg-amber-50/30 px-6 py-4 border-b border-amber-100">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="bg-white rounded-xl border border-amber-100 p-4 shadow-sm">
                                 <h3 className="font-bold text-stone-700 text-sm mb-3">📦 Productos</h3>

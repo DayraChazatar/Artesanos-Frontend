@@ -4,7 +4,6 @@ import {
   ShoppingCart,
   User,
   LogOut,
-  BarChart3,
   UserCircle,
   Bell,
   Package,
@@ -19,7 +18,6 @@ import { API_BASE } from '../utils/config';
 
 function perfilRoute(role?: string) {
   if (role === 'artisan') return '/perfil-artesano';
-  if (role === 'admin') return '/dashboard';
   return '/perfil';
 }
 
@@ -179,11 +177,6 @@ export function Navbar({ activeTab, onTabChange }: NavbarProps) {
                   <Package className="h-4 w-4" /> Mis Pedidos
                 </Link>
               )}
-              {user?.role === 'admin' && (
-                <Link to="/dashboard" className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium">
-                  <BarChart3 className="h-4 w-4" /> Dashboard
-                </Link>
-              )}
             </div>
           )}
 
@@ -305,7 +298,7 @@ export function Navbar({ activeTab, onTabChange }: NavbarProps) {
                       <p className="font-semibold text-sm truncate">{user?.name}</p>
                       <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                       <span className="inline-block mt-1.5 text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
-                        {user?.role === 'artisan' ? '🧵 Artesano' : user?.role === 'admin' ? '⚙️ Admin' : '🛍️ Cliente'}
+                        {user?.role === 'artisan' ? '🧵 Artesano' : '🛍️ Cliente'}
                       </span>
                     </div>
                     <Link to={perfilRoute(user?.role)} onClick={() => setOpen(false)}
@@ -313,13 +306,6 @@ export function Navbar({ activeTab, onTabChange }: NavbarProps) {
                       <UserCircle className="h-4 w-4 text-gray-500" />
                       {user?.role === 'artisan' ? 'Panel Artesano' : 'Mi Perfil'}
                     </Link>
-                    {user?.role === 'admin' && (
-                      <Link to="/dashboard" onClick={() => setOpen(false)}
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors">
-                        <BarChart3 className="h-4 w-4 text-gray-500" />
-                        Dashboard
-                      </Link>
-                    )}
                     <div className="border-t border-gray-100 mt-1" />
                     <button onClick={handleLogout}
                       className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">

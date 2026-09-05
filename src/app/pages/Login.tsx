@@ -7,7 +7,6 @@ import { Button } from '../components/ui/button';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { GoogleLogin } from '@react-oauth/google';
-import { jwtDecode } from 'jwt-decode';
 
 export function Login() {
   const [email,    setEmail]    = useState('');
@@ -18,10 +17,7 @@ export function Login() {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      const destination =
-        user.role === 'artisan' ? '/perfil-artesano'
-        : user.role === 'admin' ? '/dashboard'
-        : '/catalogo';
+      const destination = user.role === 'artisan' ? '/perfil-artesano' : '/catalogo';
       navigate(destination);
     }
   }, [isAuthenticated, user, navigate]);
@@ -33,10 +29,7 @@ export function Login() {
       // login() ya guarda el user con email en AuthContext,
       // no hace falta volver a hacer localStorage.setItem aquí
       toast.success('¡Bienvenido de nuevo!');
-      const destination =
-        result.user.role === 'artisan' ? '/perfil-artesano'
-        : result.user.role === 'admin' ? '/dashboard'
-        : '/catalogo';
+      const destination = result.user.role === 'artisan' ? '/perfil-artesano' : '/catalogo';
       navigate(destination);
     } catch (error: any) {
       toast.error(error.message || 'Credenciales incorrectas');
@@ -44,20 +37,17 @@ export function Login() {
   };
 
   const handleGoogleSuccess = async (credentialResponse: any) => {
-    try {
-      const decoded: any = jwtDecode(credentialResponse.credential);
-      const googleUser = {
-        id:           decoded.sub,
-        name:         decoded.name,
-        email:        decoded.email,
-        role:         'customer' as const,
-        profileImage: decoded.picture,
-      };
-      loginWithGoogle(googleUser);
-      toast.success(`¡Bienvenido, ${decoded.name}!`);
-      navigate('/catalogo');
-    } catch {
+    if (!credentialResponse?.credential) {
       toast.error('Error al iniciar sesión con Google');
+      return;
+    }
+    try {
+      const result = await loginWithGoogle(credentialResponse.credential);
+      toast.success(`¡Bienvenido, ${result.user.name}!`);
+      const destination = result.user.role === 'artisan' ? '/perfil-artesano' : '/catalogo';
+      navigate(destination);
+    } catch (error: any) {
+      toast.error(error.message || 'Error al iniciar sesión con Google');
     }
   };
 
