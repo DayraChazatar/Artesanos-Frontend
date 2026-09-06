@@ -63,36 +63,53 @@ function StarRating({ value }: { value: number }) {
 }
 
 // ─── Sección: Cambio de Contraseña ───────────────────────────────────────────
-function TabContrasena({ userEmail }: { userEmail: string }) {
+// ✅ Ahora conectado al backend real: POST /api/perfil/cambiar-password/<usuario_id>/
+function TabContrasena({ userEmail, usuarioId }: { userEmail: string; usuarioId: string }) {
   const [form, setForm] = useState({ actual: '', nueva: '', confirmar: '' });
   const [show, setShow] = useState({ actual: false, nueva: false, confirmar: false });
   const [loading, setLoading] = useState(false);
 
   const toggle = (field: keyof typeof show) => setShow(s => ({ ...s, [field]: !s[field] }));
 
-  const handleSubmit = () => {
-    const users: any[] = JSON.parse(localStorage.getItem('users') || '[]');
-    const idx = users.findIndex((u: any) => u.email === userEmail);
-    if (idx === -1) { toast.error('Usuario no encontrado'); return; }
-
-    if (users[idx].password !== form.actual) {
-      toast.error('La contraseña actual no es correcta'); return;
-    }
+  const handleSubmit = async () => {
     if (form.nueva.length < 6) {
-      toast.error('La nueva contraseña debe tener al menos 6 caracteres'); return;
+      toast.error('La nueva contraseña debe tener al menos 6 caracteres');
+      return;
     }
     if (form.nueva !== form.confirmar) {
-      toast.error('Las contraseñas no coinciden'); return;
+      toast.error('Las contraseñas no coinciden');
+      return;
     }
 
     setLoading(true);
-    setTimeout(() => {
-      users[idx].password = form.nueva;
-      localStorage.setItem('users', JSON.stringify(users));
+    try {
+      const token = localStorage.getItem('token') ?? '';
+      const res = await fetch(`${API_BASE}/perfil/cambiar-password/${usuarioId}/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Token ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          password_actual: form.actual,
+          password_nueva: form.nueva,
+          password_confirmar: form.confirmar,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error ?? 'No se pudo cambiar la contraseña');
+        return;
+      }
+
       setForm({ actual: '', nueva: '', confirmar: '' });
+      toast.success(data.mensaje ?? 'Contraseña actualizada correctamente ✓');
+    } catch {
+      toast.error('Error de conexión');
+    } finally {
       setLoading(false);
-      toast.success('Contraseña actualizada correctamente ✓');
-    }, 800);
+    }
   };
 
   const fields = [
@@ -803,7 +820,12 @@ export function Profile() {
             )}
 
             {activeTab === 'pedidos' && <TabPedidos userId={String(localStorage.getItem('usuario_id') ?? '')} />}
-            {activeTab === 'contrasena' && <TabContrasena userEmail={user.email} />}
+            {activeTab === 'contrasena' && (
+              <TabContrasena
+                userEmail={user.email}
+                usuarioId={String(localStorage.getItem('usuario_id') ?? '')}
+              />
+            )}
             {activeTab === 'favoritos' && <TabFavoritos userEmail={user.email} />}
             {activeTab === 'resenas' && <TabResenas userEmail={user.email} />}
             {activeTab === 'notificaciones' && <TabNotificaciones userEmail={user.email} />}

@@ -5,33 +5,58 @@ import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
-import { ShoppingCart, ArrowLeft, MessageCircle, Heart, Star } from 'lucide-react';
+import {
+  ShoppingCart,
+  ArrowLeft,
+  MessageCircle,
+  Heart,
+  Star,
+} from 'lucide-react';
 import { products } from '../data/products';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { API_BASE } from '../utils/config';
 
-
 const BASE = API_BASE;
 
-// ── Estrellas visuales ────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// ESTRELLAS VISUALES
+// ─────────────────────────────────────────────────────────────────────────────
+
 function StarRating({ value }: { value: number }) {
   return (
     <div className="flex gap-0.5">
-      {[1,2,3,4,5].map(s => (
-        <Star key={s} className={`h-4 w-4 ${s <= value ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200 fill-gray-200'}`} />
+      {[1, 2, 3, 4, 5].map((s) => (
+        <Star
+          key={s}
+          className={`h-4 w-4 ${
+            s <= value
+              ? 'text-yellow-400 fill-yellow-400'
+              : 'text-gray-200 fill-gray-200'
+          }`}
+        />
       ))}
     </div>
   );
 }
 
-// ── Estrellas interactivas ────────────────────────────────────────────────────
-function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// ESTRELLAS INTERACTIVAS
+// ─────────────────────────────────────────────────────────────────────────────
+
+function StarPicker({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
   const [hovered, setHovered] = useState(0);
+
   return (
     <div className="flex gap-1">
-      {[1,2,3,4,5].map(s => (
+      {[1, 2, 3, 4, 5].map((s) => (
         <button
           key={s}
           type="button"
@@ -40,48 +65,104 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
           onClick={() => onChange(s)}
           className="transition-transform hover:scale-110"
         >
-          <Star className={`h-7 w-7 ${s <= (hovered || value) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 fill-gray-300'}`} />
+          <Star
+            className={`h-7 w-7 ${
+              s <= (hovered || value)
+                ? 'text-yellow-400 fill-yellow-400'
+                : 'text-gray-300 fill-gray-300'
+            }`}
+          />
         </button>
       ))}
     </div>
   );
 }
 
-// ── Sección Reseñas ───────────────────────────────────────────────────────────
-function ProductReviews({ productId, productName }: { productId: string; productName: string }) {
+// ─────────────────────────────────────────────────────────────────────────────
+// SECCIÓN RESEÑAS
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ProductReviews({
+  productId,
+  productName,
+}: {
+  productId: string;
+  productName: string;
+}) {
   const { user } = useAuth();
+
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [refresh, setRefresh] = useState(0);
 
-  const allUsers: any[] = JSON.parse(localStorage.getItem('users') || '[]');
+  const allUsers: any[] = JSON.parse(
+    localStorage.getItem('users') || '[]'
+  );
 
   const allReviews = allUsers.flatMap((u: any) => {
-    const userReviews: any[] = JSON.parse(localStorage.getItem(`reviews_${u.email}`) || '[]');
+    const userReviews: any[] = JSON.parse(
+      localStorage.getItem(`reviews_${u.email}`) || '[]'
+    );
+
     return userReviews
       .filter((r: any) => r.productId === productId)
-      .map((r: any) => ({ ...r, userName: u.name }));
+      .map((r: any) => ({
+        ...r,
+        userName: u.name,
+      }));
   });
 
   const userAlreadyReviewed = user
     ? (() => {
-        const userReviews: any[] = JSON.parse(localStorage.getItem(`reviews_${user.email}`) || '[]');
-        return userReviews.some((r: any) => r.productId === productId);
+        const userReviews: any[] = JSON.parse(
+          localStorage.getItem(`reviews_${user.email}`) || '[]'
+        );
+
+        return userReviews.some(
+          (r: any) => r.productId === productId
+        );
       })()
     : false;
 
-  const avgRating = allReviews.length > 0
-    ? allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length
-    : 0;
+  const avgRating =
+    allReviews.length > 0
+      ? allReviews.reduce(
+          (sum, r) => sum + r.rating,
+          0
+        ) / allReviews.length
+      : 0;
 
   const handleSubmit = () => {
-    if (!user) { toast.error('Inicia sesión para dejar una reseña'); return; }
-    if (rating === 0) { toast.error('Selecciona una calificación'); return; }
-    if (comment.trim().length < 5) { toast.error('Escribe un comentario más detallado'); return; }
+    if (!user) {
+      toast.error(
+        'Inicia sesión para dejar una reseña'
+      );
+      return;
+    }
+
+    if (rating === 0) {
+      toast.error(
+        'Selecciona una calificación'
+      );
+      return;
+    }
+
+    if (comment.trim().length < 5) {
+      toast.error(
+        'Escribe un comentario más detallado'
+      );
+      return;
+    }
 
     setSubmitting(true);
-    const saved: any[] = JSON.parse(localStorage.getItem(`reviews_${user.email}`) || '[]');
+
+    const saved: any[] = JSON.parse(
+      localStorage.getItem(
+        `reviews_${user.email}`
+      ) || '[]'
+    );
+
     const newReview = {
       id: Date.now().toString(),
       productId,
@@ -90,69 +171,118 @@ function ProductReviews({ productId, productName }: { productId: string; product
       comment: comment.trim(),
       date: new Date().toISOString(),
     };
-    localStorage.setItem(`reviews_${user.email}`, JSON.stringify([...saved, newReview]));
+
+    localStorage.setItem(
+      `reviews_${user.email}`,
+      JSON.stringify([
+        ...saved,
+        newReview,
+      ])
+    );
+
     setRating(0);
     setComment('');
     setSubmitting(false);
-    setRefresh(r => r + 1);
+    setRefresh((r) => r + 1);
+
     toast.success('¡Reseña publicada!');
   };
 
   return (
     <div className="mt-12">
       <div className="flex items-center gap-4 mb-6">
-        <h2 className="text-2xl">Reseñas del Producto</h2>
+        <h2 className="text-2xl">
+          Reseñas del Producto
+        </h2>
+
         {allReviews.length > 0 && (
           <div className="flex items-center gap-2 bg-orange-50 px-3 py-1.5 rounded-full">
-            <StarRating value={Math.round(avgRating)} />
+            <StarRating
+              value={Math.round(avgRating)}
+            />
+
             <span className="text-sm font-semibold text-orange-700">
-              {avgRating.toFixed(1)} ({allReviews.length} {allReviews.length === 1 ? 'reseña' : 'reseñas'})
+              {avgRating.toFixed(1)} (
+              {allReviews.length}{' '}
+              {allReviews.length === 1
+                ? 'reseña'
+                : 'reseñas'}
+              )
             </span>
           </div>
         )}
       </div>
 
       {/* Formulario nueva reseña */}
-      {user?.role === 'customer' && !userAlreadyReviewed && (
-        <Card className="mb-6 border-orange-100">
-          <CardContent className="p-5">
-            <h3 className="font-semibold text-gray-800 mb-4">Escribe tu reseña</h3>
-            <div className="space-y-4">
-              <div>
-                <Label className="mb-2 block text-sm text-gray-600">Calificación</Label>
-                <StarPicker value={rating} onChange={setRating} />
-              </div>
-              <div>
-                <Label className="mb-2 block text-sm text-gray-600">Comentario</Label>
-                <Textarea
-                  value={comment}
-                  onChange={e => setComment(e.target.value)}
-                  placeholder="¿Qué te pareció el producto? Comparte tu experiencia..."
-                  rows={3}
-                  className="resize-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-              <Button
-                onClick={handleSubmit}
-                disabled={submitting || rating === 0}
-                className="bg-orange-600 hover:bg-orange-700 text-white"
-              >
-                {submitting ? 'Publicando...' : 'Publicar Reseña'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {user?.role === 'customer' &&
+        !userAlreadyReviewed && (
+          <Card className="mb-6 border-orange-100">
+            <CardContent className="p-5">
+              <h3 className="font-semibold text-gray-800 mb-4">
+                Escribe tu reseña
+              </h3>
 
-      {user?.role === 'customer' && userAlreadyReviewed && (
-        <div className="mb-6 bg-green-50 border border-green-100 rounded-xl px-4 py-3 text-sm text-green-700">
-          ✓ Ya dejaste tu reseña para este producto.
-        </div>
-      )}
+              <div className="space-y-4">
+                <div>
+                  <Label className="mb-2 block text-sm text-gray-600">
+                    Calificación
+                  </Label>
+
+                  <StarPicker
+                    value={rating}
+                    onChange={setRating}
+                  />
+                </div>
+
+                <div>
+                  <Label className="mb-2 block text-sm text-gray-600">
+                    Comentario
+                  </Label>
+
+                  <Textarea
+                    value={comment}
+                    onChange={(e) =>
+                      setComment(e.target.value)
+                    }
+                    placeholder="¿Qué te pareció el producto? Comparte tu experiencia..."
+                    rows={3}
+                    className="resize-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleSubmit}
+                  disabled={
+                    submitting ||
+                    rating === 0
+                  }
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                >
+                  {submitting
+                    ? 'Publicando...'
+                    : 'Publicar Reseña'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+      {user?.role === 'customer' &&
+        userAlreadyReviewed && (
+          <div className="mb-6 bg-green-50 border border-green-100 rounded-xl px-4 py-3 text-sm text-green-700">
+            ✓ Ya dejaste tu reseña para este producto.
+          </div>
+        )}
 
       {!user && (
         <div className="mb-6 bg-orange-50 border border-orange-100 rounded-xl px-4 py-3 text-sm text-orange-700">
-          <Link to="/login" className="font-semibold underline">Inicia sesión</Link> para dejar una reseña.
+          <Link
+            to="/login"
+            className="font-semibold underline"
+          >
+            Inicia sesión
+          </Link>{' '}
+          para dejar una reseña.
         </div>
       )}
 
@@ -161,8 +291,14 @@ function ProductReviews({ productId, productName }: { productId: string; product
         <Card>
           <CardContent className="py-12 text-center">
             <Star className="h-10 w-10 mx-auto mb-3 text-gray-200" />
-            <p className="text-sm text-gray-500">Este producto aún no tiene reseñas.</p>
-            <p className="text-xs text-gray-400 mt-1">¡Sé el primero en calificarlo!</p>
+
+            <p className="text-sm text-gray-500">
+              Este producto aún no tiene reseñas.
+            </p>
+
+            <p className="text-xs text-gray-400 mt-1">
+              ¡Sé el primero en calificarlo!
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -172,17 +308,31 @@ function ProductReviews({ productId, productName }: { productId: string; product
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
-                    <p className="text-sm font-semibold text-gray-800">{review.userName}</p>
+                    <p className="text-sm font-semibold text-gray-800">
+                      {review.userName}
+                    </p>
+
                     <div className="flex items-center gap-2 mt-1">
-                      <StarRating value={review.rating} />
+                      <StarRating
+                        value={review.rating}
+                      />
+
                       <span className="text-xs text-gray-400">
-                        {new Date(review.date).toLocaleDateString('es-CO', {
-                          day: '2-digit', month: 'long', year: 'numeric'
-                        })}
+                        {new Date(
+                          review.date
+                        ).toLocaleDateString(
+                          'es-CO',
+                          {
+                            day: '2-digit',
+                            month: 'long',
+                            year: 'numeric',
+                          }
+                        )}
                       </span>
                     </div>
                   </div>
                 </div>
+
                 <p className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2 mt-2">
                   {review.comment}
                 </p>
@@ -195,140 +345,421 @@ function ProductReviews({ productId, productName }: { productId: string; product
   );
 }
 
-// ── Componente Principal ──────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTE PRINCIPAL
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const { addToCart } = useCart();
   const { user } = useAuth();
+
   const [quantity, setQuantity] = useState(1);
-  const [product, setProduct] = useState<any>(null);
+  const [product, setProduct] =
+    useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  const favKey = `favorites_${user?.email}`;
-  const [isFav, setIsFav] = useState(false);
+  // ─────────────────────────────────────────────────────────────────────────
+  // ESTADOS DE FAVORITOS
+  // ─────────────────────────────────────────────────────────────────────────
 
-  // ── Cargar producto desde el backend ──────────────────────────────────
+  const [isFav, setIsFav] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] =
+    useState(false);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CARGAR PRODUCTO DESDE EL BACKEND
+  // ─────────────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     const fetchProducto = async () => {
       try {
-       const res = await fetch(`${API_BASE}/productos/${id}/`);
-        if (!res.ok) throw new Error('No encontrado');
-        const data = await res.json();
-        setProduct(data);
-        // Verificar si está en favoritos
-        if (user?.email) {
-          const saved: any[] = JSON.parse(localStorage.getItem(favKey) || '[]');
-          setIsFav(saved.some((f: any) => String(f.id) === String(data.id)));
+        const res = await fetch(
+          `${API_BASE}/productos/${id}/`
+        );
+
+        if (!res.ok) {
+          throw new Error(
+            'No encontrado'
+          );
         }
-      } catch {
+
+        const data = await res.json();
+
+        setProduct(data);
+      } catch (error) {
+        console.error(
+          'Error cargando producto:',
+          error
+        );
+
         setProduct(null);
       } finally {
         setLoading(false);
       }
     };
+
     fetchProducto();
   }, [id]);
 
-  const toggleFavorite = () => {
-    if (!user) { toast.error('Inicia sesión para guardar favoritos'); return; }
-    const saved: any[] = JSON.parse(localStorage.getItem(favKey) || '[]');
-    if (isFav) {
-      localStorage.setItem(favKey, JSON.stringify(saved.filter((f: any) => String(f.id) !== String(product.id))));
-      setIsFav(false);
-      toast.success('Eliminado de favoritos');
-    } else {
-      localStorage.setItem(favKey, JSON.stringify([...saved, {
-        id:      product.id,
-        name:    product.nombre,
-        price:   product.precio_final,
-        image:   product.imagen_url ?? '',
-        artisan: product.artesano_nombre ?? '',
-      }]));
+  // ─────────────────────────────────────────────────────────────────────────
+  // VERIFICAR SI EL PRODUCTO ESTÁ EN FAVORITOS
+  // ─────────────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const verificarFavorito = async () => {
+      if (!user || !product?.id) {
+        setIsFav(false);
+        return;
+      }
+
+      const token =
+        localStorage.getItem('token');
+
+      if (!token) {
+        setIsFav(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `${API_BASE}/inventario/favoritos/`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Token ${token}`,
+              'Content-Type':
+                'application/json',
+            },
+          }
+        );
+
+        if (!res.ok) {
+          setIsFav(false);
+          return;
+        }
+
+        const favoritos =
+          await res.json();
+
+        const existe =
+          favoritos.some(
+            (favorito: any) =>
+              String(
+                favorito.producto
+              ) ===
+              String(product.id)
+          );
+
+        setIsFav(existe);
+      } catch (error) {
+        console.error(
+          'Error verificando favorito:',
+          error
+        );
+
+        setIsFav(false);
+      }
+    };
+
+    verificarFavorito();
+  }, [user, product]);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // AGREGAR / QUITAR FAVORITO
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const toggleFavorite = async () => {
+    if (!user) {
+      toast.error(
+        'Inicia sesión para guardar favoritos'
+      );
+      return;
+    }
+
+    if (!product?.id) {
+      toast.error(
+        'No se pudo identificar el producto'
+      );
+      return;
+    }
+
+    const token =
+      localStorage.getItem('token');
+
+    if (!token) {
+      toast.error(
+        'Tu sesión ha expirado. Inicia sesión nuevamente'
+      );
+      return;
+    }
+
+    setFavoriteLoading(true);
+
+    try {
+      // ───────────────────────────────────────
+      // QUITAR DE FAVORITOS
+      // ───────────────────────────────────────
+
+      if (isFav) {
+        const res = await fetch(
+          `${API_BASE}/inventario/favoritos/quitar/${product.id}/`,
+          {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Token ${token}`,
+              'Content-Type':
+                'application/json',
+            },
+          }
+        );
+
+        if (!res.ok) {
+          throw new Error(
+            'No se pudo eliminar el favorito'
+          );
+        }
+
+        setIsFav(false);
+
+        toast.success(
+          'Eliminado de favoritos'
+        );
+
+        return;
+      }
+
+      // ───────────────────────────────────────
+      // AGREGAR A FAVORITOS
+      // ───────────────────────────────────────
+
+      const res = await fetch(
+        `${API_BASE}/inventario/favoritos/agregar/`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Token ${token}`,
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({
+            producto_id: product.id,
+          }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(
+          data.error ||
+            'No se pudo guardar el favorito'
+        );
+      }
+
       setIsFav(true);
-      toast.success('Guardado en favoritos ❤️');
+
+      toast.success(
+        'Guardado en favoritos'
+      );
+    } catch (error: any) {
+      console.error(
+        'Error con favoritos:',
+        error
+      );
+
+      toast.error(
+        error.message ||
+          'Ocurrió un error con favoritos'
+      );
+    } finally {
+      setFavoriteLoading(false);
     }
   };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CARGANDO
+  // ─────────────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-20 text-center text-amber-700">
-        <span className="animate-spin text-3xl inline-block">⏳</span>
-        <p className="mt-4 text-sm">Cargando producto...</p>
+        <span className="animate-spin text-3xl inline-block">
+          ⏳
+        </span>
+
+        <p className="mt-4 text-sm">
+          Cargando producto...
+        </p>
       </div>
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // PRODUCTO NO ENCONTRADO
+  // ─────────────────────────────────────────────────────────────────────────
+
   if (!product) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <h2 className="text-2xl mb-4">Producto no encontrado</h2>
+        <h2 className="text-2xl mb-4">
+          Producto no encontrado
+        </h2>
+
         <Button asChild>
-          <Link to="/catalogo">Volver al catálogo</Link>
+          <Link to="/catalogo">
+            Volver al catálogo
+          </Link>
         </Button>
       </div>
     );
   }
 
-  // Mapear campos del backend al formato que usa el resto del componente
-  const precio     = Number(product.precio_final ?? product.precio_neto ?? 0);
-  const descuento  = product.descuento ? product.valor_descuento : 0;
+  // ─────────────────────────────────────────────────────────────────────────
+  // MAPEAR CAMPOS DEL BACKEND
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const precio = Number(
+    product.precio_final ??
+      product.precio_neto ??
+      0
+  );
+
+  const descuento = product.descuento
+    ? product.valor_descuento
+    : 0;
+
   const precioFinal = descuento
-    ? Math.round(precio * (1 - descuento / 100))
+    ? Math.round(
+        precio *
+          (1 - descuento / 100)
+      )
     : null;
-  const stock = Math.max(0, product.cantidad_disponible ?? product.cantidad ?? 0);
+
+  const stock = Math.max(
+    0,
+    product.cantidad_disponible ??
+      product.cantidad ??
+      0
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // AGREGAR AL CARRITO
+  // ─────────────────────────────────────────────────────────────────────────
 
   const handleAddToCart = () => {
     if (quantity > stock) {
-      toast.error('No hay suficiente stock disponible');
+      toast.error(
+        'No hay suficiente stock disponible'
+      );
       return;
     }
-    addToCart({
-      id:          String(product.id),
-      name:        product.nombre,
-      description: product.categoria_nombre ?? '',
-      price:       precioFinal ?? precio,
-      image:       product.imagen_url ?? '',
-      category:    product.categoria_nombre ?? '',
-      artisan:     product.artesano_nombre ?? '',
-      stock:       stock,
-    }, quantity);
-    toast.success(`${product.nombre} agregado al carrito`);
+
+    addToCart(
+      {
+        id: String(product.id),
+        name: product.nombre,
+        description:
+          product.categoria_nombre ?? '',
+        price:
+          precioFinal ?? precio,
+        image:
+          product.imagen_url ?? '',
+        category:
+          product.categoria_nombre ?? '',
+        artisan:
+          product.artesano_nombre ?? '',
+        stock: stock,
+      },
+      quantity
+    );
+
+    toast.success(
+      `${product.nombre} agregado al carrito`
+    );
   };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // COMPRAR AHORA
+  // ─────────────────────────────────────────────────────────────────────────
 
   const handleBuyNow = () => {
     handleAddToCart();
     navigate('/carrito');
   };
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // CONTACTAR ARTESANO
+  // ─────────────────────────────────────────────────────────────────────────
+
   const handleContactArtisan = async () => {
-  if (!product.artesano_telefono) {
-    toast.error('Este artesano no tiene un número de contacto registrado');
-    return;
-  }
+    if (!product.artesano_telefono) {
+      toast.error(
+        'Este artesano no tiene un número de contacto registrado'
+      );
+      return;
+    }
 
-  // Registrar el evento de contacto para métricas de visibilidad
-  await fetch(`${BASE}/contactos/registrar/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      artesano_id: product.artesano,
-      cliente_id: user?.id ?? null,
-      producto_id: product.id,
-    }),
-  });
+    // Registrar contacto para métricas
+    try {
+      await fetch(
+        `${BASE}/contactos/registrar/`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type':
+              'application/json',
+          },
+          body: JSON.stringify({
+            artesano_id:
+              product.artesano,
+            cliente_id:
+              user?.id ?? null,
+            producto_id:
+              product.id,
+          }),
+        }
+      );
+    } catch (error) {
+      console.error(
+        'Error registrando contacto:',
+        error
+      );
+    }
 
-  const telefono = product.artesano_telefono.replace(/\D/g, ''); // solo números
-  const message = encodeURIComponent(`Hola, estoy interesado en el producto: ${product.nombre}`);
-  window.open(`https://wa.me/57${telefono}?text=${message}`, '_blank');
-};
-  
+    const telefono =
+      product.artesano_telefono.replace(
+        /\D/g,
+        ''
+      );
+
+    const message =
+      encodeURIComponent(
+        `Hola, estoy interesado en el producto: ${product.nombre}`
+      );
+
+    window.open(
+      `https://wa.me/57${telefono}?text=${message}`,
+      '_blank'
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div className="py-8 bg-gray-50 min-h-[calc(100vh-4rem)]">
       <div className="container mx-auto px-4">
-        <Button variant="ghost" className="mb-6" asChild>
+
+        {/* Volver */}
+        <Button
+          variant="ghost"
+          className="mb-6"
+          asChild
+        >
           <Link to="/catalogo">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver al catálogo
@@ -337,126 +768,291 @@ export function ProductDetail() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-          {/* Imagen */}
+          {/* ─────────────────────────────────────
+              IMAGEN DEL PRODUCTO
+          ───────────────────────────────────── */}
+
           <div className="relative">
             <img
-              src={product.imagen_url || 'https://via.placeholder.com/600x400'}
+              src={
+                product.imagen_url ||
+                'https://via.placeholder.com/600x400'
+              }
               alt={product.nombre}
               className="w-full rounded-lg shadow-lg object-contain bg-white max-h-[500px]"
             />
+
+            {/* Descuento */}
             {descuento > 0 && (
               <span className="absolute top-4 right-4 bg-gradient-to-r from-red-500 to-red-700 text-white text-sm font-bold px-4 py-2 rounded-full shadow-lg">
                 🏷️ -{descuento}% descuento
               </span>
             )}
+
+            {/* ────────────────────────────────
+                BOTÓN FAVORITOS
+            ──────────────────────────────── */}
+
             {user?.role === 'customer' && (
-              <button onClick={toggleFavorite}
-                className={`absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 rounded-full shadow-lg font-medium text-sm transition-all duration-200
-                  ${isFav ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-white text-gray-500 hover:text-red-500 border border-gray-200'}`}>
-                <Heart className={`h-4 w-4 ${isFav ? 'fill-white' : ''}`} />
-                {isFav ? 'Guardado en favoritos' : 'Guardar en favoritos'}
+              <button
+                onClick={
+                  toggleFavorite
+                }
+                disabled={
+                  favoriteLoading
+                }
+                className={`
+                  absolute bottom-4 right-4
+                  flex items-center gap-2
+                  px-4 py-2
+                  rounded-full
+                  shadow-lg
+                  font-medium
+                  text-sm
+                  transition-all duration-200
+
+                  ${
+                    isFav
+                      ? 'bg-red-500 text-white hover:bg-red-600'
+                      : 'bg-white text-gray-500 hover:text-red-500 border border-gray-200'
+                  }
+
+                  ${
+                    favoriteLoading
+                      ? 'opacity-60 cursor-not-allowed'
+                      : ''
+                  }
+                `}
+              >
+                <Heart
+                  className={`
+                    h-4 w-4
+                    ${
+                      isFav
+                        ? 'fill-white'
+                        : ''
+                    }
+                  `}
+                />
+
+                {favoriteLoading
+                  ? 'Guardando...'
+                  : isFav
+                    ? 'Guardado en favoritos'
+                    : 'Guardar en favoritos'}
               </button>
             )}
           </div>
 
-          {/* Info */}
+          {/* ─────────────────────────────────────
+              INFORMACIÓN DEL PRODUCTO
+          ───────────────────────────────────── */}
+
           <div>
+
+            {/* Categoría */}
             <div className="mb-4 flex items-center gap-2 flex-wrap">
               <span className="text-sm bg-orange-100 text-orange-700 px-3 py-1 rounded">
-                {product.categoria_nombre ?? '—'}
+                {product.categoria_nombre ??
+                  '—'}
               </span>
+
               {descuento > 0 && (
-                <span className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded font-medium">¡En oferta!</span>
+                <span className="text-sm bg-red-100 text-red-700 px-3 py-1 rounded font-medium">
+                  ¡En oferta!
+                </span>
               )}
             </div>
 
-            <h1 className="text-3xl md:text-4xl mb-4">{product.nombre}</h1>
+            {/* Nombre */}
+            <h1 className="text-3xl md:text-4xl mb-4">
+              {product.nombre}
+            </h1>
+
+            {/* ─────────────────────────────
+                CARD PRECIO / COMPRA
+            ───────────────────────────── */}
 
             <Card className="mb-6">
               <CardContent className="p-4">
+
                 <div className="flex justify-between items-center mb-4">
+
+                  {/* Precio */}
                   <div className="flex flex-col">
+
                     {precioFinal ? (
                       <>
                         <span className="text-gray-400 line-through text-lg font-medium">
-                          ${precio.toLocaleString('es-CO')}
+                          $
+                          {precio.toLocaleString(
+                            'es-CO'
+                          )}
                         </span>
+
                         <span className="text-3xl text-red-600 font-bold">
-                          ${precioFinal.toLocaleString('es-CO')}
+                          $
+                          {precioFinal.toLocaleString(
+                            'es-CO'
+                          )}
                         </span>
                       </>
                     ) : (
                       <span className="text-3xl text-orange-600 font-semibold">
-                        ${precio.toLocaleString('es-CO')}
+                        $
+                        {precio.toLocaleString(
+                          'es-CO'
+                        )}
                       </span>
                     )}
+
                   </div>
-                  <span className={`text-sm font-medium px-3 py-1 rounded-full ${
-                    stock === 0 ? 'bg-red-100 text-red-700'
-                    : stock <= 5 ? 'bg-yellow-100 text-yellow-700'
-                    : 'bg-green-100 text-green-700'
-                  }`}>
-                    {stock === 0 ? 'Agotado' : `${stock} disponibles`}
+
+                  {/* Stock */}
+                  <span
+                    className={`text-sm font-medium px-3 py-1 rounded-full ${
+                      stock === 0
+                        ? 'bg-red-100 text-red-700'
+                        : stock <= 5
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : 'bg-green-100 text-green-700'
+                    }`}
+                  >
+                    {stock === 0
+                      ? 'Agotado'
+                      : `${stock} disponibles`}
                   </span>
                 </div>
 
                 <div className="space-y-4">
+
+                  {/* Cantidad */}
                   <div>
-                    <Label htmlFor="quantity">Cantidad</Label>
-                    <Input id="quantity" type="number" min="1" max={stock}
+                    <Label htmlFor="quantity">
+                      Cantidad
+                    </Label>
+
+                    <Input
+                      id="quantity"
+                      type="number"
+                      min="1"
+                      max={stock}
                       value={quantity}
-                      onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-24" />
+                      onChange={(e) =>
+                        setQuantity(
+                          Math.max(
+                            1,
+                            parseInt(
+                              e.target.value
+                            ) || 1
+                          )
+                        )
+                      }
+                      className="w-24"
+                    />
                   </div>
+
+                  {/* Botones compra */}
                   <div className="flex gap-3">
-                    {user?.role === 'artisan' ? (
 
-  <div className="flex-1 bg-orange-50 border border-orange-200 text-orange-700 px-4 py-3 rounded-xl text-sm text-center">
-    Los artesanos pueden explorar productos, pero no realizar compras.
-  </div>
+                    {user?.role ===
+                    'artisan' ? (
+                      <div className="flex-1 bg-orange-50 border border-orange-200 text-orange-700 px-4 py-3 rounded-xl text-sm text-center">
+                        Los artesanos pueden
+                        explorar productos,
+                        pero no realizar
+                        compras.
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={
+                          handleAddToCart
+                        }
+                        disabled={
+                          stock === 0
+                        }
+                        className="flex-1 bg-orange-600 hover:bg-orange-700"
+                      >
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        Agregar al Carrito
+                      </Button>
+                    )}
 
-) : (
-
-  <Button
-    onClick={handleAddToCart}
-    disabled={stock === 0}
-    className="flex-1 bg-orange-600 hover:bg-orange-700"
-  >
-    <ShoppingCart className="mr-2 h-4 w-4" />
-    Agregar al Carrito
-  </Button>
-
-)}
-                    {user?.role !== 'artisan' && (
-                      <Button onClick={handleBuyNow} disabled={stock === 0}
-                        variant="outline" className="flex-1">
+                    {user?.role !==
+                      'artisan' && (
+                      <Button
+                        onClick={
+                          handleBuyNow
+                        }
+                        disabled={
+                          stock === 0
+                        }
+                        variant="outline"
+                        className="flex-1"
+                      >
                         Comprar Ahora
                       </Button>
                     )}
+
                   </div>
-                  {user?.role !== 'artisan' && (
-                    <Button onClick={handleContactArtisan} variant="outline" className="w-full">
-                      <MessageCircle className="mr-2 h-4 w-4" /> Contactar al Artesano
+
+                  {/* Contactar artesano */}
+                  {user?.role !==
+                    'artisan' && (
+                    <Button
+                      onClick={
+                        handleContactArtisan
+                      }
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <MessageCircle className="mr-2 h-4 w-4" />
+                      Contactar al Artesano
                     </Button>
                   )}
+
                 </div>
               </CardContent>
             </Card>
 
+            {/* ─────────────────────────────
+                INFORMACIÓN ARTESANO
+            ───────────────────────────── */}
+
             <Card>
               <CardContent className="p-4">
-                <h3 className="font-semibold mb-2">Artesano</h3>
-                <p className="text-gray-600">{product.artesano_nombre ?? '—'}</p>
+                <h3 className="font-semibold mb-2">
+                  Artesano
+                </h3>
+
+                <p className="text-gray-600">
+                  {product.artesano_nombre ??
+                    '—'}
+                </p>
+
                 <p className="text-sm text-gray-500 mt-2">
-                  Cada producto es hecho a mano con dedicación y técnicas tradicionales.
+                  Cada producto es hecho a mano
+                  con dedicación y técnicas
+                  tradicionales.
                 </p>
               </CardContent>
             </Card>
+
           </div>
         </div>
 
-        {/* Reseñas */}
-        <ProductReviews productId={String(product.id)} productName={product.nombre} />
+        {/* ─────────────────────────────────────
+            RESEÑAS
+        ───────────────────────────────────── */}
+
+        <ProductReviews
+          productId={String(
+            product.id
+          )}
+          productName={
+            product.nombre
+          }
+        />
 
       </div>
     </div>
