@@ -16,6 +16,7 @@ import {
   XCircle,
   RotateCcw,
   Ban,
+  BarChart3,
 } from 'lucide-react';
 
 import { useCart } from '../context/CartContext';
@@ -423,7 +424,6 @@ export function Navbar({
                   Mis Pedidos
                 </Link>
               )}
-<<<<<<< HEAD
 
               {user?.role === 'admin' && (
                 <Link
@@ -434,8 +434,6 @@ export function Navbar({
                   Dashboard
                 </Link>
               )}
-=======
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
             </div>
           )}
 
@@ -876,15 +874,11 @@ export function Navbar({
                       </p>
 
                       <span className="inline-block mt-1.5 text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
-<<<<<<< HEAD
                         {user?.role === 'artisan'
                           ? '🧵 Artesano'
                           : user?.role === 'admin'
                           ? '⚙️ Admin'
                           : '🛍️ Cliente'}
-=======
-                        {user?.role === 'artisan' ? '🧵 Artesano' : '🛍️ Cliente'}
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
                       </span>
 
                     </div>
@@ -904,7 +898,6 @@ export function Navbar({
                         ? 'Panel Artesano'
                         : 'Mi Perfil'}
                     </Link>
-<<<<<<< HEAD
 
                     {user?.role === 'admin' && (
                       <Link
@@ -919,8 +912,6 @@ export function Navbar({
                       </Link>
                     )}
 
-=======
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
                     <div className="border-t border-gray-100 mt-1" />
 
                     <button

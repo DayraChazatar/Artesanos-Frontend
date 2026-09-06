@@ -47,12 +47,9 @@ function StarRating({ value }: { value: number }) {
 }
 
 // ─── Sección: Cambio de Contraseña ───────────────────────────────────────────
-<<<<<<< HEAD
-// ✅ Ahora conectado al backend real: POST /api/perfil/cambiar-password/<usuario_id>/
-function TabContrasena({ userEmail, usuarioId }: { userEmail: string; usuarioId: string }) {
-=======
+
 function TabContrasena({ userId }: { userId: string }) {
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
+
   const [form, setForm] = useState({ actual: '', nueva: '', confirmar: '' });
   const [show, setShow] = useState({ actual: false, nueva: false, confirmar: false });
   const [loading, setLoading] = useState(false);
@@ -60,12 +57,11 @@ function TabContrasena({ userId }: { userId: string }) {
   const toggle = (field: keyof typeof show) => setShow(s => ({ ...s, [field]: !s[field] }));
 
   const handleSubmit = async () => {
-<<<<<<< HEAD
-=======
+
     if (!form.actual || !form.nueva || !form.confirmar) {
       toast.error('Todos los campos son obligatorios'); return;
     }
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
+
     if (form.nueva.length < 6) {
       toast.error('La nueva contraseña debe tener al menos 6 caracteres');
       return;
@@ -78,11 +74,9 @@ function TabContrasena({ userId }: { userId: string }) {
     setLoading(true);
     try {
       const token = localStorage.getItem('token') ?? '';
-<<<<<<< HEAD
-      const res = await fetch(`${API_BASE}/perfil/cambiar-password/${usuarioId}/`, {
-=======
+
       const res = await fetch(`${API_BASE}/perfil/cambiar-password/${userId}/`, {
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
+
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -95,7 +89,7 @@ function TabContrasena({ userId }: { userId: string }) {
         }),
       });
       const data = await res.json();
-<<<<<<< HEAD
+
 
       if (!res.ok) {
         toast.error(data.error ?? 'No se pudo cambiar la contraseña');
@@ -106,13 +100,7 @@ function TabContrasena({ userId }: { userId: string }) {
       toast.success(data.mensaje ?? 'Contraseña actualizada correctamente ✓');
     } catch {
       toast.error('Error de conexión');
-=======
-      if (!res.ok) { toast.error(data.error ?? 'No se pudo cambiar la contraseña'); return; }
-      setForm({ actual: '', nueva: '', confirmar: '' });
-      toast.success('Contraseña actualizada correctamente ✓');
-    } catch {
-      toast.error('Error de conexión con el servidor');
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
+
     } finally {
       setLoading(false);
     }
@@ -712,28 +700,41 @@ export function Profile() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        setPreviewImage(base64);
+    if (!file) return;
 
-        // Guardar en localStorage con la clave del email
-        localStorage.setItem(`profileImage_${user?.email}`, base64);
+    const usuarioId = localStorage.getItem('usuario_id') ?? user?.id;
+    const token = localStorage.getItem('token') ?? '';
 
-        // Actualizar el objeto user en localStorage
-        const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
-        savedUser.profileImage = base64;
-        localStorage.setItem('user', JSON.stringify(savedUser));
+    if (!usuarioId || !token) {
+      toast.error('Debes iniciar sesión de nuevo para cambiar tu foto');
+      return;
+    }
 
-        // Actualizar en el contexto
-        updateProfile({ profileImage: base64 });
+    const formData = new FormData();
+    formData.append('foto', file);
 
-        toast.success('Foto de perfil actualizada');
-      };
-      reader.readAsDataURL(file);
+    try {
+      const res = await fetch(`${API_BASE}/perfil/artesano/${usuarioId}/`, {
+        method: 'PATCH',
+        headers: { Authorization: `Token ${token}` },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        toast.error('No se pudo actualizar la foto de perfil');
+        return;
+      }
+
+      const data = await res.json();
+      const nuevaUrl = data.foto_url || data.foto;
+
+      setPreviewImage(nuevaUrl);
+      updateProfile({ profileImage: nuevaUrl });
+      toast.success('Foto de perfil actualizada');
+    } catch {
+      toast.error('Error de conexión al subir la foto');
     }
   };
 
@@ -890,21 +891,12 @@ export function Profile() {
               </Card>
             )}
 
-            {activeTab === 'pedidos' && <TabPedidos userId={String(localStorage.getItem('usuario_id') ?? '')} />}
-<<<<<<< HEAD
-            {activeTab === 'contrasena' && (
-              <TabContrasena
-                userEmail={user.email}
-                usuarioId={String(localStorage.getItem('usuario_id') ?? '')}
-              />
-            )}
-            {activeTab === 'favoritos' && <TabFavoritos userEmail={user.email} />}
-            {activeTab === 'resenas' && <TabResenas userEmail={user.email} />}
-=======
+            {activeTab === 'pedidos' && <TabPedidos userId={String(localStorage.getItem('usuario_id') ?? user.id)} />}
+
             {activeTab === 'contrasena' && <TabContrasena userId={String(localStorage.getItem('usuario_id') ?? user.id)} />}
             {activeTab === 'favoritos' && <TabFavoritos />}
             {activeTab === 'resenas' && <TabResenas />}
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
+
             {activeTab === 'notificaciones' && <TabNotificaciones userEmail={user.email} />}
           </div>
         </div>

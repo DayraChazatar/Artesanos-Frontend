@@ -5,7 +5,6 @@ import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
-<<<<<<< HEAD
 import {
   ShoppingCart,
   ArrowLeft,
@@ -13,10 +12,6 @@ import {
   Heart,
   Star,
 } from 'lucide-react';
-import { products } from '../data/products';
-=======
-import { ShoppingCart, ArrowLeft, MessageCircle, Heart, Star } from 'lucide-react';
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -24,12 +19,7 @@ import { API_BASE } from '../utils/config';
 
 const BASE = API_BASE;
 
-<<<<<<< HEAD
-// ─────────────────────────────────────────────────────────────────────────────
-// ESTRELLAS VISUALES
-// ─────────────────────────────────────────────────────────────────────────────
 
-=======
 /** Extrae un mensaje de error legible de una respuesta de error de DRF, sin importar la forma exacta que tenga. */
 function extraerError(data: any, fallback: string): string {
   if (!data) return fallback;
@@ -40,7 +30,7 @@ function extraerError(data: any, fallback: string): string {
 }
 
 // ── Estrellas visuales ────────────────────────────────────────────────────────
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
+
 function StarRating({ value }: { value: number }) {
   return (
     <div className="flex gap-0.5">
@@ -95,22 +85,10 @@ function StarPicker({
   );
 }
 
-<<<<<<< HEAD
-// ─────────────────────────────────────────────────────────────────────────────
-// SECCIÓN RESEÑAS
-// ─────────────────────────────────────────────────────────────────────────────
 
-function ProductReviews({
-  productId,
-  productName,
-}: {
-  productId: string;
-  productName: string;
-}) {
-=======
 // ── Sección Reseñas ───────────────────────────────────────────────────────────
-function ProductReviews({ productId }: { productId: string; productName: string }) {
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
+function ProductReviews({ productId }: { productId: string }) {
+
   const { user } = useAuth();
 
   const [rating, setRating] = useState(0);
@@ -119,98 +97,7 @@ function ProductReviews({ productId }: { productId: string; productName: string 
   const [loading, setLoading] = useState(true);
   const [allReviews, setAllReviews] = useState<any[]>([]);
 
-<<<<<<< HEAD
-  const allUsers: any[] = JSON.parse(
-    localStorage.getItem('users') || '[]'
-  );
 
-  const allReviews = allUsers.flatMap((u: any) => {
-    const userReviews: any[] = JSON.parse(
-      localStorage.getItem(`reviews_${u.email}`) || '[]'
-    );
-
-    return userReviews
-      .filter((r: any) => r.productId === productId)
-      .map((r: any) => ({
-        ...r,
-        userName: u.name,
-      }));
-  });
-
-  const userAlreadyReviewed = user
-    ? (() => {
-        const userReviews: any[] = JSON.parse(
-          localStorage.getItem(`reviews_${user.email}`) || '[]'
-        );
-
-        return userReviews.some(
-          (r: any) => r.productId === productId
-        );
-      })()
-    : false;
-
-  const avgRating =
-    allReviews.length > 0
-      ? allReviews.reduce(
-          (sum, r) => sum + r.rating,
-          0
-        ) / allReviews.length
-      : 0;
-
-  const handleSubmit = () => {
-    if (!user) {
-      toast.error(
-        'Inicia sesión para dejar una reseña'
-      );
-      return;
-    }
-
-    if (rating === 0) {
-      toast.error(
-        'Selecciona una calificación'
-      );
-      return;
-    }
-
-    if (comment.trim().length < 5) {
-      toast.error(
-        'Escribe un comentario más detallado'
-      );
-      return;
-    }
-
-    setSubmitting(true);
-
-    const saved: any[] = JSON.parse(
-      localStorage.getItem(
-        `reviews_${user.email}`
-      ) || '[]'
-    );
-
-    const newReview = {
-      id: Date.now().toString(),
-      productId,
-      productName,
-      rating,
-      comment: comment.trim(),
-      date: new Date().toISOString(),
-    };
-
-    localStorage.setItem(
-      `reviews_${user.email}`,
-      JSON.stringify([
-        ...saved,
-        newReview,
-      ])
-    );
-
-    setRating(0);
-    setComment('');
-    setSubmitting(false);
-    setRefresh((r) => r + 1);
-
-    toast.success('¡Reseña publicada!');
-=======
   const fetchReviews = useCallback(async () => {
     setLoading(true);
     try {
@@ -258,7 +145,7 @@ function ProductReviews({ productId }: { productId: string; productName: string 
     } finally {
       setSubmitting(false);
     }
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
+
   };
 
   return (
@@ -383,28 +270,7 @@ function ProductReviews({ productId }: { productId: string; productName: string 
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
-<<<<<<< HEAD
-                    <p className="text-sm font-semibold text-gray-800">
-                      {review.userName}
-                    </p>
 
-                    <div className="flex items-center gap-2 mt-1">
-                      <StarRating
-                        value={review.rating}
-                      />
-
-                      <span className="text-xs text-gray-400">
-                        {new Date(
-                          review.date
-                        ).toLocaleDateString(
-                          'es-CO',
-                          {
-                            day: '2-digit',
-                            month: 'long',
-                            year: 'numeric',
-                          }
-                        )}
-=======
                     <p className="text-sm font-semibold text-gray-800">{review.cliente_nombre}</p>
                     <div className="flex items-center gap-2 mt-1">
                       <StarRating value={review.calificacion} />
@@ -412,7 +278,7 @@ function ProductReviews({ productId }: { productId: string; productName: string 
                         {new Date(review.creado_en).toLocaleDateString('es-CO', {
                           day: '2-digit', month: 'long', year: 'numeric'
                         })}
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
+
                       </span>
                     </div>
                   </div>
@@ -446,13 +312,12 @@ export function ProductDetail() {
     useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-<<<<<<< HEAD
+
   // ─────────────────────────────────────────────────────────────────────────
   // ESTADOS DE FAVORITOS
   // ─────────────────────────────────────────────────────────────────────────
 
-=======
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
+
   const [isFav, setIsFav] = useState(false);
   const [favoriteLoading, setFavoriteLoading] =
     useState(false);
@@ -464,7 +329,7 @@ export function ProductDetail() {
   useEffect(() => {
     const fetchProducto = async () => {
       try {
-<<<<<<< HEAD
+
         const res = await fetch(
           `${API_BASE}/productos/${id}/`
         );
@@ -484,13 +349,7 @@ export function ProductDetail() {
           error
         );
 
-=======
-       const res = await fetch(`${API_BASE}/productos/${id}/`);
-        if (!res.ok) throw new Error('No encontrado');
-        const data = await res.json();
-        setProduct(data);
-      } catch {
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
+
         setProduct(null);
       } finally {
         setLoading(false);
@@ -500,7 +359,7 @@ export function ProductDetail() {
     fetchProducto();
   }, [id]);
 
-<<<<<<< HEAD
+
   // ─────────────────────────────────────────────────────────────────────────
   // VERIFICAR SI EL PRODUCTO ESTÁ EN FAVORITOS
   // ─────────────────────────────────────────────────────────────────────────
@@ -673,48 +532,7 @@ export function ProductDetail() {
       );
     } finally {
       setFavoriteLoading(false);
-=======
-  // ── Verificar si ya está en favoritos (backend real) ────────────────────
-  useEffect(() => {
-    const verificarFavorito = async () => {
-      if (!user?.id || !product?.id) { setIsFav(false); return; }
-      try {
-        const token = localStorage.getItem('token') ?? '';
-        const res = await fetch(`${API_BASE}/favoritos/`, {
-          headers: token ? { Authorization: `Token ${token}` } : {},
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        setIsFav(Array.isArray(data) && data.some((f: any) => String(f.producto) === String(product.id)));
-      } catch { /* no crítico */ }
-    };
-    verificarFavorito();
-  }, [user?.id, product?.id]);
 
-  const toggleFavorite = async () => {
-    if (!user) { toast.error('Inicia sesión para guardar favoritos'); return; }
-    const token = localStorage.getItem('token') ?? '';
-    try {
-      if (isFav) {
-        await fetch(`${API_BASE}/favoritos/producto/${product.id}/`, {
-          method: 'DELETE',
-          headers: token ? { Authorization: `Token ${token}` } : {},
-        });
-        setIsFav(false);
-        toast.success('Eliminado de favoritos');
-      } else {
-        const res = await fetch(`${API_BASE}/favoritos/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Token ${token}` } : {}) },
-          body: JSON.stringify({ producto: product.id }),
-        });
-        if (!res.ok) { toast.error('No se pudo guardar en favoritos'); return; }
-        setIsFav(true);
-        toast.success('Guardado en favoritos ❤️');
-      }
-    } catch {
-      toast.error('Error de conexión con el servidor');
->>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
     }
   };
 
@@ -788,12 +606,12 @@ export function ProductDetail() {
   // AGREGAR AL CARRITO
   // ─────────────────────────────────────────────────────────────────────────
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (): boolean => {
     if (quantity > stock) {
       toast.error(
         'No hay suficiente stock disponible'
       );
-      return;
+      return false;
     }
 
     addToCart(
@@ -818,6 +636,7 @@ export function ProductDetail() {
     toast.success(
       `${product.nombre} agregado al carrito`
     );
+    return true;
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -825,8 +644,9 @@ export function ProductDetail() {
   // ─────────────────────────────────────────────────────────────────────────
 
   const handleBuyNow = () => {
-    handleAddToCart();
-    navigate('/carrito');
+    if (handleAddToCart()) {
+      navigate('/carrito');
+    }
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -1184,14 +1004,7 @@ export function ProductDetail() {
             RESEÑAS
         ───────────────────────────────────── */}
 
-        <ProductReviews
-          productId={String(
-            product.id
-          )}
-          productName={
-            product.nombre
-          }
-        />
+        <ProductReviews productId={String(product.id)} />
 
       </div>
     </div>

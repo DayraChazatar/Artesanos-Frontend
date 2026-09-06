@@ -19,9 +19,18 @@ export function Checkout() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const savedAddress = JSON.parse(
-    localStorage.getItem(`direccion_${user?.email}`) || '{}'
-  );
+const direccionesGuardadas = JSON.parse(
+  localStorage.getItem(`addresses_${user?.email}`) || '[]'
+);
+const principal = direccionesGuardadas.find((a: any) => a.isPrimary) || direccionesGuardadas[0] || {};
+
+const savedAddress = {
+  phone: principal.phone || '',
+  address: principal.street ? `${principal.street}${principal.neighborhood ? `, ${principal.neighborhood}` : ''}` : '',
+  city: principal.city ? `${principal.city}, ${principal.department}` : '',
+  postalCode: '',
+  notes: principal.reference || '',
+};
 
   const [formData, setFormData] = useState({
     name: user?.name || '',
