@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -15,22 +15,6 @@ import {
 import { API_BASE } from '../utils/config';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
-interface FavoriteProduct {
-  id: string;
-  name: string;
-  price: number;
-  image?: string;
-  artisan?: string;
-}
-
-interface Review {
-  id: string;
-  productId: string;
-  productName: string;
-  rating: number;
-  comment: string;
-  date: string;
-}
 
 interface NotificationSettings {
   pedidoConfirmado: boolean;
@@ -63,8 +47,12 @@ function StarRating({ value }: { value: number }) {
 }
 
 // ─── Sección: Cambio de Contraseña ───────────────────────────────────────────
+<<<<<<< HEAD
 // ✅ Ahora conectado al backend real: POST /api/perfil/cambiar-password/<usuario_id>/
 function TabContrasena({ userEmail, usuarioId }: { userEmail: string; usuarioId: string }) {
+=======
+function TabContrasena({ userId }: { userId: string }) {
+>>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
   const [form, setForm] = useState({ actual: '', nueva: '', confirmar: '' });
   const [show, setShow] = useState({ actual: false, nueva: false, confirmar: false });
   const [loading, setLoading] = useState(false);
@@ -72,6 +60,12 @@ function TabContrasena({ userEmail, usuarioId }: { userEmail: string; usuarioId:
   const toggle = (field: keyof typeof show) => setShow(s => ({ ...s, [field]: !s[field] }));
 
   const handleSubmit = async () => {
+<<<<<<< HEAD
+=======
+    if (!form.actual || !form.nueva || !form.confirmar) {
+      toast.error('Todos los campos son obligatorios'); return;
+    }
+>>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
     if (form.nueva.length < 6) {
       toast.error('La nueva contraseña debe tener al menos 6 caracteres');
       return;
@@ -84,7 +78,11 @@ function TabContrasena({ userEmail, usuarioId }: { userEmail: string; usuarioId:
     setLoading(true);
     try {
       const token = localStorage.getItem('token') ?? '';
+<<<<<<< HEAD
       const res = await fetch(`${API_BASE}/perfil/cambiar-password/${usuarioId}/`, {
+=======
+      const res = await fetch(`${API_BASE}/perfil/cambiar-password/${userId}/`, {
+>>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,6 +95,7 @@ function TabContrasena({ userEmail, usuarioId }: { userEmail: string; usuarioId:
         }),
       });
       const data = await res.json();
+<<<<<<< HEAD
 
       if (!res.ok) {
         toast.error(data.error ?? 'No se pudo cambiar la contraseña');
@@ -107,6 +106,13 @@ function TabContrasena({ userEmail, usuarioId }: { userEmail: string; usuarioId:
       toast.success(data.mensaje ?? 'Contraseña actualizada correctamente ✓');
     } catch {
       toast.error('Error de conexión');
+=======
+      if (!res.ok) { toast.error(data.error ?? 'No se pudo cambiar la contraseña'); return; }
+      setForm({ actual: '', nueva: '', confirmar: '' });
+      toast.success('Contraseña actualizada correctamente ✓');
+    } catch {
+      toast.error('Error de conexión con el servidor');
+>>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
     } finally {
       setLoading(false);
     }
@@ -165,20 +171,49 @@ function TabContrasena({ userEmail, usuarioId }: { userEmail: string; usuarioId:
 }
 
 // ─── Sección: Favoritos ───────────────────────────────────────────────────────
-function TabFavoritos({ userEmail }: { userEmail: string }) {
-  const [favorites, setFavorites] = useState<FavoriteProduct[]>([]);
+function TabFavoritos() {
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem(`favorites_${userEmail}`) || '[]');
-    setFavorites(saved);
-  }, [userEmail]);
+  const fetchFavoritos = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token') ?? '';
+      const res = await fetch(`${API_BASE}/favoritos/`, {
+        headers: token ? { Authorization: `Token ${token}` } : {},
+      });
+      const data = await res.json();
+      setFavorites(Array.isArray(data) ? data : []);
+    } catch {
+      setFavorites([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const removeFavorite = (id: string) => {
-    const updated = favorites.filter(f => f.id !== id);
-    setFavorites(updated);
-    localStorage.setItem(`favorites_${userEmail}`, JSON.stringify(updated));
-    toast.success('Eliminado de favoritos');
+  useEffect(() => { fetchFavoritos(); }, [fetchFavoritos]);
+
+  const removeFavorite = async (productoId: number) => {
+    try {
+      const token = localStorage.getItem('token') ?? '';
+      await fetch(`${API_BASE}/favoritos/producto/${productoId}/`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Token ${token}` } : {},
+      });
+      setFavorites(prev => prev.filter(f => f.producto !== productoId));
+      toast.success('Eliminado de favoritos');
+    } catch {
+      toast.error('Error de conexión con el servidor');
+    }
   };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="py-16 text-center text-sm text-gray-400">Cargando favoritos...</CardContent>
+      </Card>
+    );
+  }
 
   if (favorites.length === 0) {
     return (
@@ -205,25 +240,25 @@ function TabFavoritos({ userEmail }: { userEmail: string }) {
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {favorites.map(product => (
-            <div key={product.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-orange-200 transition group">
+          {favorites.map(fav => (
+            <div key={fav.id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-orange-200 transition group">
               <div className="w-14 h-14 rounded-xl bg-orange-50 flex-shrink-0 overflow-hidden">
-                {product.image
-                  ? <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                {fav.producto_imagen_url
+                  ? <img src={fav.producto_imagen_url} alt={fav.producto_nombre} className="w-full h-full object-cover" />
                   : <Package2 className="h-6 w-6 m-auto mt-4 text-orange-300" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">{product.name}</p>
-                {product.artisan && <p className="text-xs text-gray-400 truncate">{product.artisan}</p>}
-                <p className="text-sm font-bold text-orange-600 mt-0.5">${product.price?.toLocaleString('es-CO')}</p>
+                <p className="text-sm font-medium text-gray-800 truncate">{fav.producto_nombre}</p>
+                {fav.artesano_nombre && <p className="text-xs text-gray-400 truncate">{fav.artesano_nombre}</p>}
+                <p className="text-sm font-bold text-orange-600 mt-0.5">${Number(fav.producto_precio ?? 0).toLocaleString('es-CO')}</p>
               </div>
               <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition">
-                <Link to={`/producto/${product.id}`}>
+                <Link to={`/producto/${fav.producto}`}>
                   <button className="p-1.5 rounded-lg hover:bg-orange-50 text-orange-500 transition">
                     <ChevronRight className="h-4 w-4" />
                   </button>
                 </Link>
-                <button onClick={() => removeFavorite(product.id)}
+                <button onClick={() => removeFavorite(fav.producto)}
                   className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition">
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -237,37 +272,73 @@ function TabFavoritos({ userEmail }: { userEmail: string }) {
 }
 
 // ─── Sección: Reseñas ─────────────────────────────────────────────────────────
-function TabResenas({ userEmail }: { userEmail: string }) {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [editing, setEditing] = useState<string | null>(null);
+function TabResenas() {
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
 
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem(`reviews_${userEmail}`) || '[]');
-    setReviews(saved);
-  }, [userEmail]);
+  const fetchResenas = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token') ?? '';
+      const res = await fetch(`${API_BASE}/resenas/?mias=true`, {
+        headers: token ? { Authorization: `Token ${token}` } : {},
+      });
+      const data = await res.json();
+      setReviews(Array.isArray(data) ? data : []);
+    } catch {
+      setReviews([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const saveReviews = (updated: Review[]) => {
-    setReviews(updated);
-    localStorage.setItem(`reviews_${userEmail}`, JSON.stringify(updated));
-  };
+  useEffect(() => { fetchResenas(); }, [fetchResenas]);
 
-  const startEdit = (review: Review) => {
+  const startEdit = (review: any) => {
     setEditing(review.id);
-    setEditText(review.comment);
+    setEditText(review.comentario);
   };
 
-  const saveEdit = (id: string) => {
-    const updated = reviews.map(r => r.id === id ? { ...r, comment: editText } : r);
-    saveReviews(updated);
-    setEditing(null);
-    toast.success('Reseña actualizada');
+  const saveEdit = async (id: number) => {
+    try {
+      const token = localStorage.getItem('token') ?? '';
+      const res = await fetch(`${API_BASE}/resenas/${id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Token ${token}` } : {}) },
+        body: JSON.stringify({ comentario: editText }),
+      });
+      if (!res.ok) { toast.error('No se pudo actualizar la reseña'); return; }
+      setReviews(prev => prev.map(r => r.id === id ? { ...r, comentario: editText } : r));
+      setEditing(null);
+      toast.success('Reseña actualizada');
+    } catch {
+      toast.error('Error de conexión con el servidor');
+    }
   };
 
-  const deleteReview = (id: string) => {
-    saveReviews(reviews.filter(r => r.id !== id));
-    toast.success('Reseña eliminada');
+  const deleteReview = async (id: number) => {
+    try {
+      const token = localStorage.getItem('token') ?? '';
+      await fetch(`${API_BASE}/resenas/${id}/`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Token ${token}` } : {},
+      });
+      setReviews(prev => prev.filter(r => r.id !== id));
+      toast.success('Reseña eliminada');
+    } catch {
+      toast.error('Error de conexión con el servidor');
+    }
   };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="py-16 text-center text-sm text-gray-400">Cargando reseñas...</CardContent>
+      </Card>
+    );
+  }
 
   if (reviews.length === 0) {
     return (
@@ -297,11 +368,11 @@ function TabResenas({ userEmail }: { userEmail: string }) {
           <div key={review.id} className="p-4 rounded-xl border border-gray-100 space-y-2">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-sm font-medium text-gray-800">{review.productName}</p>
+                <p className="text-sm font-medium text-gray-800">{review.producto_nombre}</p>
                 <div className="flex items-center gap-2 mt-1">
-                  <StarRating value={review.rating} />
+                  <StarRating value={review.calificacion} />
                   <span className="text-xs text-gray-400">
-                    {new Date(review.date).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    {new Date(review.creado_en).toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })}
                   </span>
                 </div>
               </div>
@@ -328,7 +399,7 @@ function TabResenas({ userEmail }: { userEmail: string }) {
                 </div>
               </div>
             ) : (
-              <p className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">{review.comment}</p>
+              <p className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">{review.comentario}</p>
             )}
           </div>
         ))}
@@ -713,8 +784,8 @@ export function Profile() {
                 <h3 className="font-bold text-xl mb-1 text-orange-600 tracking-wide">{user.name}</h3>
                 <p className="text-xs text-gray-500 mb-2">{user.email}</p>
                 <span className="inline-block px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
-                  {user.role === 'artisan' ? 'Artesano' : user.role === 'admin' ? 'Administrador' : user.role === 'customer' ? 'Cliente'
-                    : 'Cliente'}                </span>
+                  {user.role === 'artisan' ? 'Artesano' : 'Cliente'}
+                </span>
                 <p className="text-xs text-gray-400 mt-3">Haz clic en la cámara para cambiar tu foto</p>
               </CardContent>
             </Card>
@@ -820,6 +891,7 @@ export function Profile() {
             )}
 
             {activeTab === 'pedidos' && <TabPedidos userId={String(localStorage.getItem('usuario_id') ?? '')} />}
+<<<<<<< HEAD
             {activeTab === 'contrasena' && (
               <TabContrasena
                 userEmail={user.email}
@@ -828,6 +900,11 @@ export function Profile() {
             )}
             {activeTab === 'favoritos' && <TabFavoritos userEmail={user.email} />}
             {activeTab === 'resenas' && <TabResenas userEmail={user.email} />}
+=======
+            {activeTab === 'contrasena' && <TabContrasena userId={String(localStorage.getItem('usuario_id') ?? user.id)} />}
+            {activeTab === 'favoritos' && <TabFavoritos />}
+            {activeTab === 'resenas' && <TabResenas />}
+>>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
             {activeTab === 'notificaciones' && <TabNotificaciones userEmail={user.email} />}
           </div>
         </div>

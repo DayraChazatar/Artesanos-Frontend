@@ -50,37 +50,52 @@ export function Catalog() {
       setPriceRange([0, maxProductPrice]);
     }
   }, [maxProductPrice]);
-  // ── Favoritos ──────────────────────────────────────────────────────────────
-  const favKey = `favorites_${user?.email}`;
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    if (!user?.email) return [];
-    const saved: any[] = JSON.parse(localStorage.getItem(favKey) || '[]');
-    return saved.map((f: any) => f.id);
-  });
+  // ── Favoritos (backend real) ─────────────────────────────────────────────────
+  const [favorites, setFavorites] = useState<number[]>([]);
 
-  const toggleFavorite = (e: React.MouseEvent, product: any) => {
+  useEffect(() => {
+    const cargarFavoritos = async () => {
+      if (!user?.id) { setFavorites([]); return; }
+      try {
+        const token = localStorage.getItem('token') ?? '';
+        const res = await fetch(`${API_BASE}/favoritos/`, {
+          headers: token ? { Authorization: `Token ${token}` } : {},
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setFavorites(Array.isArray(data) ? data.map((f: any) => f.producto) : []);
+      } catch { /* no crítico */ }
+    };
+    cargarFavoritos();
+  }, [user?.id]);
+
+  const toggleFavorite = async (e: React.MouseEvent, product: any) => {
     e.preventDefault(); // evita navegar al producto
     if (!user) { toast.error('Inicia sesión para guardar favoritos'); return; }
 
-    const saved: any[] = JSON.parse(localStorage.getItem(favKey) || '[]');
+    const token = localStorage.getItem('token') ?? '';
     const isFav = favorites.includes(product.id);
 
-    if (isFav) {
-      const updated = saved.filter((f: any) => f.id !== product.id);
-      localStorage.setItem(favKey, JSON.stringify(updated));
-      setFavorites(prev => prev.filter(id => id !== product.id));
-      toast.success('Eliminado de favoritos');
-    } else {
-      const newFav = {
-        id: product.id,
-        name: product.nombre,
-        price: product.precio_final,
-        image: product.imagen_url,
-        artisan: product.artesano_nombre,
-      };
-      localStorage.setItem(favKey, JSON.stringify([...saved, newFav]));
-      setFavorites(prev => [...prev, product.id]);
-      toast.success('Guardado en favoritos ❤️');
+    try {
+      if (isFav) {
+        await fetch(`${API_BASE}/favoritos/producto/${product.id}/`, {
+          method: 'DELETE',
+          headers: token ? { Authorization: `Token ${token}` } : {},
+        });
+        setFavorites(prev => prev.filter(id => id !== product.id));
+        toast.success('Eliminado de favoritos');
+      } else {
+        const res = await fetch(`${API_BASE}/favoritos/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Token ${token}` } : {}) },
+          body: JSON.stringify({ producto: product.id }),
+        });
+        if (!res.ok) { toast.error('No se pudo guardar en favoritos'); return; }
+        setFavorites(prev => [...prev, product.id]);
+        toast.success('Guardado en favoritos ❤️');
+      }
+    } catch {
+      toast.error('Error de conexión con el servidor');
     }
   };
   // ──────────────────────────────────────────────────────────────────────────
@@ -117,19 +132,22 @@ export function Catalog() {
   };
   const toggleVisibilidad = async (productoId: number) => {
     try {
+      const token = localStorage.getItem('token') ?? '';
       const response = await fetch(
        `${API_BASE}/productos/${productoId}/visibilidad/`,
         {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Token ${token}` } : {}),
           },
           body: JSON.stringify({}),
         }
       );
 
       if (!response.ok) {
-        alert(`No se pudo cambiar la visibilidad. Código: ${response.status}`);
+        const data = await response.json().catch(() => ({}));
+        toast.error(data.error ?? `No se pudo cambiar la visibilidad (código ${response.status})`);
         return;
       }
 

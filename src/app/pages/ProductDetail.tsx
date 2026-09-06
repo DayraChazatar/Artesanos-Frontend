@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
+<<<<<<< HEAD
 import {
   ShoppingCart,
   ArrowLeft,
@@ -13,6 +14,9 @@ import {
   Star,
 } from 'lucide-react';
 import { products } from '../data/products';
+=======
+import { ShoppingCart, ArrowLeft, MessageCircle, Heart, Star } from 'lucide-react';
+>>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -20,10 +24,23 @@ import { API_BASE } from '../utils/config';
 
 const BASE = API_BASE;
 
+<<<<<<< HEAD
 // ─────────────────────────────────────────────────────────────────────────────
 // ESTRELLAS VISUALES
 // ─────────────────────────────────────────────────────────────────────────────
 
+=======
+/** Extrae un mensaje de error legible de una respuesta de error de DRF, sin importar la forma exacta que tenga. */
+function extraerError(data: any, fallback: string): string {
+  if (!data) return fallback;
+  if (typeof data.error === 'string') return data.error;
+  if (Array.isArray(data.non_field_errors) && data.non_field_errors[0]) return data.non_field_errors[0];
+  const primerCampo = Object.values(data).find((v) => Array.isArray(v) && v.length > 0) as string[] | undefined;
+  return primerCampo?.[0] ?? fallback;
+}
+
+// ── Estrellas visuales ────────────────────────────────────────────────────────
+>>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
 function StarRating({ value }: { value: number }) {
   return (
     <div className="flex gap-0.5">
@@ -78,6 +95,7 @@ function StarPicker({
   );
 }
 
+<<<<<<< HEAD
 // ─────────────────────────────────────────────────────────────────────────────
 // SECCIÓN RESEÑAS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -89,13 +107,19 @@ function ProductReviews({
   productId: string;
   productName: string;
 }) {
+=======
+// ── Sección Reseñas ───────────────────────────────────────────────────────────
+function ProductReviews({ productId }: { productId: string; productName: string }) {
+>>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
   const { user } = useAuth();
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [refresh, setRefresh] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [allReviews, setAllReviews] = useState<any[]>([]);
 
+<<<<<<< HEAD
   const allUsers: any[] = JSON.parse(
     localStorage.getItem('users') || '[]'
   );
@@ -186,6 +210,55 @@ function ProductReviews({
     setRefresh((r) => r + 1);
 
     toast.success('¡Reseña publicada!');
+=======
+  const fetchReviews = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE}/resenas/?producto=${productId}`);
+      const data = await res.json();
+      setAllReviews(Array.isArray(data) ? data : []);
+    } catch {
+      setAllReviews([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [productId]);
+
+  useEffect(() => { fetchReviews(); }, [fetchReviews]);
+
+  const userAlreadyReviewed = user
+    ? allReviews.some(r => String(r.cliente) === String(user.id))
+    : false;
+
+  const avgRating = allReviews.length > 0
+    ? allReviews.reduce((sum, r) => sum + r.calificacion, 0) / allReviews.length
+    : 0;
+
+  const handleSubmit = async () => {
+    if (!user) { toast.error('Inicia sesión para dejar una reseña'); return; }
+    if (rating === 0) { toast.error('Selecciona una calificación'); return; }
+    if (comment.trim().length < 5) { toast.error('Escribe un comentario más detallado'); return; }
+
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem('token') ?? '';
+      const res = await fetch(`${BASE}/resenas/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Token ${token}` } : {}) },
+        body: JSON.stringify({ producto: Number(productId), calificacion: rating, comentario: comment.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(extraerError(data, 'No se pudo publicar la reseña')); return; }
+      setRating(0);
+      setComment('');
+      toast.success('¡Reseña publicada!');
+      await fetchReviews();
+    } catch {
+      toast.error('Error de conexión con el servidor');
+    } finally {
+      setSubmitting(false);
+    }
+>>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
   };
 
   return (
@@ -287,7 +360,9 @@ function ProductReviews({
       )}
 
       {/* Lista de reseñas */}
-      {allReviews.length === 0 ? (
+      {loading ? (
+        <div className="space-y-3">{[1, 2].map(i => <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />)}</div>
+      ) : allReviews.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Star className="h-10 w-10 mx-auto mb-3 text-gray-200" />
@@ -308,6 +383,7 @@ function ProductReviews({
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
+<<<<<<< HEAD
                     <p className="text-sm font-semibold text-gray-800">
                       {review.userName}
                     </p>
@@ -328,13 +404,22 @@ function ProductReviews({
                             year: 'numeric',
                           }
                         )}
+=======
+                    <p className="text-sm font-semibold text-gray-800">{review.cliente_nombre}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <StarRating value={review.calificacion} />
+                      <span className="text-xs text-gray-400">
+                        {new Date(review.creado_en).toLocaleDateString('es-CO', {
+                          day: '2-digit', month: 'long', year: 'numeric'
+                        })}
+>>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
                       </span>
                     </div>
                   </div>
                 </div>
 
                 <p className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2 mt-2">
-                  {review.comment}
+                  {review.comentario}
                 </p>
               </CardContent>
             </Card>
@@ -361,10 +446,13 @@ export function ProductDetail() {
     useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+<<<<<<< HEAD
   // ─────────────────────────────────────────────────────────────────────────
   // ESTADOS DE FAVORITOS
   // ─────────────────────────────────────────────────────────────────────────
 
+=======
+>>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
   const [isFav, setIsFav] = useState(false);
   const [favoriteLoading, setFavoriteLoading] =
     useState(false);
@@ -376,6 +464,7 @@ export function ProductDetail() {
   useEffect(() => {
     const fetchProducto = async () => {
       try {
+<<<<<<< HEAD
         const res = await fetch(
           `${API_BASE}/productos/${id}/`
         );
@@ -395,6 +484,13 @@ export function ProductDetail() {
           error
         );
 
+=======
+       const res = await fetch(`${API_BASE}/productos/${id}/`);
+        if (!res.ok) throw new Error('No encontrado');
+        const data = await res.json();
+        setProduct(data);
+      } catch {
+>>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
         setProduct(null);
       } finally {
         setLoading(false);
@@ -404,6 +500,7 @@ export function ProductDetail() {
     fetchProducto();
   }, [id]);
 
+<<<<<<< HEAD
   // ─────────────────────────────────────────────────────────────────────────
   // VERIFICAR SI EL PRODUCTO ESTÁ EN FAVORITOS
   // ─────────────────────────────────────────────────────────────────────────
@@ -576,6 +673,48 @@ export function ProductDetail() {
       );
     } finally {
       setFavoriteLoading(false);
+=======
+  // ── Verificar si ya está en favoritos (backend real) ────────────────────
+  useEffect(() => {
+    const verificarFavorito = async () => {
+      if (!user?.id || !product?.id) { setIsFav(false); return; }
+      try {
+        const token = localStorage.getItem('token') ?? '';
+        const res = await fetch(`${API_BASE}/favoritos/`, {
+          headers: token ? { Authorization: `Token ${token}` } : {},
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setIsFav(Array.isArray(data) && data.some((f: any) => String(f.producto) === String(product.id)));
+      } catch { /* no crítico */ }
+    };
+    verificarFavorito();
+  }, [user?.id, product?.id]);
+
+  const toggleFavorite = async () => {
+    if (!user) { toast.error('Inicia sesión para guardar favoritos'); return; }
+    const token = localStorage.getItem('token') ?? '';
+    try {
+      if (isFav) {
+        await fetch(`${API_BASE}/favoritos/producto/${product.id}/`, {
+          method: 'DELETE',
+          headers: token ? { Authorization: `Token ${token}` } : {},
+        });
+        setIsFav(false);
+        toast.success('Eliminado de favoritos');
+      } else {
+        const res = await fetch(`${API_BASE}/favoritos/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Token ${token}` } : {}) },
+          body: JSON.stringify({ producto: product.id }),
+        });
+        if (!res.ok) { toast.error('No se pudo guardar en favoritos'); return; }
+        setIsFav(true);
+        toast.success('Guardado en favoritos ❤️');
+      }
+    } catch {
+      toast.error('Error de conexión con el servidor');
+>>>>>>> 90c5e345e7b0759aaab08d58c8fbcd9a36a253f1
     }
   };
 

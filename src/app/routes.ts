@@ -4,13 +4,13 @@ import { Home } from "./pages/Home";
 import { Register } from "./pages/Register";
 import { Login } from "./pages/Login";
 import { ForgotPassword } from "./pages/ForgotPassword";
+import { RestablecerContrasena } from "./pages/RestablecerContrasena";
 import { Profile } from "./pages/PerfilCliente";
 import { Catalog } from "./pages/Catalog";
 import { ProductDetail } from "./pages/ProductDetail";
 import { ProductEdit } from "./pages/ProductEdit";
 import { Cart } from "./pages/Cart";
 import { Checkout } from "./pages/Checkout";
-import { Dashboard } from "./pages/Dashboard";
 import { NotFound } from "./pages/NotFound";
 import PerfilArtesano from "./pages/PerfilArtesano";
 import { MisPedidos } from "./pages/MisPedidos";
@@ -24,6 +24,7 @@ export const router = createBrowserRouter([
       { path: "registro", Component: Register },
       { path: "login", Component: Login },
       { path: "recuperar-contraseña", Component: ForgotPassword },
+      { path: "restablecer-contrasena/:token", Component: RestablecerContrasena },
       { path: "perfil", Component: Profile },
       { path: "perfil-artesano", Component: PerfilArtesano },
       { path: "catalogo", Component: Catalog },
@@ -32,7 +33,6 @@ export const router = createBrowserRouter([
       { path: "carrito", Component: Cart },
       { path: "checkout", Component: Checkout },
       { path: "mis-pedidos", Component: MisPedidos },
-      { path: "dashboard", Component: Dashboard },
       { path: "*", Component: NotFound },
     ],
   },

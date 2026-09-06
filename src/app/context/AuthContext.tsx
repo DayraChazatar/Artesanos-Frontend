@@ -12,7 +12,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'customer' | 'artisan' | 'admin';
+  role: 'customer' | 'artisan' | 'admin'; // ← agregado 'admin'
   phone?: string;
   address?: string;
   bio?: string;
@@ -24,7 +24,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ user: User; token: string }>;
-  loginWithGoogle: (googleUser: User) => void;
+  loginWithGoogle: (credential: string) => Promise<{ user: User; token: string }>;
   register: (name: string, email: string, password: string, role: 'customer' | 'artisan') => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -107,11 +107,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { user: loggedUser, token: data.token };
   };
 
-  const loginWithGoogle = (googleUser: User) => {
-    setUser(googleUser);
-    localStorage.setItem('user', JSON.stringify(googleUser));
-    localStorage.setItem('usuario_id', googleUser.id);
-    localStorage.setItem('usuario_nombre', googleUser.name);
+  const loginWithGoogle = async (credential: string): Promise<{ user: User; token: string }> => {
+    const res = await fetch(`${BASE}/login-google/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Error al iniciar sesión con Google');
+
+    const loggedUser: User = mapDjangoUser(data, data.correo);
+
+    setUser(loggedUser);
+    localStorage.setItem('user', JSON.stringify(loggedUser));
+    localStorage.setItem('usuario_id', String(data.id));
+    localStorage.setItem('usuario_nombre', data.nombre);
+    if (data.token) localStorage.setItem('token', data.token);
+
+    return { user: loggedUser, token: data.token };
   };
 
   const register = async (
@@ -181,10 +194,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
-    const res  = await fetch(`${BASE}/usuarios/?correo=${email}`);
+    const res = await fetch(`${BASE}/password-reset/solicitar/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ correo: email }),
+    });
     const data = await res.json();
-    if (!data || data.length === 0) throw new Error('No se encontró una cuenta con ese correo');
-    console.log('Enlace de recuperación enviado a:', email);
+    if (!res.ok) throw new Error(data.error || 'No se pudo procesar la solicitud');
+    // Nota: la respuesta es la misma exista o no la cuenta, a propósito —
+    // así no se puede usar esto para averiguar qué correos están registrados.
   };
 
   if (loading) return null;

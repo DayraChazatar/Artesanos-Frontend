@@ -13,6 +13,7 @@ export interface DetallePedido {
   id: number;
   producto: number;
   producto_nombre: string;
+  producto_codigo?: string;
   cantidad: number;
   precio: number;
   subtotal: number;
