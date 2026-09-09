@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Producto, Categoria, Kardex,
-  updateProducto, reponerStock,
+  updateProducto, reponerStock, getProductos,
+  descargarPlantillaCargaMasiva, cargarProductosMasivo, type ResultadoCargaMasiva,
 } from '../../../data/artesanoApi';
 import { ModalReposicion } from '../components/ModalReposicion';
 import { API_BASE } from '../../../utils/config';
@@ -103,7 +104,10 @@ export function ModuloProductos({
   productos, setProductos, categorias, setCategorias,
   imagenes, setImagenes, onIrAInventario,
 }: ModuloProductosProps) {
-  const [tabLocal, setTabLocal] = useState<'producto' | 'lista'>('producto');
+  const [tabLocal, setTabLocal] = useState<'producto' | 'lista' | 'masiva'>('producto');
+  const [archivoMasivo, setArchivoMasivo] = useState<File | null>(null);
+  const [loadingMasivo, setLoadingMasivo] = useState(false);
+  const [resultadoMasivo, setResultadoMasivo] = useState<ResultadoCargaMasiva | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [modalStockProd, setModalStockProd] = useState<Producto | null>(null);
@@ -236,6 +240,37 @@ export function ModuloProductos({
     setTabLocal('producto');
   };
 
+  const handleDescargarPlantilla = async () => {
+    try {
+      await descargarPlantillaCargaMasiva();
+    } catch {
+      showAlert('No se pudo descargar la plantilla', 'error');
+    }
+  };
+
+  const handleCargarMasivo = async () => {
+    if (!archivoMasivo) return showAlert('Selecciona un archivo Excel primero', 'error');
+    setLoadingMasivo(true);
+    setResultadoMasivo(null);
+    try {
+      const resultado = await cargarProductosMasivo(archivoMasivo);
+      setResultadoMasivo(resultado);
+      if (resultado.creados > 0) {
+        const actualizados = await getProductos(ARTESANO_ID);
+        setProductos(actualizados);
+        showAlert(`✓ ${resultado.creados} producto${resultado.creados !== 1 ? 's' : ''} creado${resultado.creados !== 1 ? 's' : ''} correctamente`);
+      }
+      if (resultado.errores.length > 0 && resultado.creados === 0) {
+        showAlert('No se pudo crear ningún producto — revisa los errores abajo', 'error');
+      }
+      setArchivoMasivo(null);
+    } catch (err: any) {
+      showAlert(err?.message ?? 'Error al procesar el archivo', 'error');
+    } finally {
+      setLoadingMasivo(false);
+    }
+  };
+
   const tabCls = (t: string) =>
     `px-4 py-2 rounded-xl text-sm font-semibold transition ${tabLocal === t ? 'bg-amber-700 text-white shadow' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'}`;
 
@@ -258,6 +293,7 @@ export function ModuloProductos({
       <div className="flex gap-3 flex-wrap">
         <button className={tabCls('producto')} onClick={() => setTabLocal('producto')}>➕ Nuevo Producto</button>
         <button className={tabCls('lista')} onClick={() => setTabLocal('lista')}>📋 Ver todo</button>
+        <button className={tabCls('masiva')} onClick={() => setTabLocal('masiva')}>📤 Cargar varios (Excel)</button>
       </div>
 
       {tabLocal === 'producto' && (
@@ -510,6 +546,84 @@ export function ModuloProductos({
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {tabLocal === 'masiva' && (
+        <div className="space-y-5">
+          <BannerCategoria categoria={categorias[0]} />
+          <div className="bg-white rounded-2xl shadow-sm p-6">
+            <h2 className="font-serif text-xl text-amber-800 mb-2">📤 Cargar varios productos a la vez</h2>
+            <p className="text-sm text-stone-500 mb-5">
+              Si tienes muchos productos para registrar, descarga la plantilla, llénala en Excel (datos y foto
+              incluidos) y súbela aquí — se crean todos de una sola vez, en lugar de uno por uno.
+              La categoría se asigna sola (la tuya).
+            </p>
+
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <button onClick={handleDescargarPlantilla}
+                className="px-4 py-2 rounded-xl bg-green-100 text-green-700 text-sm font-semibold hover:bg-green-200 transition">
+                ⬇️ Descargar plantilla Excel
+              </button>
+              <span className="text-xs text-stone-400">Paso 1: descarga y llena una fila por producto</span>
+            </div>
+
+            <div className="p-4 bg-amber-50 rounded-xl border border-amber-100 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Paso 2: sube el archivo lleno</p>
+              <div
+                onClick={() => document.getElementById('input-carga-masiva')?.click()}
+                className="flex flex-col items-center justify-center border-2 border-dashed border-amber-300 rounded-xl p-6 cursor-pointer hover:bg-amber-100/50 transition text-stone-500"
+              >
+                <span className="text-3xl mb-2">📊</span>
+                <p className="text-sm">{archivoMasivo ? archivoMasivo.name : 'Haz clic para seleccionar el Excel lleno'}</p>
+                <span className="text-xs opacity-60 mt-1">Solo archivos .xlsx</span>
+              </div>
+              <input id="input-carga-masiva" type="file" accept=".xlsx" className="hidden"
+                onChange={e => { setArchivoMasivo(e.target.files?.[0] ?? null); setResultadoMasivo(null); }} />
+
+              <button onClick={handleCargarMasivo} disabled={!archivoMasivo || loadingMasivo}
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white text-sm font-semibold shadow hover:shadow-md transition disabled:opacity-60">
+                {loadingMasivo ? 'Procesando...' : '📤 Cargar productos'}
+              </button>
+            </div>
+
+            {resultadoMasivo && (
+              <div className="mt-5 space-y-3">
+                <div className={`p-3 rounded-lg border text-sm font-medium ${resultadoMasivo.creados > 0 ? 'bg-green-100 text-green-800 border-green-200' : 'bg-red-100 text-red-800 border-red-200'}`}>
+                  {resultadoMasivo.creados} de {resultadoMasivo.total_filas} producto{resultadoMasivo.total_filas !== 1 ? 's' : ''} creado{resultadoMasivo.creados !== 1 ? 's' : ''} correctamente
+                </div>
+                {resultadoMasivo.errores.length > 0 && (
+                  <div className="overflow-x-auto rounded-xl border border-red-100">
+                    <table className="w-full text-sm">
+                      <thead className="bg-red-50 text-xs uppercase tracking-wider text-red-700/70">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-semibold">Fila</th>
+                          <th className="px-3 py-2 text-left font-semibold">Producto</th>
+                          <th className="px-3 py-2 text-left font-semibold">Error</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {resultadoMasivo.errores.map((e, i) => (
+                          <tr key={i} className="border-t border-red-50">
+                            <td className="px-3 py-2 text-stone-500">{e.fila}</td>
+                            <td className="px-3 py-2 font-semibold">{e.nombre || '—'}</td>
+                            <td className="px-3 py-2 text-red-600 text-xs">{typeof e.error === 'string' ? e.error : JSON.stringify(e.error)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {resultadoMasivo.avisos?.length > 0 && (
+                  <div className="p-3 rounded-lg border bg-amber-50 text-amber-800 border-amber-200 text-xs space-y-1">
+                    {resultadoMasivo.avisos.map((a, i) => (
+                      <p key={i}>⚠️ Fila {a.fila} ({a.nombre}): {a.mensaje}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

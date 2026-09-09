@@ -173,21 +173,36 @@ export function Register() {
                       ⚠️ No hay categorías disponibles. Contacta al administrador.
                     </div>
                   ) : (
-                    <select
-                      name="categoria_id"
-                      value={artesanoData.categoria_id}
-                      onChange={handleArtesanoChange}
-                      required
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                    >
-                      <option value="">— Selecciona tu categoría —</option>
-                      {categoriasDisponibles.map(cat => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.nombre}
-                          {cat.descripcion ? ` — ${cat.descripcion}` : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <>
+                      <select
+                        name="categoria_id"
+                        value={artesanoData.categoria_id}
+                        onChange={handleArtesanoChange}
+                        required
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <option value="">— Selecciona tu categoría —</option>
+                        {categoriasDisponibles.map(cat => (
+                          // La descripción NO va aquí adentro: un <select> nativo no
+                          // hace salto de línea dentro de sus opciones, así que un
+                          // texto largo simplemente se ve cortado. Se muestra completa
+                          // abajo, para la categoría que quede seleccionada.
+                          <option key={cat.id} value={cat.id} title={cat.descripcion || undefined}>
+                            {cat.nombre}
+                          </option>
+                        ))}
+                      </select>
+                      {artesanoData.categoria_id && (() => {
+                        const categoriaSeleccionada = categoriasDisponibles.find(
+                          cat => String(cat.id) === artesanoData.categoria_id
+                        );
+                        return categoriaSeleccionada?.descripcion ? (
+                          <p className="text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-md px-3 py-2 mt-1">
+                            {categoriaSeleccionada.descripcion}
+                          </p>
+                        ) : null;
+                      })()}
+                    </>
                   )}
 
                   <p className="text-xs text-gray-400">

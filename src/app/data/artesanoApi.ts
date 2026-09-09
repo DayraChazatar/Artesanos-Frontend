@@ -216,6 +216,53 @@ export const descargarReporte = async (
 export const getCategoriasDisponibles = () =>
   request<Categoria[]>(`${BASE}/categorias/?disponibles=true`);
 
+// ── Carga masiva de productos por Excel ──────────────────────────────────────
+// Permite al artesano registrar varios productos a la vez en vez de uno por
+// uno: descarga una plantilla ya formateada, la llena y la vuelve a subir.
+export const descargarPlantillaCargaMasiva = async () => {
+  const token = localStorage.getItem('token') ?? '';
+  const res = await fetch(`${BASE}/productos/plantilla-carga-masiva/`, {
+    headers: token ? { Authorization: `Token ${token}` } : {},
+  });
+  if (!res.ok) throw new Error('No se pudo descargar la plantilla');
+
+  const blob = await res.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = 'plantilla_productos_pakari.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(blobUrl);
+};
+
+export interface ResultadoCargaMasiva {
+  total_filas: number;
+  creados: number;
+  detalle_creados: { fila: number; nombre: string }[];
+  errores: { fila: number; nombre: string; error: any }[];
+  avisos: { fila: number; nombre: string; mensaje: string }[];
+}
+
+export const cargarProductosMasivo = async (archivo: File): Promise<ResultadoCargaMasiva> => {
+  const token = localStorage.getItem('token') ?? '';
+  const formData = new FormData();
+  formData.append('archivo', archivo);
+
+  const res = await fetch(`${BASE}/productos/carga-masiva/`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Token ${token}` } : {},
+    body: formData,
+  });
+
+  const data = await res.json();
+  if (!res.ok && data.creados === undefined) {
+    throw new Error(data.error ?? 'No se pudo procesar el archivo');
+  }
+  return data;
+};
+
 // ── Registro artesano con categoría ──────────────────────────────────────────
 export const registrarArtesano = (data: {
   nombre: string;
