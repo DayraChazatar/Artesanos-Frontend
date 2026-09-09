@@ -38,24 +38,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 function mapDjangoUser(data: any, email?: string): User {
   const savedUser = JSON.parse(localStorage.getItem('user') || '{}');
   const resolvedEmail = email || data.correo || savedUser.email || '';
-  const savedPhoto =
-    localStorage.getItem(`profileImage_${resolvedEmail}`) ||
-    savedUser.profileImage || '';
   return {
-    id:           String(data.id),
-    name:         data.nombre,
-    email:        resolvedEmail,
-    role:         data.tipo === 'artesano' ? 'artisan' : 'customer',
-    phone:        data.telefono ?? '',
-    address:      data.direccion ?? '',
-    bio:          data.biografia ?? '',
-    specialty:    data.especialidad ?? '',
-    profileImage: savedPhoto,
+    id: String(data.id),
+    name: data.nombre,
+    email: resolvedEmail,
+    role: data.tipo === 'artesano' ? 'artisan' : 'customer',
+    phone: data.telefono ?? '',
+    address: data.direccion ?? '',
+    bio: data.biografia ?? '',
+    specialty: data.especialidad ?? '',
+    profileImage: data.foto || savedUser.profileImage || '',
   };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser]       = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -87,16 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!data.success) throw new Error(data.mensaje || 'Credenciales incorrectas');
 
-    const savedPhoto =
-      localStorage.getItem(`profileImage_${email}`) ||
-      localStorage.getItem('profileImage_undefined') ||
-      '';
-
-    const loggedUser: User = {
-      ...mapDjangoUser(data, email),
-      profileImage: savedPhoto,
-      email,
-    };
+    const loggedUser: User = { ...mapDjangoUser(data, email), email };
 
     setUser(loggedUser);
     localStorage.setItem('user', JSON.stringify(loggedUser));
@@ -137,13 +125,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        nombre:       name,
-        correo:       email,
+        nombre: name,
+        correo: email,
         password,
-        tipo:         role === 'artisan' ? 'artesano' : 'cliente',
-        telefono:     '',
+        tipo: role === 'artisan' ? 'artesano' : 'cliente',
+        telefono: '',
         especialidad: '',
-        biografia:    '',
+        biografia: '',
       }),
     });
 
@@ -176,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const updatedUser = { ...user, ...data };
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
-        const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token');
     await fetch(`${BASE}/usuarios/${user.id}/`, {
       method: 'PATCH',
       headers: {
@@ -184,11 +172,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         Authorization: `Token ${token}`,
       },
       body: JSON.stringify({
-        nombre:       data.name      ?? user.name,
-        telefono:     data.phone     ?? user.phone,
-        biografia:    data.bio       ?? user.bio,
+        nombre: data.name ?? user.name,
+        telefono: data.phone ?? user.phone,
+        biografia: data.bio ?? user.bio,
         especialidad: data.specialty ?? user.specialty,
-        direccion:    data.address   ?? user.address,  // ✅ agregado
+        direccion: data.address ?? user.address,  // ✅ agregado
       }),
     });
   };
