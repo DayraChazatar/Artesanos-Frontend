@@ -62,6 +62,14 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
     if (fInventario.subtipo !== 'todos' && String((k as any).subtipo ?? '').toLowerCase() !== fInventario.subtipo) return false;
     return true;
   });
+  // Para las tarjetas de Entradas/Salidas: solo respeta Producto y Fechas.
+  // Si dependieran también del filtro "Tipo", elegir un tipo específico
+  // (ej. Devolución) las dejaría siempre en 0 sin que eso signifique nada.
+  const inventarioParaTotales = kardex.filter(k => {
+    if (!enRango(k.fecha, fInventario.desde, fInventario.hasta)) return false;
+    if (fInventario.producto && String(k.producto) !== fInventario.producto) return false;
+    return true;
+  });
   const productosFiltrados = productos.filter(p => {
     if (fProductos.producto && String(p.id) !== fProductos.producto) return false;
     return true;
@@ -80,8 +88,8 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
     .reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0);
 
   const totalVentas = ventasFiltradas.reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0) - totalDevoluciones;
-  const totalEntradas = inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'entrada').reduce((a, k) => a + k.cantidad, 0);
-  const totalSalidas = inventarioFiltrado.filter(k => String(k.tipo).toLowerCase() === 'salida').reduce((a, k) => a + k.cantidad, 0);
+  const totalEntradas = inventarioParaTotales.filter(k => String(k.tipo).toLowerCase() === 'entrada').reduce((a, k) => a + k.cantidad, 0);
+  const totalSalidas = inventarioParaTotales.filter(k => String(k.tipo).toLowerCase() === 'salida').reduce((a, k) => a + k.cantidad, 0);
   const valorContable = contableFiltrado.reduce((a, k) => a + k.cantidad * Number((k as any).precio_unitario ?? 0), 0);
 
   const ventasPorFecha = Object.entries(ventasFiltradas.reduce((acc: Record<string, number>, k) => {

@@ -7,10 +7,12 @@ import { Button } from '../components/ui/button';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { GoogleLogin } from '@react-oauth/google';
+import { Eye, EyeOff } from 'lucide-react';
 
 export function Login() {
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const { login, loginWithGoogle, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
@@ -74,9 +76,15 @@ export function Login() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input id="password" type="password" placeholder="••••••••"
-                value={password} onChange={e => setPassword(e.target.value)}
-                className="h-11" required />
+              <div className="relative">
+                <Input id="password" type={showPassword ? 'text' : 'password'} placeholder="••••••••"
+                  value={password} onChange={e => setPassword(e.target.value)}
+                  className="h-11 pr-10" required />
+                <button type="button" onClick={() => setShowPassword(s => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             <div className="text-right">
@@ -105,15 +113,6 @@ export function Login() {
               shape="rectangular"
             />
           </div>
-
-          <button
-            onClick={() => toast.info('Próximamente disponible')}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors mt-3">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="#1877F2">
-              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-            </svg>
-            <span className="text-sm font-medium text-gray-700">Continuar con Facebook</span>
-          </button>
 
           <div className="mt-6 text-center text-sm">
             ¿No tienes cuenta?{' '}

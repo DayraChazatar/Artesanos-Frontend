@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { API_BASE } from '../../../utils/config';
 
 const inputCls = 'px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-base text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition';
@@ -19,6 +20,7 @@ export function ModuloPerfil() {
   const [password, setPassword] = useState({ password_actual: '', password_nueva: '', password_confirmar: '' });
   const [loadingPass, setLoadingPass] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [verCampo, setVerCampo] = useState({ password_actual: false, password_nueva: false, password_confirmar: false });
   const [modalFoto, setModalFoto] = useState(false);
 
   useEffect(() => {
@@ -259,10 +261,17 @@ export function ModuloPerfil() {
             ].map(({ label, field }) => (
               <div key={field} className="flex flex-col gap-1">
                 <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">{label}</label>
-                <input type="password" className={inputCls}
-                  value={password[field as keyof typeof password]}
-                  onChange={e => setPassword({ ...password, [field]: e.target.value })}
-                  placeholder="••••••••" />
+                <div className="relative">
+                  <input type={verCampo[field as keyof typeof verCampo] ? 'text' : 'password'} className={`${inputCls} w-full pr-10`}
+                    value={password[field as keyof typeof password]}
+                    onChange={e => setPassword({ ...password, [field]: e.target.value })}
+                    placeholder="••••••••" />
+                  <button type="button"
+                    onClick={() => setVerCampo(v => ({ ...v, [field]: !v[field as keyof typeof verCampo] }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600">
+                    {verCampo[field as keyof typeof verCampo] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
             ))}
             <button onClick={handleCambiarPassword} disabled={loadingPass}

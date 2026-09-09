@@ -194,9 +194,9 @@ export function ModuloInventario({
               />
             </div>
             <span>Desde</span>
-            <input type="date" className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.desde} onChange={e => setFiltros({ ...filtros, desde: e.target.value })} />
+            <input type="date" max={new Date().toISOString().slice(0, 10)} className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.desde} onChange={e => setFiltros({ ...filtros, desde: e.target.value })} />
             <span>Hasta</span>
-            <input type="date" className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.hasta} onChange={e => setFiltros({ ...filtros, hasta: e.target.value })} />
+            <input type="date" max={new Date().toISOString().slice(0, 10)} className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.hasta} onChange={e => setFiltros({ ...filtros, hasta: e.target.value })} />
             <select className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.tipo} onChange={e => setFiltros({ ...filtros, tipo: e.target.value })}>
               <option value="todos">Tipo: todos</option>
               <option value="entrada">Entrada</option>

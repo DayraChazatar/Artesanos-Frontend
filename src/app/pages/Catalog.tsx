@@ -131,6 +131,16 @@ export function Catalog() {
     return null;
   };
   const toggleVisibilidad = async (productoId: number) => {
+    const visibleAnterior = productos.find(p => p.id === productoId)?.visible;
+
+    // Actualización optimista: el ícono cambia al instante, sin esperar
+    // la respuesta del servidor. Si la petición falla, se revierte abajo.
+    setProductos(prev =>
+      prev.map(product =>
+        product.id === productoId ? { ...product, visible: !product.visible } : product
+      )
+    );
+
     try {
       const token = localStorage.getItem('token') ?? '';
       const response = await fetch(
@@ -147,6 +157,11 @@ export function Catalog() {
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
+        setProductos(prev =>
+          prev.map(product =>
+            product.id === productoId ? { ...product, visible: visibleAnterior } : product
+          )
+        );
         toast.error(data.error ?? `No se pudo cambiar la visibilidad (código ${response.status})`);
         return;
       }
@@ -169,9 +184,14 @@ export function Catalog() {
 
     } catch (error) {
       console.error(error);
+      setProductos(prev =>
+        prev.map(product =>
+          product.id === productoId ? { ...product, visible: visibleAnterior } : product
+        )
+      );
       toast.error('Error al cambiar visibilidad');
     }
-  };;
+  };
   return (
     <div className="py-8 bg-gray-50 min-h-[calc(100vh-4rem)]">
       <div className="container mx-auto px-4">
@@ -308,6 +328,8 @@ export function Catalog() {
                             <img
                               src={product.imagen_url || 'https://via.placeholder.com/400x300'}
                               alt={product.nombre}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-60 object-contain bg-white group-hover:scale-105 transition-transform duration-500"
                             />
                             {/* Badge oferta / stock */}
