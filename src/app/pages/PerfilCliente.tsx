@@ -691,8 +691,7 @@ export function Profile() {
         phone: user.phone || '', address: user.address || '',
         bio: user.bio || '', specialty: user.specialty || '',
       });
-      const savedPhoto = localStorage.getItem(`profileImage_${user.email}`);
-      setPreviewImage(savedPhoto || user.profileImage || null);
+      setPreviewImage(user.profileImage || null);
     }
   }, [user, isAuthenticated, navigate]);
 
