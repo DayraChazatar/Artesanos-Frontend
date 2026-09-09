@@ -25,8 +25,10 @@ export function Home() {
 
   // 4. Efecto para consultar la API al cargar el componente
   useEffect(() => {
-    // URL Corregida funcionando con tu puerto 8000 local
-   const API_URL = `${API_BASE}/catalogo/`;
+    // Solo se necesitan 3 productos destacados — pedirle al backend que
+    // limite la respuesta evita traer el catálogo completo cada vez que
+    // alguien abre la página de inicio.
+   const API_URL = `${API_BASE}/catalogo/?limit=3`;
     fetch(API_URL)
       .then((res) => {
         if (!res.ok) {
@@ -195,9 +197,11 @@ export function Home() {
                         <div className="relative w-full h-64 flex items-center justify-center overflow-hidden bg-gray-900">
                           
                           {/* 1. Imagen de fondo duplicada y difuminada */}
-                          <img 
-                            src={image || "/placeholder-product.png"} 
+                          <img
+                            src={image || "/placeholder-product.png"}
                             alt=""
+                            loading="lazy"
+                            decoding="async"
                             className="absolute inset-0 w-full h-full object-cover blur-md scale-110 opacity-40 pointer-events-none"
                           />
 
@@ -205,6 +209,8 @@ export function Home() {
                           <img
                             src={image || "/placeholder-product.png"}
                             alt={name}
+                            loading="lazy"
+                            decoding="async"
                             className="relative max-h-[90%] max-w-[90%] object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-300"
                             onError={(e) => {
                               (e.target as HTMLImageElement).src = "/placeholder-product.png";

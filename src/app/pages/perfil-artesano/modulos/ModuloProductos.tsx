@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Producto, Categoria, Kardex,
-  createCategoria, updateCategoria,
   updateProducto, reponerStock,
 } from '../../../data/artesanoApi';
 import { ModalReposicion } from '../components/ModalReposicion';
@@ -109,7 +108,6 @@ export function ModuloProductos({
   const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [modalStockProd, setModalStockProd] = useState<Producto | null>(null);
   const [editandoId, setEditandoId] = useState<number | null>(null);
-  const [editandoCatId, setEditandoCatId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [archivos, setArchivos] = useState<string[]>([]);
   const [imagenFile, setImagenFile] = useState<File | null>(null);
@@ -136,8 +134,6 @@ export function ModuloProductos({
       lote: prev.lote || generarLote(),
     }));
   }, []);
-
-  const [cat, setCat] = useState({ nombre: '', descripcion: '' });
 
   const handleAddProducto = async () => {
     if (!prod.nombre || !prod.precio_neto) return showAlert('Nombre y precio son obligatorios', 'error');
@@ -238,25 +234,6 @@ export function ModuloProductos({
       tallas: producto.tallas ?? [],
     });
     setTabLocal('producto');
-  };
-
-  const handleAddCategoria = async () => {
-    if (!cat.nombre) return showAlert('El nombre es obligatorio', 'error');
-    setLoading(true);
-    try {
-      if (editandoCatId !== null) {
-        const actualizada = await updateCategoria(editandoCatId, { ...cat, artesano: ARTESANO_ID });
-        setCategorias(prev => prev.map(c => c.id === editandoCatId ? actualizada : c));
-        setEditandoCatId(null);
-        showAlert('✓ Categoría actualizada correctamente');
-      } else {
-        const nueva = await createCategoria({ ...cat, artesano: ARTESANO_ID });
-        setCategorias(prev => [...prev, nueva]);
-        showAlert('✓ Categoría creada correctamente');
-      }
-      setCat({ nombre: '', descripcion: '' });
-    } catch { showAlert('Error al guardar la categoría', 'error'); }
-    finally { setLoading(false); }
   };
 
   const tabCls = (t: string) =>

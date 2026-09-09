@@ -6,11 +6,13 @@ const BASE = API_BASE;
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
+// Varios artesanos pueden compartir una misma categoría — ya no tiene un
+// único "dueño"; se administra desde Django Admin, no por este API.
 export interface Categoria {
   id?: number;
   nombre: string;
   descripcion: string;
-  artesano: number;
+  cantidad_artesanos?: number;
 }
 
 type ColorProducto = {
@@ -107,26 +109,11 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
   });
 }
 // ── Categorías ────────────────────────────────────────────────────────────────
+// Solo lectura: las categorías ahora se crean/editan desde Django Admin
+// (varios artesanos comparten cada una, así que ya no tiene sentido que un
+// artesano individual las cree o renombre desde su panel).
 export const getCategorias = (artesanoId: number) =>
   request<Categoria[]>(`${BASE}/categorias/?artesano=${artesanoId}`);
-
-export const createCategoria = (data: Categoria) =>
-  request<Categoria>(`${BASE}/categorias/`, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  });
-
-export const deleteCategoria = (id: number) =>
-  fetch(`${BASE}/categorias/${id}/`, {
-    method: 'DELETE',
-    headers: { Authorization: `Token ${localStorage.getItem('token')}` },
-  });
-
-export const updateCategoria = (id: number, data: Omit<Categoria, 'id'>) =>
-  request<Categoria>(`${BASE}/categorias/${id}/`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  });
 
 // ── Productos ─────────────────────────────────────────────────────────────────
 export const getProductos = (artesanoId: number) =>

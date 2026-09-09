@@ -206,6 +206,14 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
               <span className="text-sm text-stone-500">Hasta</span>
               <input type="date" max={new Date().toISOString().split('T')[0]} value={filtroHasta} onChange={e => setFiltroHasta(e.target.value)} className={inputCls} />
             </div>
+            {(busqueda || filtroEstado || filtroDesde || filtroHasta) && (
+              <button
+                onClick={() => { setBusqueda(''); setFiltroEstado(''); setFiltroDesde(''); setFiltroHasta(''); }}
+                className="px-4 py-3 rounded-xl bg-stone-100 text-stone-500 text-sm font-semibold hover:bg-stone-200 transition"
+              >
+                ✕ Limpiar filtros
+              </button>
+            )}
           </div>
         </div>
       )}

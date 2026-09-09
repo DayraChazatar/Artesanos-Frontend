@@ -17,6 +17,11 @@ export default defineConfig({
     },
   },
 
+  server: {
+    host: true, // permite acceso desde otros dispositivos en la misma red WiFi
+    port: 5173,
+  },
+
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
 })
