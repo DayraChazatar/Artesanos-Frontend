@@ -1,14 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { API_BASE } from '../../../utils/config';
-
+ 
 const inputCls = 'px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-base text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition';
-
+ 
 const Alert = ({ msg, type }: { msg: string; type: 'success' | 'error' }) => {
   const colors = { success: 'bg-green-100 text-green-800 border-green-200', error: 'bg-red-100 text-red-800 border-red-200' };
-  return <div className={`mb-4 p-3 rounded-lg border text-sm font-medium ${colors[type]}`}>{msg}</div>;
+  return (
+    <div
+      role={type === 'error' ? 'alert' : 'status'}
+      aria-live={type === 'error' ? 'assertive' : 'polite'}
+      className={`mb-4 p-3 rounded-lg border text-sm font-medium ${colors[type]}`}
+    >
+      {msg}
+    </div>
+  );
 };
-
+ 
 export function ModuloPerfil() {
   const artesanoId = Number(localStorage.getItem('usuario_id') ?? 1);
   const [perfil, setPerfil] = useState({ nombre: '', correo: '', telefono: '', especialidad: '', biografia: '', foto_url: '' });
@@ -22,7 +30,7 @@ export function ModuloPerfil() {
   const [showPassword, setShowPassword] = useState(false);
   const [verCampo, setVerCampo] = useState({ password_actual: false, password_nueva: false, password_confirmar: false });
   const [modalFoto, setModalFoto] = useState(false);
-
+ 
   useEffect(() => {
     fetch(`${API_BASE}/perfil/artesano/${artesanoId}/`, {
   headers: { Authorization: `Token ${localStorage.getItem('token') ?? ''}` },
@@ -33,13 +41,13 @@ export function ModuloPerfil() {
         telefono: data.telefono ?? '', especialidad: data.especialidad ?? '',
         biografia: data.biografia ?? '', foto_url: data.foto_url ?? '',
       }));
-
+ 
     fetch(`${API_BASE}/productos/?artesano=${artesanoId}`, {
   headers: { Authorization: `Token ${localStorage.getItem('token') ?? ''}` },
 })
       .then(r => r.json())
       .then(data => setStats(prev => ({ ...prev, productos: Array.isArray(data) ? data.length : 0 })));
-
+ 
     fetch(`${API_BASE}/inventario/pedidos/artesano/${artesanoId}/`, {
       headers: { Authorization: `Token ${localStorage.getItem('token') ?? ''}` }
     })
@@ -47,7 +55,7 @@ export function ModuloPerfil() {
       .then(data => setStats(prev => ({ ...prev, pedidos: Array.isArray(data) ? data.length : 0 })))
       .catch(() => {});
   }, [artesanoId]);
-
+ 
   const handleCambiarPassword = async () => {
     if (!password.password_actual || !password.password_nueva || !password.password_confirmar)
       return setAlert({ msg: 'Todos los campos son obligatorios', type: 'error' });
@@ -76,7 +84,7 @@ export function ModuloPerfil() {
       setLoadingPass(false);
     }
   };
-
+ 
   const handleGuardar = async () => {
     setLoading(true);
     try {
@@ -99,33 +107,34 @@ export function ModuloPerfil() {
       setLoading(false);
     }
   };
-
+ 
   return (
     <div className="space-y-5 max-w-2xl mx-auto">
       {alert && <Alert msg={alert.msg} type={alert.type} />}
-
+ 
       {/* ── TARJETA PRINCIPAL ── */}
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-
+ 
         {/* Banner */}
         <div className="h-24 bg-gradient-to-r from-amber-600 to-amber-400" />
-
+ 
         <div className="px-8 pb-8">
-
+ 
           {/* Foto centrada */}
           <div className="flex flex-col items-center -mt-14 mb-4">
             <div className="relative">
-              <button onClick={() => setModalFoto(true)}>
+              <button onClick={() => setModalFoto(true)} aria-label="Ver foto de perfil ampliada">
                 <div className="w-28 h-28 rounded-full border-4 border-white shadow-md overflow-hidden bg-amber-50 flex items-center justify-center hover:opacity-90 transition">
                   {preview || perfil.foto_url
-                    ? <img src={preview || perfil.foto_url} className="w-full h-full object-cover" />
-                    : <span className="text-5xl">👤</span>}
+                    ? <img src={preview || perfil.foto_url} alt={`Foto de perfil de ${perfil.nombre}`} className="w-full h-full object-cover" />
+                    : <span className="text-5xl" aria-hidden="true">👤</span>}
                 </div>
               </button>
               <button
                 onClick={() => document.getElementById('input-foto')?.click()}
+                aria-label="Cambiar foto de perfil"
                 className="absolute bottom-0 right-0 w-8 h-8 bg-amber-600 rounded-full flex items-center justify-center text-white text-sm hover:bg-amber-700 transition shadow">
-                📷
+                <span aria-hidden="true">📷</span>
               </button>
               <input id="input-foto" type="file" accept="image/*" className="hidden"
                 onChange={async e => {
@@ -153,21 +162,27 @@ export function ModuloPerfil() {
                 }} />
             </div>
           </div>
-
+ 
           {/* Modal foto grande */}
           {modalFoto && (perfil.foto_url || preview) && (
-            <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center"
-              onClick={() => setModalFoto(false)}>
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Foto de perfil ampliada"
+              className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center"
+              onClick={() => setModalFoto(false)}
+              onKeyDown={e => { if (e.key === 'Escape') setModalFoto(false); }}>
               <div className="relative" onClick={e => e.stopPropagation()}>
-                <img src={preview || perfil.foto_url} className="w-72 h-72 rounded-full object-cover border-4 border-white shadow-2xl" />
-                <button onClick={() => setModalFoto(false)}
+                <img src={preview || perfil.foto_url} alt={`Foto de perfil de ${perfil.nombre}`} className="w-72 h-72 rounded-full object-cover border-4 border-white shadow-2xl" />
+                <button onClick={() => setModalFoto(false)} autoFocus
+                  aria-label="Cerrar imagen ampliada"
                   className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full flex items-center justify-center text-stone-600 shadow hover:bg-stone-100 transition">
-                  ✕
+                  <span aria-hidden="true">✕</span>
                 </button>
               </div>
             </div>
           )}
-
+ 
           {/* Nombre y badges */}
           <div className="text-center mb-6">
             <h2 className="font-serif text-2xl font-bold text-stone-800">{perfil.nombre}</h2>
@@ -178,7 +193,7 @@ export function ModuloPerfil() {
               )}
             </div>
           </div>
-
+ 
           {/* Estadísticas */}
           <div className="grid grid-cols-3 gap-3 mb-6">
             {[
@@ -193,7 +208,7 @@ export function ModuloPerfil() {
               </div>
             ))}
           </div>
-
+ 
           {/* Botón editar */}
           <div className="flex justify-end mb-4">
             <button onClick={() => setEditando(!editando)}
@@ -201,7 +216,7 @@ export function ModuloPerfil() {
               {editando ? '✕ Cancelar' : '✏️ Editar perfil'}
             </button>
           </div>
-
+ 
           {/* Campos en dos columnas */}
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
@@ -209,9 +224,9 @@ export function ModuloPerfil() {
               <p className="text-stone-700 text-sm truncate">{perfil.correo}</p>
             </div>
             <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-              <p className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1">Teléfono</p>
+              <label htmlFor="telefono" className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1 block">Teléfono</label>
               {editando
-                ? <input className={inputCls} value={perfil.telefono}
+                ? <input id="telefono" className={inputCls} value={perfil.telefono}
                     onChange={e => setPerfil({ ...perfil, telefono: e.target.value })}
                     placeholder="Ej: 3001234567" />
                 : <p className="text-stone-700 text-sm">{perfil.telefono || '—'}</p>}
@@ -221,17 +236,17 @@ export function ModuloPerfil() {
               <p className="text-stone-700 text-sm">{perfil.especialidad || '—'}</p>
             </div>
           </div>
-
+ 
           {/* Biografía */}
           <div className="bg-amber-50 rounded-xl p-4 border border-amber-100 mb-4">
-            <p className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1">Biografía</p>
+            <label htmlFor="biografia" className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1 block">Biografía</label>
             {editando
-              ? <textarea className={`${inputCls} min-h-[100px] resize-y w-full`} value={perfil.biografia}
+              ? <textarea id="biografia" className={`${inputCls} min-h-[100px] resize-y w-full`} value={perfil.biografia}
                   onChange={e => setPerfil({ ...perfil, biografia: e.target.value })}
                   placeholder="Cuéntanos sobre ti y tu arte..." />
               : <p className="text-stone-700 leading-relaxed text-sm">{perfil.biografia || '—'}</p>}
           </div>
-
+ 
           {editando && (
             <button onClick={handleGuardar} disabled={loading}
               className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white font-semibold shadow hover:shadow-md transition disabled:opacity-60">
@@ -240,10 +255,12 @@ export function ModuloPerfil() {
           )}
         </div>
       </div>
-
+ 
       {/* ── CAMBIAR CONTRASEÑA (colapsable) ── */}
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         <button onClick={() => setShowPassword(!showPassword)}
+          aria-expanded={showPassword}
+          aria-controls="panel-cambiar-password"
           className="w-full px-8 py-5 flex items-center justify-between hover:bg-amber-50 transition">
           <div className="flex items-center gap-3">
             <span className="text-xl">🔐</span>
@@ -251,25 +268,26 @@ export function ModuloPerfil() {
           </div>
           <span className="text-stone-400 text-sm">{showPassword ? '▲ Cerrar' : '▼ Expandir'}</span>
         </button>
-
+ 
         {showPassword && (
-          <div className="px-8 pb-8 space-y-4 border-t border-amber-100 pt-4">
+          <div id="panel-cambiar-password" className="px-8 pb-8 space-y-4 border-t border-amber-100 pt-4">
             {[
               { label: 'Contraseña actual', field: 'password_actual' },
               { label: 'Nueva contraseña', field: 'password_nueva' },
               { label: 'Confirmar nueva contraseña', field: 'password_confirmar' },
             ].map(({ label, field }) => (
               <div key={field} className="flex flex-col gap-1">
-                <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">{label}</label>
+                <label htmlFor={field} className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">{label}</label>
                 <div className="relative">
-                  <input type={verCampo[field as keyof typeof verCampo] ? 'text' : 'password'} className={`${inputCls} w-full pr-10`}
+                  <input id={field} type={verCampo[field as keyof typeof verCampo] ? 'text' : 'password'} className={`${inputCls} w-full pr-10`}
                     value={password[field as keyof typeof password]}
                     onChange={e => setPassword({ ...password, [field]: e.target.value })}
                     placeholder="••••••••" />
                   <button type="button"
                     onClick={() => setVerCampo(v => ({ ...v, [field]: !v[field as keyof typeof verCampo] }))}
+                    aria-label={verCampo[field as keyof typeof verCampo] ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600">
-                    {verCampo[field as keyof typeof verCampo] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {verCampo[field as keyof typeof verCampo] ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
                   </button>
                 </div>
               </div>
