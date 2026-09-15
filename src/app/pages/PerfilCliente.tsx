@@ -13,9 +13,9 @@ import {
   ChevronRight, Package2, TruckIcon, CheckCircle, AlertCircle
 } from 'lucide-react';
 import { API_BASE } from '../utils/config';
-
+ 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
-
+ 
 interface NotificationSettings {
   pedidoConfirmado: boolean;
   pedidoEnviado: boolean;
@@ -24,7 +24,7 @@ interface NotificationSettings {
   favoritoDescuento: boolean;
   nuevoProductoArtesano: boolean;
 }
-
+ 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 const TABS_CLIENTE = [
   { id: 'perfil', label: 'Perfil', icon: User },
@@ -34,34 +34,34 @@ const TABS_CLIENTE = [
   { id: 'resenas', label: 'Mis Reseñas', icon: Star },
   { id: 'notificaciones', label: 'Notificaciones', icon: Bell },
 ];
-
+ 
 // ─── Estrellas ────────────────────────────────────────────────────────────────
 function StarRating({ value }: { value: number }) {
   return (
-    <div className="flex gap-0.5">
+    <div className="flex gap-0.5" role="img" aria-label={`Calificación: ${value} de 5 estrellas`}>
       {[1, 2, 3, 4, 5].map(s => (
-        <Star key={s} className={`h-4 w-4 ${s <= value ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200 fill-gray-200'}`} />
+        <Star key={s} aria-hidden="true" className={`h-4 w-4 ${s <= value ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200 fill-gray-200'}`} />
       ))}
     </div>
   );
 }
-
+ 
 // ─── Sección: Cambio de Contraseña ───────────────────────────────────────────
-
+ 
 function TabContrasena({ userId }: { userId: string }) {
-
+ 
   const [form, setForm] = useState({ actual: '', nueva: '', confirmar: '' });
   const [show, setShow] = useState({ actual: false, nueva: false, confirmar: false });
   const [loading, setLoading] = useState(false);
-
+ 
   const toggle = (field: keyof typeof show) => setShow(s => ({ ...s, [field]: !s[field] }));
-
+ 
   const handleSubmit = async () => {
-
+ 
     if (!form.actual || !form.nueva || !form.confirmar) {
       toast.error('Todos los campos son obligatorios'); return;
     }
-
+ 
     if (form.nueva.length < 6) {
       toast.error('La nueva contraseña debe tener al menos 6 caracteres');
       return;
@@ -70,13 +70,13 @@ function TabContrasena({ userId }: { userId: string }) {
       toast.error('Las contraseñas no coinciden');
       return;
     }
-
+ 
     setLoading(true);
     try {
       const token = localStorage.getItem('token') ?? '';
-
+ 
       const res = await fetch(`${API_BASE}/perfil/cambiar-password/${userId}/`, {
-
+ 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -89,29 +89,29 @@ function TabContrasena({ userId }: { userId: string }) {
         }),
       });
       const data = await res.json();
-
-
+ 
+ 
       if (!res.ok) {
         toast.error(data.error ?? 'No se pudo cambiar la contraseña');
         return;
       }
-
+ 
       setForm({ actual: '', nueva: '', confirmar: '' });
       toast.success(data.mensaje ?? 'Contraseña actualizada correctamente ✓');
     } catch {
       toast.error('Error de conexión');
-
+ 
     } finally {
       setLoading(false);
     }
   };
-
+ 
   const fields = [
     { key: 'actual', label: 'Contraseña actual', placeholder: 'Ingresa tu contraseña actual' },
     { key: 'nueva', label: 'Nueva contraseña', placeholder: 'Mínimo 6 caracteres' },
     { key: 'confirmar', label: 'Confirmar contraseña', placeholder: 'Repite la nueva contraseña' },
   ] as const;
-
+ 
   return (
     <Card>
       <CardHeader>
@@ -123,12 +123,13 @@ function TabContrasena({ userId }: { userId: string }) {
         <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-600">
           🔒 Por seguridad, necesitas ingresar tu contraseña actual para poder cambiarla.
         </div>
-
+ 
         {fields.map(({ key, label, placeholder }) => (
           <div key={key} className="space-y-1.5">
-            <Label>{label}</Label>
+            <Label htmlFor={`pass-${key}`}>{label}</Label>
             <div className="relative">
               <Input
+                id={`pass-${key}`}
                 type={show[key] ? 'text' : 'password'}
                 value={form[key]}
                 onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
@@ -136,19 +137,20 @@ function TabContrasena({ userId }: { userId: string }) {
                 className="pr-10"
               />
               <button type="button" onClick={() => toggle(key)}
+                aria-label={show[key] ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                {show[key] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {show[key] ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
               </button>
             </div>
           </div>
         ))}
-
+ 
         {form.nueva && form.confirmar && (
           <div className={`text-xs flex items-center gap-1 ${form.nueva === form.confirmar ? 'text-green-600' : 'text-red-500'}`}>
             {form.nueva === form.confirmar ? '✓ Las contraseñas coinciden' : '✗ Las contraseñas no coinciden'}
           </div>
         )}
-
+ 
         <Button onClick={handleSubmit} disabled={loading}
           className="w-full bg-orange-600 hover:bg-orange-700 text-white">
           {loading ? 'Actualizando...' : 'Cambiar Contraseña'}
@@ -157,12 +159,12 @@ function TabContrasena({ userId }: { userId: string }) {
     </Card>
   );
 }
-
+ 
 // ─── Sección: Favoritos ───────────────────────────────────────────────────────
 function TabFavoritos() {
   const [favorites, setFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-
+ 
   const fetchFavoritos = useCallback(async () => {
     setLoading(true);
     try {
@@ -178,9 +180,9 @@ function TabFavoritos() {
       setLoading(false);
     }
   }, []);
-
+ 
   useEffect(() => { fetchFavoritos(); }, [fetchFavoritos]);
-
+ 
   const removeFavorite = async (productoId: number) => {
     try {
       const token = localStorage.getItem('token') ?? '';
@@ -194,7 +196,7 @@ function TabFavoritos() {
       toast.error('Error de conexión con el servidor');
     }
   };
-
+ 
   if (loading) {
     return (
       <Card>
@@ -202,7 +204,7 @@ function TabFavoritos() {
       </Card>
     );
   }
-
+ 
   if (favorites.length === 0) {
     return (
       <Card>
@@ -217,7 +219,7 @@ function TabFavoritos() {
       </Card>
     );
   }
-
+ 
   return (
     <Card>
       <CardHeader>
@@ -247,8 +249,9 @@ function TabFavoritos() {
                   </button>
                 </Link>
                 <button onClick={() => removeFavorite(fav.producto)}
+                  aria-label={`Eliminar ${fav.producto_nombre} de favoritos`}
                   className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition">
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -258,14 +261,14 @@ function TabFavoritos() {
     </Card>
   );
 }
-
+ 
 // ─── Sección: Reseñas ─────────────────────────────────────────────────────────
 function TabResenas() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
-
+ 
   const fetchResenas = useCallback(async () => {
     setLoading(true);
     try {
@@ -281,14 +284,14 @@ function TabResenas() {
       setLoading(false);
     }
   }, []);
-
+ 
   useEffect(() => { fetchResenas(); }, [fetchResenas]);
-
+ 
   const startEdit = (review: any) => {
     setEditing(review.id);
     setEditText(review.comentario);
   };
-
+ 
   const saveEdit = async (id: number) => {
     try {
       const token = localStorage.getItem('token') ?? '';
@@ -305,7 +308,7 @@ function TabResenas() {
       toast.error('Error de conexión con el servidor');
     }
   };
-
+ 
   const deleteReview = async (id: number) => {
     try {
       const token = localStorage.getItem('token') ?? '';
@@ -319,7 +322,7 @@ function TabResenas() {
       toast.error('Error de conexión con el servidor');
     }
   };
-
+ 
   if (loading) {
     return (
       <Card>
@@ -327,7 +330,7 @@ function TabResenas() {
       </Card>
     );
   }
-
+ 
   if (reviews.length === 0) {
     return (
       <Card>
@@ -342,7 +345,7 @@ function TabResenas() {
       </Card>
     );
   }
-
+ 
   return (
     <Card>
       <CardHeader>
@@ -370,12 +373,13 @@ function TabResenas() {
                   Editar
                 </button>
                 <button onClick={() => deleteReview(review.id)}
+                  aria-label={`Eliminar reseña de ${review.producto_nombre}`}
                   className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 transition">
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </div>
             </div>
-
+ 
             {editing === review.id ? (
               <div className="space-y-2">
                 <Textarea value={editText} onChange={e => setEditText(e.target.value)} rows={2}
@@ -395,7 +399,7 @@ function TabResenas() {
     </Card>
   );
 }
-
+ 
 // ─── Sección: Notificaciones ──────────────────────────────────────────────────
 function TabNotificaciones({ userEmail }: { userEmail: string }) {
   const defaultSettings: NotificationSettings = {
@@ -406,21 +410,21 @@ function TabNotificaciones({ userEmail }: { userEmail: string }) {
     favoritoDescuento: false,
     nuevoProductoArtesano: false,
   };
-
+ 
   const [settings, setSettings] = useState<NotificationSettings>(defaultSettings);
-
+ 
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem(`notif_${userEmail}`) || 'null');
     if (saved) setSettings(saved);
   }, [userEmail]);
-
+ 
   const toggle = (key: keyof NotificationSettings) => {
     const updated = { ...settings, [key]: !settings[key] };
     setSettings(updated);
     localStorage.setItem(`notif_${userEmail}`, JSON.stringify(updated));
     toast.success(updated[key] ? 'Notificación activada' : 'Notificación desactivada');
   };
-
+ 
   const NOTIF_GROUPS = [
     {
       group: '📦 Mis Pedidos',
@@ -439,7 +443,7 @@ function TabNotificaciones({ userEmail }: { userEmail: string }) {
       ],
     },
   ] as const;
-
+ 
   return (
     <Card>
       <CardHeader>
@@ -451,7 +455,7 @@ function TabNotificaciones({ userEmail }: { userEmail: string }) {
         <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-3 text-xs text-orange-700">
           🔔 Controla qué notificaciones quieres recibir sobre tus pedidos y productos favoritos.
         </div>
-
+ 
         {NOTIF_GROUPS.map(({ group, items }) => (
           <div key={group}>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{group}</p>
@@ -482,16 +486,16 @@ function TabNotificaciones({ userEmail }: { userEmail: string }) {
     </Card>
   );
 }
-
+ 
 // ─── Sección: Mis Pedidos ─────────────────────────────────────────────────────
 function TabPedidos({ userId }: { userId: string }) {
   const [pedidos, setPedidos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelando, setCancelando] = useState<number | null>(null);
   const [expandido, setExpandido] = useState<number | null>(null);
-
+ 
 const BASE = API_BASE;
-
+ 
   useEffect(() => {
     const fetchPedidos = async () => {
       try {
@@ -510,7 +514,7 @@ const BASE = API_BASE;
     };
     fetchPedidos();
   }, [userId]);
-
+ 
   const cancelarPedido = async (pedido: any) => {
     if (!confirm(`¿Seguro que deseas cancelar el pedido ${pedido.codigo}?`)) return;
     setCancelando(pedido.id);
@@ -534,7 +538,7 @@ const BASE = API_BASE;
       setCancelando(null);
     }
   };
-
+ 
   const estadoColor: Record<string, string> = {
     Pendiente: 'bg-yellow-100 text-yellow-700',
     'En proceso': 'bg-orange-100 text-orange-700',
@@ -545,14 +549,14 @@ const BASE = API_BASE;
     'Devolucion aprobada': 'bg-teal-100 text-teal-700',
     'Devolucion rechazada': 'bg-red-200 text-red-800',
   };
-
+ 
   const estadoIcono: Record<string, string> = {
     Pendiente: '🕐', 'En proceso': '⚙️', Enviado: '🚚',
     Entregado: '✅', Cancelado: '❌',
     'Devolucion solicitada': '🔄', 'Devolucion aprobada': '↩️',
     'Devolucion rechazada': '🚫',
   };
-
+ 
   if (loading) return (
     <Card>
       <CardContent className="py-10 space-y-3">
@@ -560,7 +564,7 @@ const BASE = API_BASE;
       </CardContent>
     </Card>
   );
-
+ 
   if (pedidos.length === 0) return (
     <Card>
       <CardContent className="py-16 text-center">
@@ -573,7 +577,7 @@ const BASE = API_BASE;
       </CardContent>
     </Card>
   );
-
+ 
   return (
     <Card>
       <CardHeader>
@@ -585,13 +589,13 @@ const BASE = API_BASE;
       <CardContent className="space-y-3">
         {pedidos.map(pedido => (
           <div key={pedido.id} className="border border-gray-100 rounded-2xl overflow-hidden hover:border-orange-200 transition">
-
+ 
             {/* Fila principal */}
             <div className="flex items-center gap-3 p-4">
-
+ 
               {/* Ícono estado */}
               <div className="text-2xl flex-shrink-0">{estadoIcono[pedido.estado] ?? '📦'}</div>
-
+ 
               {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -607,24 +611,26 @@ const BASE = API_BASE;
                   {new Date(pedido.fecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </p>
               </div>
-
+ 
               {/* Total */}
               <div className="text-right flex-shrink-0">
                 <p className="font-bold text-green-700 text-sm">${Number(pedido.total).toLocaleString('es-CO')}</p>
               </div>
             </div>
-
+ 
             {/* Acciones */}
             <div className="flex items-center gap-2 px-4 pb-3 flex-wrap">
-
+ 
               {/* Ver detalles */}
               <button
                 onClick={() => setExpandido(expandido === pedido.id ? null : pedido.id)}
+                aria-expanded={expandido === pedido.id}
+                aria-controls={`detalle-pedido-${pedido.id}`}
                 className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition"
               >
-                {expandido === pedido.id ? '▲ Ocultar' : '▼ Ver detalles'}
+                <span aria-hidden="true">{expandido === pedido.id ? '▲' : '▼'}</span> {expandido === pedido.id ? 'Ocultar' : 'Ver detalles'}
               </button>
-
+ 
               {/* Cancelar — solo si está Pendiente */}
               {pedido.estado === 'Pendiente' && (
                 <button
@@ -636,10 +642,10 @@ const BASE = API_BASE;
                 </button>
               )}
             </div>
-
+ 
             {/* Detalles expandidos */}
             {expandido === pedido.id && (
-              <div className="border-t border-orange-50 bg-orange-50/30 px-4 py-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div id={`detalle-pedido-${pedido.id}`} className="border-t border-orange-50 bg-orange-50/30 px-4 py-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="bg-white rounded-xl border border-orange-100 p-3">
                   <p className="text-xs font-bold text-orange-700 mb-2">📦 Productos</p>
                   {pedido.detalles?.map((d: any, i: number) => (
@@ -666,23 +672,23 @@ const BASE = API_BASE;
     </Card>
   );
 }
-
+ 
 // ─── Componente Principal ─────────────────────────────────────────────────────
 export function Profile() {
   const { user, isAuthenticated, updateProfile } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState('perfil');
-
+ 
   const savedAddress = JSON.parse(localStorage.getItem(`direccion_${user?.email}`) || '{}');
-
+ 
   const [formData, setFormData] = useState({
     name: '', email: '', phone: '',
     address: savedAddress.address || '',
     bio: '', specialty: '',
   });
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-
+ 
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
     if (user) {
@@ -694,41 +700,41 @@ export function Profile() {
       setPreviewImage(user.profileImage || null);
     }
   }, [user, isAuthenticated, navigate]);
-
+ 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-
+ 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
+ 
     const usuarioId = localStorage.getItem('usuario_id') ?? user?.id;
     const token = localStorage.getItem('token') ?? '';
-
+ 
     if (!usuarioId || !token) {
       toast.error('Debes iniciar sesión de nuevo para cambiar tu foto');
       return;
     }
-
+ 
     const formData = new FormData();
     formData.append('foto', file);
-
+ 
     try {
       const res = await fetch(`${API_BASE}/perfil/artesano/${usuarioId}/`, {
         method: 'PATCH',
         headers: { Authorization: `Token ${token}` },
         body: formData,
       });
-
+ 
       if (!res.ok) {
         toast.error('No se pudo actualizar la foto de perfil');
         return;
       }
-
+ 
       const data = await res.json();
       const nuevaUrl = data.foto_url || data.foto;
-
+ 
       setPreviewImage(nuevaUrl);
       updateProfile({ profileImage: nuevaUrl });
       toast.success('Foto de perfil actualizada');
@@ -736,7 +742,7 @@ export function Profile() {
       toast.error('Error de conexión al subir la foto');
     }
   };
-
+ 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -746,14 +752,14 @@ export function Profile() {
       toast.error('Error al actualizar el perfil');
     }
   };
-
+ 
   if (!user) return null;
-
+ 
   // Solo clientes ven las tabs extra
   const tabs = user.role === 'customer'
     ? TABS_CLIENTE
     : TABS_CLIENTE.filter(t => t.id === 'perfil' || t.id === 'contrasena');
-
+ 
   return (
     <div className="py-8 bg-gray-50 min-h-[calc(100vh-4rem)]">
       <div className="container mx-auto px-4 max-w-5xl">
@@ -761,7 +767,7 @@ export function Profile() {
           <h1 className="text-3xl mb-2">Mi Perfil</h1>
           <p className="text-gray-600">Gestiona tu información personal</p>
         </div>
-
+ 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* ── Panel izquierdo ── */}
           <div className="space-y-4">
@@ -771,13 +777,13 @@ export function Profile() {
                 <div className="relative w-24 h-24 mx-auto mb-4">
                   <div className="w-24 h-24 bg-orange-100 rounded-full overflow-hidden flex items-center justify-center">
                     {previewImage
-                      ? <img src={previewImage} alt="Foto de perfil" className="w-full h-full object-cover" />
-                      : <User className="h-12 w-12 text-orange-600" />}
+                      ? <img src={previewImage} alt={`Foto de perfil de ${user.name}`} className="w-full h-full object-cover" />
+                      : <User className="h-12 w-12 text-orange-600" aria-hidden="true" />}
                   </div>
                   <button onClick={() => fileInputRef.current?.click()}
                     className="absolute bottom-0 right-0 bg-orange-600 hover:bg-orange-700 text-white rounded-full p-1.5 shadow-md transition-colors"
-                    title="Cambiar foto">
-                    <Camera className="h-3.5 w-3.5" />
+                    aria-label="Cambiar foto de perfil">
+                    <Camera className="h-3.5 w-3.5" aria-hidden="true" />
                   </button>
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
                 </div>
@@ -789,25 +795,29 @@ export function Profile() {
                 <p className="text-xs text-gray-400 mt-3">Haz clic en la cámara para cambiar tu foto</p>
               </CardContent>
             </Card>
-
+ 
             {/* Navegación de tabs */}
             <Card>
               <CardContent className="p-2">
-                <nav className="space-y-0.5">
+                <nav className="space-y-0.5" role="tablist" aria-label="Secciones del perfil">
                   {tabs.map(({ id, label, icon: Icon }) => (
                     <button key={id} onClick={() => setActiveTab(id)}
+                      role="tab"
+                      id={`tab-${id}`}
+                      aria-selected={activeTab === id}
+                      aria-controls={`panel-${id}`}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${activeTab === id
                           ? 'bg-orange-600 text-white font-medium shadow-sm'
                           : 'text-gray-600 hover:bg-orange-50 hover:text-orange-700'
                         }`}>
-                      <Icon className="h-4 w-4 flex-shrink-0" />
+                      <Icon className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
                       {label}
                     </button>
                   ))}
                 </nav>
               </CardContent>
             </Card>
-
+ 
             {/* Acciones rápidas artesano */}
             {user.role === 'artisan' && (
               <Card>
@@ -824,12 +834,12 @@ export function Profile() {
                 </CardContent>
               </Card>
             )}
-
+ 
           </div>
-
+ 
           {/* ── Panel derecho (contenido del tab) ── */}
-          <div className="lg:col-span-3">
-
+          <div className="lg:col-span-3" role="tabpanel" id={`panel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
+ 
             {/* Tab: Perfil */}
             {activeTab === 'perfil' && (
               <Card>
@@ -889,13 +899,13 @@ export function Profile() {
                 </CardContent>
               </Card>
             )}
-
+ 
             {activeTab === 'pedidos' && <TabPedidos userId={String(localStorage.getItem('usuario_id') ?? user.id)} />}
-
+ 
             {activeTab === 'contrasena' && <TabContrasena userId={String(localStorage.getItem('usuario_id') ?? user.id)} />}
             {activeTab === 'favoritos' && <TabFavoritos />}
             {activeTab === 'resenas' && <TabResenas />}
-
+ 
             {activeTab === 'notificaciones' && <TabNotificaciones userEmail={user.email} />}
           </div>
         </div>
