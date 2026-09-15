@@ -50,6 +50,9 @@ export function ModuloReferencias({ pedidos, onRefrescar, setProductos, setKarde
   const [entregandoId, setEntregandoId] = useState<number | null>(null);
   const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [busqueda, setBusqueda] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('');
+  const [filtroDesde, setFiltroDesde] = useState('');
+  const [filtroHasta, setFiltroHasta] = useState('');
 
   const [form, setForm] = useState({ pedido: '', referencia: '' });
   const [dropdownAbierto, setDropdownAbierto] = useState(false);
@@ -179,6 +182,10 @@ export function ModuloReferencias({ pedidos, onRefrescar, setProductos, setKarde
     const q = busqueda.trim().toLowerCase();
     return pedidosConReferencia
       .filter(p => {
+        if (filtroEstado && p.estado !== filtroEstado) return false;
+        const fechaEnvio = (p.fecha_envio ?? p.fecha).split('T')[0];
+        if (filtroDesde && fechaEnvio < filtroDesde) return false;
+        if (filtroHasta && fechaEnvio > filtroHasta) return false;
         if (!q) return true;
         return (
           p.codigo.toLowerCase().includes(q) ||
@@ -192,7 +199,12 @@ export function ModuloReferencias({ pedidos, onRefrescar, setProductos, setKarde
         );
       })
       .map(pedido => ({ pedido, detalles: pedido.detalles.length > 0 ? pedido.detalles : [null] }));
-  }, [pedidosConReferencia, busqueda]);
+  }, [pedidosConReferencia, busqueda, filtroEstado, filtroDesde, filtroHasta]);
+
+  const hayFiltrosActivos = !!(busqueda || filtroEstado || filtroDesde || filtroHasta);
+  const limpiarFiltros = () => {
+    setBusqueda(''); setFiltroEstado(''); setFiltroDesde(''); setFiltroHasta('');
+  };
 
   return (
     <div className="space-y-5">
@@ -280,16 +292,7 @@ export function ModuloReferencias({ pedidos, onRefrescar, setProductos, setKarde
       <div className="bg-white rounded-2xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <h3 className="font-serif text-lg text-amber-800">Historial de envíos</h3>
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
-              <input
-                className={`${inputCls} pl-9 py-2`}
-                placeholder="Buscar por pedido, referencia, cliente o producto..."
-                value={busqueda}
-                onChange={e => setBusqueda(e.target.value)}
-              />
-            </div>
+          <div className="flex items-center gap-2">
             <button onClick={() => descargarReporte('envios', 'excel', ARTESANO_ID)}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-50 border border-green-200 text-green-700 text-xs font-semibold hover:bg-green-100 transition">
               📊 Excel
@@ -301,6 +304,44 @@ export function ModuloReferencias({ pedidos, onRefrescar, setProductos, setKarde
           </div>
         </div>
         <p className="text-xs text-stone-400 -mt-2 mb-3">El reporte descarga todo el historial de envíos, sin importar el filtro de búsqueda.</p>
+
+        {/* ── Filtros de búsqueda ── */}
+        <div className="flex flex-wrap items-end gap-3 mb-4 p-3 bg-amber-50/60 rounded-xl border border-amber-100">
+          <div className="relative flex-1 min-w-[220px]">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/70 block mb-1">Buscar</label>
+            <Search className="absolute left-3 top-1/2 translate-y-[3px] h-4 w-4 text-stone-400" />
+            <input
+              className={`${inputCls} pl-9 py-2 w-full`}
+              placeholder="Pedido, referencia, cliente o producto..."
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/70">Estado</label>
+            <select className={`${inputCls} py-2`} value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
+              <option value="">Todos</option>
+              <option value="Enviado">Enviado</option>
+              <option value="Entregado">Entregado</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/70">Enviado desde</label>
+            <input type="date" max={new Date().toISOString().split('T')[0]} className={`${inputCls} py-2`}
+              value={filtroDesde} onChange={e => setFiltroDesde(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/70">Hasta</label>
+            <input type="date" max={new Date().toISOString().split('T')[0]} className={`${inputCls} py-2`}
+              value={filtroHasta} onChange={e => setFiltroHasta(e.target.value)} />
+          </div>
+          {hayFiltrosActivos && (
+            <button onClick={limpiarFiltros}
+              className="px-3 py-2 rounded-xl bg-stone-100 text-stone-500 text-sm font-semibold hover:bg-stone-200 transition">
+              ✕ Limpiar filtros
+            </button>
+          )}
+        </div>
 
         <div className="overflow-x-auto rounded-xl border border-amber-100">
           <table className="w-full text-sm">
