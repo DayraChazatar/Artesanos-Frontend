@@ -3,6 +3,7 @@ import { ChevronDown, Search, Package, Truck } from 'lucide-react';
 import { Producto, Kardex, getKardex, descargarReporte } from '../../../data/artesanoApi';
 import { Pedido } from '../types';
 import { API_BASE } from '../../../utils/config';
+import { hoyLocal } from '../../../utils/fecha';
 
 const BASE = API_BASE;
 const ARTESANO_ID = Number(localStorage.getItem('usuario_id') ?? 1);
@@ -327,12 +328,12 @@ export function ModuloReferencias({ pedidos, onRefrescar, setProductos, setKarde
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/70">Enviado desde</label>
-            <input type="date" max={new Date().toISOString().split('T')[0]} className={`${inputCls} py-2`}
+            <input type="date" max={hoyLocal()} className={`${inputCls} py-2`}
               value={filtroDesde} onChange={e => setFiltroDesde(e.target.value)} />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/70">Hasta</label>
-            <input type="date" max={new Date().toISOString().split('T')[0]} className={`${inputCls} py-2`}
+            <input type="date" max={hoyLocal()} className={`${inputCls} py-2`}
               value={filtroHasta} onChange={e => setFiltroHasta(e.target.value)} />
           </div>
           {hayFiltrosActivos && (

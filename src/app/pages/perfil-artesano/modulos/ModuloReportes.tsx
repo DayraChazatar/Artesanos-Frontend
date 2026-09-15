@@ -4,6 +4,7 @@ import {
   LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
 import { Producto, Kardex, descargarReporte } from '../../../data/artesanoApi';
+import { hoyLocal } from '../../../utils/fecha';
 
 const ARTESANO_ID = Number(localStorage.getItem('usuario_id') ?? 1);
 const COLORS = ['#b45309', '#d97706', '#f59e0b', '#fbbf24', '#92400e', '#78350f', '#fde68a'];
@@ -21,7 +22,7 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
   const [tabReporte, setTabReporte] = useState<'ventas' | 'inventario' | 'productos' | 'contable'>('ventas');
   const [vista, setVista] = useState<Record<string, 'tabla' | 'dashboard'>>({ ventas: 'tabla', inventario: 'tabla', productos: 'tabla', contable: 'tabla' });
 
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = hoyLocal();
   const [fVentas, setFVentas] = useState({ producto: '', desde: '', hasta: '' });
   const [fInventario, setFInventario] = useState({ producto: '', desde: '', hasta: '', tipo: 'todos', subtipo: 'todos' });
   const [fProductos, setFProductos] = useState({ producto: '', desde: '', hasta: '' });

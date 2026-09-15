@@ -6,6 +6,7 @@ import { generarGuiaEnvio } from '../../../utils/guiaEnvio';
 import { ModuloReferencias } from './ModuloReferencias';
 
 import { API_BASE } from '../../../utils/config';
+import { hoyLocal } from '../../../utils/fecha';
 
 const BASE = API_BASE;
 
@@ -200,11 +201,11 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
             </select>
             <div className="flex items-center gap-2">
               <span className="text-sm text-stone-500">Desde</span>
-              <input type="date" max={new Date().toISOString().split('T')[0]} value={filtroDesde} onChange={e => setFiltroDesde(e.target.value)} className={inputCls} />
+              <input type="date" max={hoyLocal()} value={filtroDesde} onChange={e => setFiltroDesde(e.target.value)} className={inputCls} />
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-stone-500">Hasta</span>
-              <input type="date" max={new Date().toISOString().split('T')[0]} value={filtroHasta} onChange={e => setFiltroHasta(e.target.value)} className={inputCls} />
+              <input type="date" max={hoyLocal()} value={filtroHasta} onChange={e => setFiltroHasta(e.target.value)} className={inputCls} />
             </div>
             {(busqueda || filtroEstado || filtroDesde || filtroHasta) && (
               <button

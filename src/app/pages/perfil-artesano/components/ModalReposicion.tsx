@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Producto } from '../../../data/artesanoApi';
+import { hoyLocal } from '../../../utils/fecha';
 
 interface ModalReposicionProps {
   producto: Producto;
@@ -10,7 +11,7 @@ interface ModalReposicionProps {
 export function ModalReposicion({ producto, onClose, onConfirm }: ModalReposicionProps) {
   const [cantidad, setCantidad] = useState(0);
   const [nota, setNota] = useState('');
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = hoyLocal();
   const [fecha, setFecha] = useState(hoy);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

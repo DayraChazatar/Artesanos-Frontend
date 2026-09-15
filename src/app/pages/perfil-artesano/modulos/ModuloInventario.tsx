@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Producto, Kardex, createKardex, reponerStock, getKardex, getResumenInventario, type ResumenInventario } from '../../../data/artesanoApi';
 import { ModalReposicion } from '../components/ModalReposicion';
+import { hoyLocal } from '../../../utils/fecha';
 
 const inputCls = 'w-full rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent transition';
 const labelCls = 'block text-[10px] font-semibold tracking-widest uppercase text-stone-500 mb-1';
@@ -23,7 +24,7 @@ export function ModuloInventario({
   productos, kardex, setKardex, setProductos,
   filtroProductoInicial = 'todos', onFiltroUsado,
 }: ModuloInventarioProps) {
-  const [form, setForm] = useState({ producto: productos[0]?.id ?? 0, fecha: new Date().toISOString().slice(0, 10), cantidad: '', precio_pvp: '', nota: '' });
+  const [form, setForm] = useState({ producto: productos[0]?.id ?? 0, fecha: hoyLocal(), cantidad: '', precio_pvp: '', nota: '' });
   const [alert, setAlert] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [loading, setLoading] = useState(false);
   const [modalProd, setModalProd] = useState<Producto | null>(null);
@@ -63,7 +64,7 @@ export function ModuloInventario({
         setProductos(prev => prev.map(p => p.id === form.producto ? { ...p, cantidad: nuevo.stock_resultante! } : p));
       }
       try { const k = await getKardex(); setKardex(k); } catch { }
-      setForm({ producto: productos[0]?.id ?? 0, fecha: new Date().toISOString().slice(0, 10), cantidad: '', precio_pvp: '', nota: '' });
+      setForm({ producto: productos[0]?.id ?? 0, fecha: hoyLocal(), cantidad: '', precio_pvp: '', nota: '' });
       showAlert('✓ Entrada registrada correctamente');
     } catch (err: any) {
       let msg = 'Error al registrar el movimiento';
@@ -130,7 +131,7 @@ export function ModuloInventario({
                 </div>
                 <div className="flex-1 min-w-[140px]">
                   <label className={labelCls}>Fecha *</label>
-                  <input type="date" className={inputCls} value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} />
+                  <input type="date" max={hoyLocal()} className={inputCls} value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} />
                 </div>
               </div>
               <div>
@@ -194,9 +195,9 @@ export function ModuloInventario({
               />
             </div>
             <span>Desde</span>
-            <input type="date" max={new Date().toISOString().slice(0, 10)} className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.desde} onChange={e => setFiltros({ ...filtros, desde: e.target.value })} />
+            <input type="date" max={hoyLocal()} className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.desde} onChange={e => setFiltros({ ...filtros, desde: e.target.value })} />
             <span>Hasta</span>
-            <input type="date" max={new Date().toISOString().slice(0, 10)} className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.hasta} onChange={e => setFiltros({ ...filtros, hasta: e.target.value })} />
+            <input type="date" max={hoyLocal()} className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.hasta} onChange={e => setFiltros({ ...filtros, hasta: e.target.value })} />
             <select className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.tipo} onChange={e => setFiltros({ ...filtros, tipo: e.target.value })}>
               <option value="todos">Tipo: todos</option>
               <option value="entrada">Entrada</option>
