@@ -21,6 +21,10 @@ const Alert = ({ msg, type }: { msg: string; type: 'success' | 'error' }) => {
 // desde la pestaña "Referencias", donde queda registrado el número de
 // guía/ticket real que dio la transportadora.
 const SIGUIENTES: Record<string, string[]> = {
+  // Pago por transferencia directa: se confirma a mano una vez el cliente
+  // sube el comprobante (ver el caso especial más abajo, igual que Enviar/
+  // Confirmar entrega). El de Wompi se confirma solo, por su webhook.
+  'Pago pendiente': ['Pago confirmado'],
   'Pago confirmado': ['Pendiente'],
   'Pendiente': ['En proceso'],
   'En proceso': [],
@@ -36,6 +40,7 @@ const SIGUIENTES: Record<string, string[]> = {
 const FINALIZADOS = ['Entregado', 'Cancelado', 'Devolucion aprobada', 'Devolucion rechazada', 'Devuelto'];
 
 const BTN_COLOR: Record<string, string> = {
+  'Pago confirmado': 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200',
   'Pendiente': 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200',
   'En proceso': 'bg-orange-100 text-orange-700 hover:bg-orange-200',
   Enviado: 'bg-blue-100 text-blue-700 hover:bg-blue-200',
@@ -45,6 +50,7 @@ const BTN_COLOR: Record<string, string> = {
 };
 
 const MENSAJES_ESTADO: Record<string, string> = {
+  'Pago confirmado': '✅ Pago confirmado — pendiente de que aceptes el pedido',
   'En proceso': '⚙️ Pedido en preparación',
   Enviado: '🚚 Pedido marcado como enviado',
   Entregado: '✅ Entregado — stock descontado',
@@ -293,7 +299,24 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
                         <td className="px-4 py-3 text-xs text-stone-400 whitespace-nowrap">{new Date(pedido.fecha).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            {pedido.estado === 'En proceso' ? (
+                            {pedido.estado === 'Pago pendiente' && pedido.metodo_pago === 'transferencia' ? (
+                              pedido.comprobante_url ? (
+                                <>
+                                  <a href={pedido.comprobante_url} target="_blank" rel="noopener noreferrer"
+                                    className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200 transition">
+                                    🧾 Ver comprobante
+                                  </a>
+                                  <button disabled={isLoading} onClick={() => actualizarEstado(pedido, 'Pago confirmado')}
+                                    className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition disabled:opacity-50">
+                                    {isLoading ? '⏳' : '✓ Confirmar pago recibido'}
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="text-xs text-amber-500 italic">⏳ Esperando comprobante del cliente</span>
+                              )
+                            ) : pedido.estado === 'Pago pendiente' ? (
+                              <span className="text-xs text-stone-300 italic">⏳ Esperando confirmación de Wompi</span>
+                            ) : pedido.estado === 'En proceso' ? (
                               <button onClick={() => irAReferencias(pedido.codigo, 'enviar')}
                                 className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200 transition">
                                 📮 Enviar

@@ -3,7 +3,8 @@ export function generarGuiaEnvio(pedido: any) {
     day: '2-digit', month: 'long', year: 'numeric'
   });
 
-  const transportadora = pedido.transportadora || 'Coordinadora';
+  // No se trabaja con ninguna transportadora — ni real ni inventada. Este
+  // comprobante lo emite Pakari Shop directamente, no una empresa de envíos.
   const numeroGuia = pedido.numero_guia || `PKR-PED-${String(pedido.id).padStart(5,'0')}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
 
   const productosHTML = pedido.detalles?.map((d: any) => `
@@ -27,8 +28,8 @@ export function generarGuiaEnvio(pedido: any) {
           /* HEADER */
           .header { background:linear-gradient(135deg, #92400e, #b45309, #d97706); padding:32px 40px; display:flex; justify-content:space-between; align-items:center; }
           .header-left { color:white; }
-          .transportadora { font-size:28px; font-weight:800; letter-spacing:-0.5px; }
-          .transportadora-sub { font-size:11px; opacity:0.8; margin-top:3px; letter-spacing:1px; text-transform:uppercase; }
+          .marca-envio { font-size:28px; font-weight:800; letter-spacing:-0.5px; }
+          .marca-envio-sub { font-size:11px; opacity:0.8; margin-top:3px; letter-spacing:1px; text-transform:uppercase; }
           .header-right { text-align:right; color:white; }
           .guia-label { font-size:11px; opacity:0.75; text-transform:uppercase; letter-spacing:1.5px; }
           .guia-num { font-size:22px; font-weight:800; letter-spacing:-0.5px; margin-top:4px; }
@@ -81,8 +82,8 @@ export function generarGuiaEnvio(pedido: any) {
           <!-- HEADER -->
           <div class="header">
             <div class="header-left">
-              <div class="transportadora">${transportadora}</div>
-              <div class="transportadora-sub">Guía logística de envío</div>
+              <div class="marca-envio">Pakari Shop</div>
+              <div class="marca-envio-sub">Comprobante de despacho</div>
             </div>
             <div class="header-right">
               <div class="guia-label">Número de guía</div>
@@ -122,10 +123,6 @@ export function generarGuiaEnvio(pedido: any) {
             <div class="info-item">
               <span class="info-item-label">Pedido</span>
               <span class="info-item-value">#${pedido.codigo ?? pedido.id}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-item-label">Transportadora</span>
-              <span class="info-item-value">${transportadora}</span>
             </div>
             <div class="info-item">
               <span class="info-item-label">Fecha</span>

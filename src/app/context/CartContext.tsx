@@ -10,6 +10,9 @@ export interface Product {
   image: string;
   category: string;
   artisan: string;
+  /** id numérico del artesano dueño — necesario para dividir el carrito en
+   * un pedido por artesano y para saber quién ofrece pago directo. */
+  artesanoId?: number;
   stock: number;
   discount?: number;
 }
@@ -22,11 +25,15 @@ interface CheckoutOptions {
   clienteId: number;
   direccion?: string;
   telefono?: string;
+  /** id de artesano (como texto) → 'wompi' | 'transferencia'. Si un
+   * artesano del carrito no aparece aquí, se le cobra por Wompi. */
+  metodosPago?: Record<string, 'wompi' | 'transferencia'>;
 }
 
 interface CheckoutResult {
   ok: boolean;
-  pedido?: any;   // PedidoSerializer data
+  /** Uno o más pedidos — el carrito se divide en un pedido por artesano. */
+  pedidos?: any[];   // PedidoSerializer data, uno por artesano
   error?: string;
 }
 
@@ -40,6 +47,9 @@ interface CartContextType {
   totalPrice: number;
   /** Crea el pedido en el backend y vacía el carrito si tiene éxito */
   checkout: (options: CheckoutOptions) => Promise<CheckoutResult>;
+  /** Completa el artesanoId de un producto que quedó guardado en el carrito
+   * antes de que este dato existiera (carritos viejos en localStorage). */
+  fijarArtesanoId: (productId: string, artesanoId: number) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -90,6 +100,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = () => setCart([]);
 
+  const fijarArtesanoId = (productId: string, artesanoId: number) => {
+    setCart((prevCart) =>
+      prevCart.map((item) =>
+        item.id === productId && item.artesanoId == null
+          ? { ...item, artesanoId }
+          : item
+      )
+    );
+  };
+
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = cart.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -114,6 +134,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         cantidad:    item.quantity,
         precio:      item.price,
       })),
+      metodos_pago: options.metodosPago ?? {},
     };
 
     try {
@@ -132,7 +153,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) {
         return { ok: false, error: data.error ?? 'Error al crear el pedido' };
       }
-      return { ok: true, pedido: data };
+      // El backend siempre devuelve una lista (un pedido por artesano).
+      return { ok: true, pedidos: Array.isArray(data) ? data : [data] };
     } catch (e) {
       return { ok: false, error: 'Error de conexión con el servidor' };
     }
@@ -149,6 +171,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         totalItems,
         totalPrice,
         checkout,
+        fijarArtesanoId,
       }}
     >
       {children}

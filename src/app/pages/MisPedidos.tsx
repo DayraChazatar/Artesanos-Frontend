@@ -7,7 +7,7 @@ import {
   AlertCircle, Eye, Upload, X, MessageSquare, Search,
   CalendarDays, ChevronLeft, ChevronRight, RefreshCw,
 } from 'lucide-react';
-import { generarFacturaPDF } from '../utils/facturas';
+import { generarReciboPDF } from '../utils/recibos';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE } from '../utils/config'; 
@@ -44,6 +44,13 @@ interface Order {
   fecha_envio?: string;
   fecha_entrega?: string;
 
+  metodo_pago?: 'wompi' | 'transferencia';
+  comprobante_url?: string | null;
+  pago_directo_banco?: string | null;
+  pago_directo_tipo_cuenta?: string | null;
+  pago_directo_numero?: string | null;
+  pago_directo_titular?: string | null;
+
   items: OrderItem[];
 
   customer: {
@@ -70,6 +77,13 @@ function mapBackendOrder(p: any): Order {
     fecha_envio: p.fecha_envio,
     fecha_entrega: p.fecha_entrega,
 
+    metodo_pago: p.metodo_pago,
+    comprobante_url: p.comprobante_url,
+    pago_directo_banco: p.pago_directo_banco,
+    pago_directo_tipo_cuenta: p.pago_directo_tipo_cuenta,
+    pago_directo_numero: p.pago_directo_numero,
+    pago_directo_titular: p.pago_directo_titular,
+
     items: (p.detalles ?? []).map((d: any) => ({
       id: d.id,
       name: d.producto_nombre,
@@ -87,6 +101,8 @@ function mapBackendOrder(p: any): Order {
 // ─── Estilos / íconos de estado ───────────────────────────────────────────────
 
 const STATUS_STYLES: Record<string, string> = {
+  'Pago pendiente':        'bg-amber-100 text-amber-700',
+  'Pago confirmado':       'bg-emerald-100 text-emerald-700',
   'Pendiente':             'bg-yellow-100 text-yellow-700',
   'En proceso':            'bg-orange-100 text-orange-700',
   'Enviado':               'bg-blue-100 text-blue-700',
@@ -98,6 +114,8 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const STATUS_ICONS: Record<string, string> = {
+  'Pago pendiente':        '🏦',
+  'Pago confirmado':       '💰',
   'Pendiente':             '🕐',
   'En proceso':            '⚙️',
   'Enviado':               '🚚',
@@ -411,19 +429,105 @@ function DetailModal({ order, onClose }: { order: Order; onClose: () => void }) 
   );
 }
 
+// ─── Modal: Pago directo (datos bancarios + subir comprobante) ───────────────
+function PaymentModal({ order, onClose, onUploaded }: {
+  order: Order;
+  onClose: () => void;
+  onUploaded: (comprobanteUrl: string) => void;
+}) {
+  const [subiendo, setSubiendo] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSubiendo(true);
+    try {
+      const token = localStorage.getItem('token') ?? '';
+      const formData = new FormData();
+      formData.append('comprobante', file);
+      const res = await fetch(`${BASE}/inventario/pedido/${order.id}/comprobante/`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Token ${token}` } : {},
+        body: formData,
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        toast.error(d.error ?? 'No se pudo subir el comprobante');
+        return;
+      }
+      const data = await res.json();
+      onUploaded(data.comprobante_url);
+      toast.success('✓ Comprobante subido — el artesano lo revisará pronto');
+    } catch {
+      toast.error('Error de conexión al subir el comprobante');
+    } finally {
+      setSubiendo(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-900">🏦 Pago por transferencia</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="px-6 py-5 space-y-4">
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm">
+            <p className="font-semibold text-blue-800 mb-2">Transfiere a esta cuenta</p>
+            <div className="space-y-1 text-blue-900">
+              <p><span className="text-blue-600">Banco:</span> {order.pago_directo_banco}</p>
+              <p><span className="text-blue-600">Tipo de cuenta:</span> {order.pago_directo_tipo_cuenta}</p>
+              <p><span className="text-blue-600">Número:</span> {order.pago_directo_numero}</p>
+              <p><span className="text-blue-600">Titular:</span> {order.pago_directo_titular}</p>
+              <p className="font-semibold pt-1">Monto exacto: ${order.total.toLocaleString('es-CO')}</p>
+            </div>
+          </div>
+
+          {order.comprobante_url ? (
+            <div className="text-sm text-green-700 font-medium bg-green-50 border border-green-100 rounded-xl px-4 py-3 flex items-center gap-2">
+              <span>✓</span>
+              <span>
+                Ya subiste el comprobante — queda pendiente de que el artesano lo confirme.{' '}
+                <a href={order.comprobante_url} target="_blank" rel="noopener noreferrer" className="underline">Verlo</a>
+              </span>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Sube la foto del comprobante</label>
+              <button onClick={() => fileRef.current?.click()} disabled={subiendo}
+                className="w-full border-2 border-dashed border-gray-200 rounded-xl py-5 flex flex-col items-center gap-2 text-gray-400 hover:border-orange-300 hover:text-orange-500 transition-colors disabled:opacity-50">
+                <Upload className="h-6 w-6" />
+                <span className="text-sm font-medium">{subiendo ? 'Subiendo...' : 'Seleccionar imagen del comprobante'}</span>
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+            </div>
+          )}
+        </div>
+        <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
+          <Button variant="ghost" onClick={onClose}>Cerrar</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Tarjeta móvil ────────────────────────────────────────────────────────────
 function OrderCard({
   order,
   onReturn,
   onDetail,
   onCancel,
-  onFactura,
+  onRecibo,
+  onPago,
 }: {
   order: Order;
   onReturn: () => void;
   onDetail: () => void;
   onCancel: () => void;
-  onFactura: () => void;
+  onRecibo: () => void;
+  onPago: () => void;
 }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-3">
@@ -446,13 +550,6 @@ function OrderCard({
           {order.numero_guia && (
             <div className="text-xs text-gray-500">
               📦 {order.numero_guia}
-            </div>
-          )}
-
-          {/* Transportadora */}
-          {order.transportadora && (
-            <div className="text-xs text-blue-600">
-              🚚 {order.transportadora}
             </div>
           )}
 
@@ -491,14 +588,28 @@ function OrderCard({
       {/* Acciones */}
       <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-50">
 
-        {/* Factura */}
+        {/* Pago directo (transferencia) */}
+        {order.status === 'Pago pendiente' && order.metodo_pago === 'transferencia' && (
+          <button
+            onClick={onPago}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition text-xs font-medium ${
+              order.comprobante_url
+                ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+            }`}
+          >
+            🏦 {order.comprobante_url ? 'Ver comprobante' : 'Pagar / subir comprobante'}
+          </button>
+        )}
+
+        {/* Recibo */}
         <button
-          onClick={onFactura}
+          onClick={onRecibo}
           disabled={order.status === 'Cancelado'}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 text-orange-600 border border-orange-200 hover:bg-orange-100 transition text-xs font-medium disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <FileText className="h-3.5 w-3.5" />
-          Factura
+          Recibo
         </button>
 
         {/* Cancelar */}
@@ -583,6 +694,7 @@ export function MisPedidos() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [returnOrder,  setReturnOrder]  = useState<Order | null>(null);
   const [detailOrder,  setDetailOrder]  = useState<Order | null>(null);
+  const [paymentOrder, setPaymentOrder] = useState<Order | null>(null);
 
   // ── Cargar pedidos desde el backend ────────────────────────────────────────
 const fetchOrders = useCallback(async () => {
@@ -656,9 +768,15 @@ const handleReturnSubmit = async (reason: string, photos: string[]) => {
     }
   };
 
-  // ── Generar factura ─────────────────────────────────────────────────────────
-  const handleFactura = (order: Order) => {
-    try { generarFacturaPDF(order); } catch (error: any) { toast.error(error.message); }
+  // ── Generar recibo ─────────────────────────────────────────────────────────
+  const handleRecibo = (order: Order) => {
+    try { generarReciboPDF(order); } catch (error: any) { toast.error(error.message); }
+  };
+
+  // ── Comprobante subido desde el modal de pago directo ───────────────────────
+  const handleComprobanteSubido = (orderId: string, comprobanteUrl: string) => {
+    setOrders(prev => prev.map(o => o.id === orderId ? { ...o, comprobante_url: comprobanteUrl } : o));
+    setPaymentOrder(prev => (prev && prev.id === orderId ? { ...prev, comprobante_url: comprobanteUrl } : prev));
   };
 
   // ── Filtros ─────────────────────────────────────────────────────────────────
@@ -819,7 +937,8 @@ const handleReturnSubmit = async (reason: string, photos: string[]) => {
                   onReturn={() => setReturnOrder(order)}
                   onDetail={() => setDetailOrder(order)}
                   onCancel={() => handleCancelOrder(order.id)}
-                  onFactura={() => handleFactura(order)} />
+                  onRecibo={() => handleRecibo(order)}
+                  onPago={() => setPaymentOrder(order)} />
               ))}
             </div>
 
@@ -868,13 +987,6 @@ const handleReturnSubmit = async (reason: string, photos: string[]) => {
       </div>
     )}
 
-    {/* Transportadora */}
-    {order.transportadora && (
-      <div className="text-xs text-blue-600">
-        🚚 {order.transportadora}
-      </div>
-    )}
-
     {/* Fecha envío */}
     {order.fecha_envio && (
       <div className="text-xs text-orange-500">
@@ -904,9 +1016,19 @@ const handleReturnSubmit = async (reason: string, photos: string[]) => {
                       <td className="px-6 py-4 text-right font-semibold text-orange-600">${order.total.toLocaleString('es-CO')}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1 flex-wrap">
-                          <button onClick={() => handleFactura(order)}
+                          {order.status === 'Pago pendiente' && order.metodo_pago === 'transferencia' && (
+                            <button onClick={() => setPaymentOrder(order)}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition text-xs font-medium ${
+                                order.comprobante_url
+                                  ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                              }`}>
+                              🏦 {order.comprobante_url ? 'Ver comprobante' : 'Pagar'}
+                            </button>
+                          )}
+                          <button onClick={() => handleRecibo(order)}
                             disabled={order.status === 'Cancelado'}
-                            title="Descargar Factura"
+                            title="Descargar Recibo"
                             className="p-1.5 rounded-lg text-orange-600 hover:bg-orange-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                             <FileText className="h-4 w-4" />
                           </button>
@@ -947,6 +1069,13 @@ const handleReturnSubmit = async (reason: string, photos: string[]) => {
 
       {returnOrder && <ReturnModal order={returnOrder} onClose={() => setReturnOrder(null)} onSubmit={handleReturnSubmit} />}
       {detailOrder && <DetailModal order={detailOrder} onClose={() => setDetailOrder(null)} />}
+      {paymentOrder && (
+        <PaymentModal
+          order={paymentOrder}
+          onClose={() => setPaymentOrder(null)}
+          onUploaded={(url) => handleComprobanteSubido(paymentOrder.id, url)}
+        />
+      )}
     </div>
   );
 }

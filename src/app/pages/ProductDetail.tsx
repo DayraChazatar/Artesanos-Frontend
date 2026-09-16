@@ -628,6 +628,8 @@ export function ProductDetail() {
           product.categoria_nombre ?? '',
         artisan:
           product.artesano_nombre ?? '',
+        artesanoId:
+          product.artesano ?? undefined,
         stock: stock,
       },
       quantity

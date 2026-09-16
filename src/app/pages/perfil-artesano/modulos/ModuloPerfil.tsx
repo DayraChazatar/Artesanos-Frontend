@@ -30,17 +30,34 @@ export function ModuloPerfil() {
   const [showPassword, setShowPassword] = useState(false);
   const [verCampo, setVerCampo] = useState({ password_actual: false, password_nueva: false, password_confirmar: false });
   const [modalFoto, setModalFoto] = useState(false);
- 
+
+  // ── Pago directo (transferencia/Nequi) — alternativa a Wompi ────────────
+  const [showPagoDirecto, setShowPagoDirecto] = useState(false);
+  const [pagoDirecto, setPagoDirecto] = useState({
+    pago_directo_banco: '', pago_directo_tipo_cuenta: '', pago_directo_numero: '', pago_directo_titular: '',
+  });
+  const [loadingPagoDirecto, setLoadingPagoDirecto] = useState(false);
+  const pagoDirectoActivo = !!(pagoDirecto.pago_directo_banco && pagoDirecto.pago_directo_tipo_cuenta
+    && pagoDirecto.pago_directo_numero && pagoDirecto.pago_directo_titular);
+
   useEffect(() => {
     fetch(`${API_BASE}/perfil/artesano/${artesanoId}/`, {
   headers: { Authorization: `Token ${localStorage.getItem('token') ?? ''}` },
 })
       .then(r => r.json())
-      .then(data => setPerfil({
-        nombre: data.nombre ?? '', correo: data.correo ?? '',
-        telefono: data.telefono ?? '', especialidad: data.especialidad ?? '',
-        biografia: data.biografia ?? '', foto_url: data.foto_url ?? '',
-      }));
+      .then(data => {
+        setPerfil({
+          nombre: data.nombre ?? '', correo: data.correo ?? '',
+          telefono: data.telefono ?? '', especialidad: data.especialidad ?? '',
+          biografia: data.biografia ?? '', foto_url: data.foto_url ?? '',
+        });
+        setPagoDirecto({
+          pago_directo_banco: data.pago_directo_banco ?? '',
+          pago_directo_tipo_cuenta: data.pago_directo_tipo_cuenta ?? '',
+          pago_directo_numero: data.pago_directo_numero ?? '',
+          pago_directo_titular: data.pago_directo_titular ?? '',
+        });
+      });
  
     fetch(`${API_BASE}/productos/?artesano=${artesanoId}`, {
   headers: { Authorization: `Token ${localStorage.getItem('token') ?? ''}` },
@@ -85,6 +102,27 @@ export function ModuloPerfil() {
     }
   };
  
+  const handleGuardarPagoDirecto = async () => {
+    setLoadingPagoDirecto(true);
+    try {
+      const res = await fetch(`${API_BASE}/perfil/artesano/${artesanoId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Token ${localStorage.getItem('token') ?? ''}`,
+        },
+        body: JSON.stringify(pagoDirecto),
+      });
+      if (!res.ok) throw new Error();
+      setAlert({ msg: '✓ Datos de pago directo actualizados correctamente', type: 'success' });
+      setTimeout(() => setAlert(null), 3000);
+    } catch {
+      setAlert({ msg: 'Error al guardar los datos de pago', type: 'error' });
+    } finally {
+      setLoadingPagoDirecto(false);
+    }
+  };
+
   const handleGuardar = async () => {
     setLoading(true);
     try {
@@ -295,6 +333,71 @@ export function ModuloPerfil() {
             <button onClick={handleCambiarPassword} disabled={loadingPass}
               className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white font-semibold shadow hover:shadow-md transition disabled:opacity-60">
               {loadingPass ? 'Actualizando...' : '✓ Cambiar contraseña'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── PAGO DIRECTO (colapsable) ── */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <button onClick={() => setShowPagoDirecto(!showPagoDirecto)}
+          aria-expanded={showPagoDirecto}
+          aria-controls="panel-pago-directo"
+          className="w-full px-8 py-5 flex items-center justify-between hover:bg-amber-50 transition">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">💳</span>
+            <div className="text-left">
+              <span className="font-serif text-lg text-amber-800 block">Pago directo (transferencia)</span>
+              <span className={`text-xs font-semibold ${pagoDirectoActivo ? 'text-green-600' : 'text-stone-400'}`}>
+                {pagoDirectoActivo ? '✓ Activo — tus clientes ya ven esta opción al pagar' : 'Sin configurar — solo verán Wompi'}
+              </span>
+            </div>
+          </div>
+          <span className="text-stone-400 text-sm">{showPagoDirecto ? '▲ Cerrar' : '▼ Expandir'}</span>
+        </button>
+
+        {showPagoDirecto && (
+          <div id="panel-pago-directo" className="px-8 pb-8 space-y-4 border-t border-amber-100 pt-4">
+            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700">
+              💡 Alternativa gratuita a Wompi: el cliente ve estos datos, te transfiere directamente y sube el
+              comprobante — tú confirmas el pago a mano desde "Pedidos". Llena los 4 campos para activarla; si
+              dejas alguno vacío, tus clientes solo verán la opción de pagar con Wompi.
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1">
+                <label htmlFor="pd-banco" className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Banco (o "Nequi")</label>
+                <input id="pd-banco" className={inputCls} value={pagoDirecto.pago_directo_banco}
+                  onChange={e => setPagoDirecto({ ...pagoDirecto, pago_directo_banco: e.target.value })}
+                  placeholder="Ej: Bancolombia, Nequi" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="pd-tipo" className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Tipo de cuenta</label>
+                <select id="pd-tipo" className={inputCls} value={pagoDirecto.pago_directo_tipo_cuenta}
+                  onChange={e => setPagoDirecto({ ...pagoDirecto, pago_directo_tipo_cuenta: e.target.value })}>
+                  <option value="">— Selecciona —</option>
+                  <option value="Ahorros">Ahorros</option>
+                  <option value="Corriente">Corriente</option>
+                  <option value="Nequi">Nequi</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="pd-numero" className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Número de cuenta o celular Nequi</label>
+                <input id="pd-numero" className={inputCls} value={pagoDirecto.pago_directo_numero}
+                  onChange={e => setPagoDirecto({ ...pagoDirecto, pago_directo_numero: e.target.value })}
+                  placeholder="Ej: 3001234567" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="pd-titular" className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Nombre del titular</label>
+                <input id="pd-titular" className={inputCls} value={pagoDirecto.pago_directo_titular}
+                  onChange={e => setPagoDirecto({ ...pagoDirecto, pago_directo_titular: e.target.value })}
+                  placeholder="Nombre completo tal como aparece en la cuenta" />
+              </div>
+            </div>
+
+            <button onClick={handleGuardarPagoDirecto} disabled={loadingPagoDirecto}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white font-semibold shadow hover:shadow-md transition disabled:opacity-60">
+              {loadingPagoDirecto ? 'Guardando...' : '✓ Guardar datos de pago'}
             </button>
           </div>
         )}

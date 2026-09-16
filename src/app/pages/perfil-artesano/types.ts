@@ -37,6 +37,12 @@ export interface Pedido {
   transportadora?: string;
   fecha_envio?: string;
   fecha_entrega?: string;
+  metodo_pago?: 'wompi' | 'transferencia';
+  comprobante_url?: string | null;
+  pago_directo_banco?: string | null;
+  pago_directo_tipo_cuenta?: string | null;
+  pago_directo_numero?: string | null;
+  pago_directo_titular?: string | null;
 }
 
 export type Tab = 'perfil' | 'catalogo' | 'productos' | 'inventario' | 'pedidos' | 'reportes';

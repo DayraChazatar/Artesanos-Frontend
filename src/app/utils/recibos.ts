@@ -4,7 +4,6 @@ interface Order {
   total: number;
   status: string;
   numero_guia?: string;
-  transportadora?: string;
   fecha_envio?: string;
   fecha_entrega?: string;
   items: any[];
@@ -15,7 +14,11 @@ interface Order {
   };
 }
 
-export function generarFacturaPDF(order: Order) {
+// "Recibo de compra", no "Factura": Pakari Shop no está registrado ante la
+// DIAN para emitir facturas electrónicas — llamarlo "factura" sería un
+// documento con un nombre legal que no le corresponde. Este PDF es solo un
+// comprobante informal de la compra para el cliente, sin validez tributaria.
+export function generarReciboPDF(order: Order) {
   const nombreCliente = order.customer?.name?.trim()
     || `Pedido #${order.id.slice(-6).toUpperCase()}`;
 
@@ -35,7 +38,7 @@ export function generarFacturaPDF(order: Order) {
   const html = `
     <html>
       <head>
-        <title>Factura Pakari Shop — #${order.id.slice(-6)}</title>
+        <title>Recibo Pakari Shop — #${order.id.slice(-6)}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: 'Segoe UI', Arial, sans-serif; background: #fffbf5; color: #44403c; }
@@ -45,8 +48,8 @@ export function generarFacturaPDF(order: Order) {
           .logo-name { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
           .logo-sub { font-size: 11px; opacity: 0.8; margin-top: 2px; letter-spacing: 1px; text-transform: uppercase; }
           .header-right { text-align: right; color: white; }
-          .factura-label { font-size: 11px; opacity: 0.75; text-transform: uppercase; letter-spacing: 1.5px; }
-          .factura-num { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+          .recibo-label { font-size: 11px; opacity: 0.75; text-transform: uppercase; letter-spacing: 1.5px; }
+          .recibo-num { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
           .status-band { background: #fef3c7; border-top: 3px solid #f59e0b; border-bottom: 3px solid #f59e0b; padding: 10px 40px; display: flex; align-items: center; gap: 10px; }
           .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; flex-shrink: 0; }
           .status-text { font-size: 13px; font-weight: 600; color: #92400e; }
@@ -82,21 +85,20 @@ export function generarFacturaPDF(order: Order) {
               <div class="logo-sub">Artesanías colombianas hechas a mano</div>
             </div>
             <div class="header-right">
-              <div class="factura-label">Factura de compra</div>
-              <div class="factura-num">#${order.id.slice(-6).toUpperCase()}</div>
+              <div class="recibo-label">Recibo de compra</div>
+              <div class="recibo-num">#${order.id.slice(-6).toUpperCase()}</div>
             </div>
           </div>
           <div class="status-band">
             <div class="status-dot"></div>
             <span class="status-text">Estado del pedido: ${order.status}</span>
-            ${order.numero_guia ? `<span style="margin-left:auto; font-size:12px; color:#92400e;">📦 Guía: <strong>${order.numero_guia}</strong></span>` : ''}
+            ${order.numero_guia ? `<span style="margin-left:auto; font-size:12px; color:#92400e;">📦 Referencia: <strong>${order.numero_guia}</strong></span>` : ''}
           </div>
           <div class="info-section">
             <div class="info-block">
               <div class="info-title">📋 Datos del pedido</div>
               <div class="info-row"><span class="info-label">Fecha</span><span class="info-value">${fecha}</span></div>
               <div class="info-row"><span class="info-label">Pedido</span><span class="info-value">#${order.id.slice(-6).toUpperCase()}</span></div>
-              ${order.transportadora ? `<div class="info-row"><span class="info-label">Transporte</span><span class="info-value">${order.transportadora}</span></div>` : ''}
               ${order.fecha_envio ? `<div class="info-row"><span class="info-label">Enviado</span><span class="info-value">${new Date(order.fecha_envio).toLocaleDateString('es-CO')}</span></div>` : ''}
               ${order.fecha_entrega ? `<div class="info-row"><span class="info-label">Entregado</span><span class="info-value">${new Date(order.fecha_entrega).toLocaleDateString('es-CO')}</span></div>` : ''}
             </div>
