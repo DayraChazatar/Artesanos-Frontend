@@ -14,6 +14,7 @@ import { Checkout } from "./pages/Checkout";
 import { NotFound } from "./pages/NotFound";
 import PerfilArtesano from "./pages/PerfilArtesano";
 import { MisPedidos } from "./pages/MisPedidos";
+import { RequireRole } from "./components/RequireRole";
 
 export const router = createBrowserRouter([
   {
@@ -26,7 +27,14 @@ export const router = createBrowserRouter([
       { path: "recuperar-contraseña", Component: ForgotPassword },
       { path: "restablecer-contrasena/:token", Component: RestablecerContrasena },
       { path: "perfil", Component: Profile },
-      { path: "perfil-artesano", Component: PerfilArtesano },
+      {
+        path: "perfil-artesano",
+        element: (
+          <RequireRole role="artisan">
+            <PerfilArtesano />
+          </RequireRole>
+        ),
+      },
       { path: "catalogo", Component: Catalog },
       { path: "producto/:id", Component: ProductDetail },
       { path: "producto/editar/:id", Component: ProductEdit },
