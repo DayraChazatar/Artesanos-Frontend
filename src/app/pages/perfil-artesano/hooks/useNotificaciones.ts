@@ -10,30 +10,33 @@ const getAuthHeaders = () => ({
 });
 
 export function useNotificaciones() {
-  const [notificaciones, setNotificaciones] = useState<Notificacion[]>(() => {
-    const guardadas = localStorage.getItem('notificaciones');
-    return guardadas ? JSON.parse(guardadas) : [];
-  });
+  const [notificaciones, setNotificaciones] = useState<Notificacion[]>([]);
 
   const cargar = useCallback(async () => {
     try {
       const res = await fetch(`${BASE}/notificaciones/`, { headers: getAuthHeaders() });
+      if (!res.ok) return;
       const data = await res.json();
-      // setNotificaciones(Array.isArray(data) ? data : []);
+      const lista = Array.isArray(data) ? data : (data?.results ?? []);
+      setNotificaciones(lista.map((n: Notificacion) => ({
+        ...n,
+        fecha: new Date(n.fecha).toLocaleString('es-CO', {
+          day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+        }),
+      })));
     } catch (e) {
       console.error('Error cargando notificaciones', e);
     }
   }, []);
 
   useEffect(() => {
+    // Antes las notificaciones se guardaban en localStorage y se compartían
+    // entre cuentas del mismo navegador; ahora vienen solo del servidor.
+    localStorage.removeItem('notificaciones');
     cargar();
     const interval = setInterval(cargar, 30_000);
     return () => clearInterval(interval);
   }, [cargar]);
-
-  useEffect(() => {
-    localStorage.setItem('notificaciones', JSON.stringify(notificaciones));
-  }, [notificaciones]);
 
   const marcarLeida = async (id: number) => {
     await fetch(`${BASE}/notificaciones/${id}/leer/`, { method: 'PATCH', headers: getAuthHeaders() });
