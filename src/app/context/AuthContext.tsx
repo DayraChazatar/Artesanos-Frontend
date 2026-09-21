@@ -29,6 +29,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   updateProfile: (data: Partial<User>) => Promise<void>;
+  syncUser: (data: Partial<User>) => void;
   resetPassword: (email: string) => Promise<void>;
 }
 
@@ -181,6 +182,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // Refleja en la sesión (barra superior, etc.) datos que YA se guardaron en
+  // el servidor por otra vía — no hace ninguna petición.
+  const syncUser = (data: Partial<User>) => {
+    if (!user) return;
+    const updatedUser = { ...user, ...data };
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    if (data.name) localStorage.setItem('usuario_nombre', data.name);
+  };
+
   const resetPassword = async (email: string) => {
     const res = await fetch(`${BASE}/password-reset/solicitar/`, {
       method: 'POST',
@@ -199,7 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider value={{
       user, loading, login, loginWithGoogle,
       register, logout, isAuthenticated: !!user,
-      updateProfile, resetPassword,
+      updateProfile, syncUser, resetPassword,
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { API_BASE } from '../../../utils/config';
- 
+import { useAuth } from '../../../context/AuthContext';
+
 const inputCls = 'px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-base text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition';
  
 const Alert = ({ msg, type }: { msg: string; type: 'success' | 'error' }) => {
@@ -19,7 +20,13 @@ const Alert = ({ msg, type }: { msg: string; type: 'success' | 'error' }) => {
  
 export function ModuloPerfil() {
   const artesanoId = Number(localStorage.getItem('usuario_id') ?? 1);
+  const { syncUser } = useAuth();
   const [perfil, setPerfil] = useState({ nombre: '', correo: '', telefono: '', especialidad: '', biografia: '', foto_url: '' });
+  // Lo que se está escribiendo mientras se edita; "perfil" solo cambia al guardar.
+  const [borrador, setBorrador] = useState({ nombre: '', correo: '', telefono: '', biografia: '' });
+  const [passwordCorreo, setPasswordCorreo] = useState('');
+  const [verPasswordCorreo, setVerPasswordCorreo] = useState(false);
+  const correoCambio = borrador.correo.trim() !== '' && borrador.correo.trim() !== perfil.correo;
   const [stats, setStats] = useState({ productos: 0, pedidos: 0 });
   const [preview, setPreview] = useState<string>('');
   const [editando, setEditando] = useState(false);
@@ -123,26 +130,113 @@ export function ModuloPerfil() {
     }
   };
 
+  const iniciarEdicion = () => {
+    setBorrador({ nombre: perfil.nombre, correo: perfil.correo, telefono: perfil.telefono, biografia: perfil.biografia });
+    setPasswordCorreo('');
+    setVerPasswordCorreo(false);
+    setEditando(true);
+  };
+
+  const cancelarEdicion = () => {
+    setPasswordCorreo('');
+    setEditando(false);
+  };
+
   const handleGuardar = async () => {
+    if (!borrador.nombre.trim())
+      return setAlert({ msg: 'El nombre no puede quedar vacío', type: 'error' });
+    if (correoCambio && !passwordCorreo)
+      return setAlert({ msg: 'Para cambiar el correo escribe tu contraseña actual', type: 'error' });
+
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('telefono', perfil.telefono);
-      formData.append('biografia', perfil.biografia);
+      const body: Record<string, string> = {
+        nombre: borrador.nombre.trim(),
+        telefono: borrador.telefono,
+        biografia: borrador.biografia,
+      };
+      if (correoCambio) {
+        body.correo = borrador.correo.trim();
+        body.password_actual = passwordCorreo;
+      }
       const res = await fetch(`${API_BASE}/perfil/artesano/${artesanoId}/`, {
-  method: 'PATCH',
-  headers: { Authorization: `Token ${localStorage.getItem('token') ?? ''}` },
-  body: formData,
-});
-      const data = await res.json();
-      setPerfil(prev => ({ ...prev, foto_url: data.foto_url ?? prev.foto_url }));
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Token ${localStorage.getItem('token') ?? ''}`,
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detalle = data.error ?? data.correo?.[0] ?? data.nombre?.[0] ?? 'No se pudo actualizar el perfil';
+        return setAlert({ msg: detalle, type: 'error' });
+      }
+      setPerfil(prev => ({
+        ...prev,
+        nombre: data.nombre ?? prev.nombre,
+        correo: data.correo ?? prev.correo,
+        telefono: data.telefono ?? '',
+        biografia: data.biografia ?? '',
+      }));
+      syncUser({ name: data.nombre, email: data.correo, phone: data.telefono ?? '', bio: data.biografia ?? '' });
+      setPasswordCorreo('');
       setEditando(false);
       setAlert({ msg: '✓ Perfil actualizado correctamente', type: 'success' });
       setTimeout(() => setAlert(null), 3000);
     } catch {
-      setAlert({ msg: 'Error al actualizar el perfil', type: 'error' });
+      setAlert({ msg: 'Error de conexión al actualizar el perfil', type: 'error' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEliminarFoto = async () => {
+    if (!window.confirm('¿Quieres quitar tu foto de perfil? Podrás subir otra cuando quieras.')) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/perfil/artesano/${artesanoId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Token ${localStorage.getItem('token') ?? ''}`,
+        },
+        body: JSON.stringify({ eliminar_foto: true }),
+      });
+      if (!res.ok) throw new Error();
+      setPerfil(prev => ({ ...prev, foto_url: '' }));
+      setPreview('');
+      syncUser({ profileImage: '' });
+      setAlert({ msg: '✓ Foto eliminada', type: 'success' });
+      setTimeout(() => setAlert(null), 3000);
+    } catch {
+      setAlert({ msg: 'No se pudo eliminar la foto', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDesactivarPagoDirecto = async () => {
+    if (!window.confirm('¿Desactivar el pago directo? Tus clientes dejarán de ver esta opción y solo podrán pagar con Wompi. Los pedidos que ya estén esperando una transferencia dejarán de mostrar tus datos de cuenta.')) return;
+    const vacios = { pago_directo_banco: '', pago_directo_tipo_cuenta: '', pago_directo_numero: '', pago_directo_titular: '' };
+    setLoadingPagoDirecto(true);
+    try {
+      const res = await fetch(`${API_BASE}/perfil/artesano/${artesanoId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Token ${localStorage.getItem('token') ?? ''}`,
+        },
+        body: JSON.stringify(vacios),
+      });
+      if (!res.ok) throw new Error();
+      setPagoDirecto(vacios);
+      setAlert({ msg: '✓ Pago directo desactivado — tus clientes solo verán Wompi', type: 'success' });
+      setTimeout(() => setAlert(null), 3000);
+    } catch {
+      setAlert({ msg: 'No se pudo desactivar el pago directo', type: 'error' });
+    } finally {
+      setLoadingPagoDirecto(false);
     }
   };
  
@@ -188,17 +282,26 @@ export function ModuloPerfil() {
   headers: { Authorization: `Token ${localStorage.getItem('token') ?? ''}` },
   body: formData,
 });
+                    if (!res.ok) throw new Error();
                     const data = await res.json();
                     setPerfil(prev => ({ ...prev, foto_url: data.foto_url ?? prev.foto_url }));
+                    syncUser({ profileImage: data.foto_url ?? '' });
                     setAlert({ msg: '✓ Foto actualizada correctamente', type: 'success' });
                     setTimeout(() => setAlert(null), 3000);
                   } catch {
+                    setPreview('');
                     setAlert({ msg: 'Error al subir la foto', type: 'error' });
                   } finally {
                     setLoading(false);
                   }
                 }} />
             </div>
+            {editando && (preview || perfil.foto_url) && (
+              <button onClick={handleEliminarFoto} disabled={loading}
+                className="mt-3 text-xs font-semibold text-red-600 hover:text-red-700 hover:underline disabled:opacity-60">
+                🗑️ Eliminar foto
+              </button>
+            )}
           </div>
  
           {/* Modal foto grande */}
@@ -249,23 +352,53 @@ export function ModuloPerfil() {
  
           {/* Botón editar */}
           <div className="flex justify-end mb-4">
-            <button onClick={() => setEditando(!editando)}
+            <button onClick={editando ? cancelarEdicion : iniciarEdicion}
               className="px-4 py-2 rounded-xl bg-amber-100 text-amber-800 text-sm font-semibold hover:bg-amber-200 transition">
               {editando ? '✕ Cancelar' : '✏️ Editar perfil'}
             </button>
           </div>
- 
+
           {/* Campos en dos columnas */}
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
-              <p className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1">Correo</p>
-              <p className="text-stone-700 text-sm truncate">{perfil.correo}</p>
+              <label htmlFor="nombre" className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1 block">Nombre</label>
+              {editando
+                ? <input id="nombre" className={`${inputCls} w-full`} value={borrador.nombre}
+                    onChange={e => setBorrador({ ...borrador, nombre: e.target.value })}
+                    placeholder="Tu nombre" />
+                : <p className="text-stone-700 text-sm truncate">{perfil.nombre}</p>}
             </div>
+            <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
+              <label htmlFor="correo" className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1 block">Correo</label>
+              {editando
+                ? <input id="correo" type="email" className={`${inputCls} w-full`} value={borrador.correo}
+                    onChange={e => setBorrador({ ...borrador, correo: e.target.value })}
+                    placeholder="tucorreo@ejemplo.com" />
+                : <p className="text-stone-700 text-sm truncate">{perfil.correo}</p>}
+            </div>
+            {editando && correoCambio && (
+              <div className="col-span-2 bg-blue-50 rounded-xl p-4 border border-blue-100">
+                <label htmlFor="password-correo" className="text-xs uppercase tracking-wider font-bold text-blue-700 mb-1 block">
+                  Contraseña actual (necesaria para cambiar el correo)
+                </label>
+                <div className="relative">
+                  <input id="password-correo" type={verPasswordCorreo ? 'text' : 'password'}
+                    className={`${inputCls} w-full pr-10`} value={passwordCorreo}
+                    onChange={e => setPasswordCorreo(e.target.value)} placeholder="••••••••" />
+                  <button type="button" onClick={() => setVerPasswordCorreo(v => !v)}
+                    aria-label={verPasswordCorreo ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600">
+                    {verPasswordCorreo ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+                  </button>
+                </div>
+                <p className="text-xs text-blue-600 mt-2">Desde ahora entrarás con el correo nuevo y las recuperaciones de contraseña llegarán a él.</p>
+              </div>
+            )}
             <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
               <label htmlFor="telefono" className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1 block">Teléfono</label>
               {editando
-                ? <input id="telefono" className={inputCls} value={perfil.telefono}
-                    onChange={e => setPerfil({ ...perfil, telefono: e.target.value })}
+                ? <input id="telefono" className={`${inputCls} w-full`} value={borrador.telefono}
+                    onChange={e => setBorrador({ ...borrador, telefono: e.target.value })}
                     placeholder="Ej: 3001234567" />
                 : <p className="text-stone-700 text-sm">{perfil.telefono || '—'}</p>}
             </div>
@@ -279,8 +412,8 @@ export function ModuloPerfil() {
           <div className="bg-amber-50 rounded-xl p-4 border border-amber-100 mb-4">
             <label htmlFor="biografia" className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1 block">Biografía</label>
             {editando
-              ? <textarea id="biografia" className={`${inputCls} min-h-[100px] resize-y w-full`} value={perfil.biografia}
-                  onChange={e => setPerfil({ ...perfil, biografia: e.target.value })}
+              ? <textarea id="biografia" className={`${inputCls} min-h-[100px] resize-y w-full`} value={borrador.biografia}
+                  onChange={e => setBorrador({ ...borrador, biografia: e.target.value })}
                   placeholder="Cuéntanos sobre ti y tu arte..." />
               : <p className="text-stone-700 leading-relaxed text-sm">{perfil.biografia || '—'}</p>}
           </div>
@@ -399,6 +532,12 @@ export function ModuloPerfil() {
               className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white font-semibold shadow hover:shadow-md transition disabled:opacity-60">
               {loadingPagoDirecto ? 'Guardando...' : '✓ Guardar datos de pago'}
             </button>
+            {pagoDirectoActivo && (
+              <button onClick={handleDesactivarPagoDirecto} disabled={loadingPagoDirecto}
+                className="w-full py-2 rounded-xl border border-red-200 text-red-600 text-sm font-semibold hover:bg-red-50 transition disabled:opacity-60">
+                Desactivar pago directo
+              </button>
+            )}
           </div>
         )}
       </div>
