@@ -6,10 +6,15 @@ interface SidebarNotificacionesProps {
   marcarLeida: (id: number) => Promise<void>;
   marcarTodasLeidas: () => Promise<void>;
   onNavegar: (tab: Tab, productoId?: number) => void;
+  // En celular este panel no cabe fijo en pantalla como en escritorio —
+  // se abre como una hoja completa cuando se toca la campana del Topbar.
+  abiertoEnMovil: boolean;
+  onCerrarEnMovil: () => void;
 }
 
 export function SidebarNotificaciones({
   notificaciones, marcarLeida, marcarTodasLeidas, onNavegar,
+  abiertoEnMovil, onCerrarEnMovil,
 }: SidebarNotificacionesProps) {
   const [detalle, setDetalle] = useState<Notificacion | null>(null);
   const [filtro, setFiltro] = useState<'todas' | 'pedido' | 'stock'>('todas');
@@ -27,17 +32,30 @@ export function SidebarNotificaciones({
     : notificaciones.filter(n => n.tipo === filtro);
 
   return (
-    <aside className="fixed top-16 right-0 bottom-0 z-20 w-64 bg-white border-l border-amber-100 flex flex-col shadow-sm">
+    <>
+      {/* En celular, tocar la campana abre esto encima de todo, con un
+          fondo oscuro detrás para poder cerrarlo tocando afuera. */}
+      {abiertoEnMovil && (
+        <div className="md:hidden fixed inset-0 z-30 bg-black/40" onClick={onCerrarEnMovil} />
+      )}
+      <aside className={`fixed top-16 right-0 bottom-0 z-30 w-64 bg-white border-l border-amber-100 flex-col shadow-sm
+        ${abiertoEnMovil ? 'flex' : 'hidden'} md:flex`}>
       <div className="flex items-center justify-between px-5 py-5 border-b border-amber-100">
         <div className="flex items-center gap-2">
           <span className="text-2xl">🔔</span>
           <span className="font-serif text-base font-bold text-amber-800">Notificaciones</span>
         </div>
-        {notificaciones.filter(n => !n.leida).length > 0 && (
-          <span className="w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-            {notificaciones.filter(n => !n.leida).length}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {notificaciones.filter(n => !n.leida).length > 0 && (
+            <span className="w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+              {notificaciones.filter(n => !n.leida).length}
+            </span>
+          )}
+          <button onClick={onCerrarEnMovil} aria-label="Cerrar notificaciones"
+            className="md:hidden w-7 h-7 rounded-full flex items-center justify-center text-stone-400 hover:bg-stone-100">
+            ✕
+          </button>
+        </div>
       </div>
 
       {detalle ? (
@@ -123,6 +141,7 @@ export function SidebarNotificaciones({
           )}
         </div>
       )}
-    </aside>
+      </aside>
+    </>
   );
 }

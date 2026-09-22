@@ -182,11 +182,11 @@ export default function Admin() {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {alert && <Alert msg={alert.msg} type={alert.type} />}
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-3">
           {([
             ['artesanos', `🧵 Artesanos (${artesanos.length})`],
             ['clientes', `🛍️ Clientes (${clientes.length})`],
@@ -201,6 +201,13 @@ export default function Admin() {
           ))}
         </div>
 
+        {/* Ayuda rápida por pestaña — para quien no usa esto todos los días */}
+        <p className="text-xs text-stone-500 mb-6">
+          {tab === 'artesanos' && 'Aquí asignas la categoría de cada artesano y puedes suspender una cuenta si hace falta (no podrá iniciar sesión ni vender mientras esté suspendida).'}
+          {tab === 'clientes' && 'Aquí puedes suspender la cuenta de un cliente si hace falta (no podrá iniciar sesión mientras esté suspendida). Suspender no borra su información.'}
+          {tab === 'pedidos' && 'Vista de solo consulta: aquí ves todos los pedidos de la página, pero los cambios de estado (confirmar pago, marcar enviado, etc.) los hace cada artesano desde su propio panel.'}
+        </p>
+
         {loading ? (
           <p className="text-stone-400 text-sm">Cargando...</p>
         ) : tab === 'artesanos' ? (
@@ -210,6 +217,7 @@ export default function Admin() {
                 placeholder="Buscar por nombre o correo..."
                 className="w-full max-w-sm px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 text-sm focus:outline-none focus:border-amber-500" />
             </div>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-amber-50 text-amber-700 text-xs uppercase tracking-wider">
                 <tr>
@@ -254,6 +262,7 @@ export default function Admin() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         ) : tab === 'clientes' ? (
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -262,6 +271,7 @@ export default function Admin() {
                 placeholder="Buscar por nombre o correo..."
                 className="w-full max-w-sm px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 text-sm focus:outline-none focus:border-amber-500" />
             </div>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-amber-50 text-amber-700 text-xs uppercase tracking-wider">
                 <tr>
@@ -298,6 +308,7 @@ export default function Admin() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -311,6 +322,7 @@ export default function Admin() {
                 {ESTADOS_PEDIDO.map(e => <option key={e} value={e}>{e}</option>)}
               </select>
             </div>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-amber-50 text-amber-700 text-xs uppercase tracking-wider">
                 <tr>
@@ -344,6 +356,7 @@ export default function Admin() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

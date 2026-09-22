@@ -6,9 +6,10 @@ import { useAuth } from '../../../context/AuthContext';
 interface TopbarProps {
   noLeidas: number;
   onVerPerfil: () => void;
+  onAbrirNotificaciones: () => void;
 }
 
-export function Topbar({ noLeidas, onVerPerfil }: TopbarProps) {
+export function Topbar({ noLeidas, onVerPerfil, onAbrirNotificaciones }: TopbarProps) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const handleLogout = () => { logout(); navigate('/'); };
@@ -39,7 +40,7 @@ export function Topbar({ noLeidas, onVerPerfil }: TopbarProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link to="/perfil-artesano#notificaciones" className="relative">
+          <button onClick={onAbrirNotificaciones} aria-label="Notificaciones" className="relative md:hidden">
             <div className="relative w-10 h-10 flex items-center justify-center rounded-xl border border-amber-100 bg-amber-50">
               <span className="text-xl">🔔</span>
               {noLeidas > 0 && (
@@ -48,7 +49,9 @@ export function Topbar({ noLeidas, onVerPerfil }: TopbarProps) {
                 </span>
               )}
             </div>
-          </Link>
+          </button>
+          {/* En escritorio el panel de notificaciones siempre está visible a
+              la derecha, así que aquí la campana solo hace falta en celular. */}
 
           <div className="relative" ref={menuRef}>
             <button onClick={() => setOpen(prev => !prev)}

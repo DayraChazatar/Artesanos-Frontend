@@ -17,6 +17,8 @@ import {
   RotateCcw,
   Ban,
   BarChart3,
+  Menu,
+  X,
 } from 'lucide-react';
 
 import { useCart } from '../context/CartContext';
@@ -145,6 +147,7 @@ export function Navbar({
 
   const [open, setOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const [orders, setOrders] = useState<any[]>([]);
   const [unseenCount, setUnseenCount] = useState(0);
@@ -362,15 +365,17 @@ export function Navbar({
 
           <Link
             to="/"
-            className="flex items-center gap-2 flex-shrink-0"
+            className="flex items-center gap-2 flex-shrink-0 min-w-0"
           >
             <img
               src="/logo.png"
               alt="Logo"
-              className="h-12 w-12 object-contain"
+              className="h-10 w-10 sm:h-12 sm:w-12 object-contain flex-shrink-0"
             />
 
-            <span className="text-xl font-bold text-orange-600">
+            {/* En celular no cabe el logo completo junto al carrito, la
+                campana y el usuario — se deja solo el ícono. */}
+            <span className="hidden sm:inline text-xl font-bold text-orange-600 whitespace-nowrap">
               Pakari Shop
             </span>
           </Link>
@@ -442,7 +447,7 @@ export function Navbar({
               ACCIONES DERECHA
           ================================================= */}
 
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
 
             {/* =================================================
                 CARRITO
@@ -944,9 +949,75 @@ export function Navbar({
 
             )}
 
+            {/* =================================================
+                MENÚ MÓVIL (hamburguesa) — solo aparece en pantallas
+                chicas, donde los enlaces de arriba están ocultos.
+            ================================================= */}
+
+            {!(isArtisan && onTabChange) && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+                aria-expanded={mobileOpen}
+                onClick={() => setMobileOpen(v => !v)}
+              >
+                {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+            )}
+
           </div>
 
         </div>
+
+        {/* =================================================
+            PANEL DEL MENÚ MÓVIL
+        ================================================= */}
+
+        {mobileOpen && !(isArtisan && onTabChange) && (
+          <div className="md:hidden pb-4 flex flex-col gap-1 border-t border-gray-100 pt-3">
+            <Link
+              to="/"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
+            >
+              <House className="h-4 w-4" />
+              Inicio
+            </Link>
+
+            <Link
+              to="/catalogo"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
+            >
+              <Store className="h-4 w-4" />
+              Productos
+            </Link>
+
+            {isAuthenticated && !isArtisan && (
+              <Link
+                to="/mis-pedidos"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
+              >
+                <Package className="h-4 w-4" />
+                Mis Pedidos
+              </Link>
+            )}
+
+            {user?.role === 'admin' && (
+              <Link
+                to="/admin"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
+              >
+                <BarChart3 className="h-4 w-4" />
+                Dashboard
+              </Link>
+            )}
+          </div>
+        )}
       </div>
     </nav>
   );

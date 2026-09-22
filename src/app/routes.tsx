@@ -12,6 +12,7 @@ import { ProductEdit } from "./pages/ProductEdit";
 import { Cart } from "./pages/Cart";
 import { Checkout } from "./pages/Checkout";
 import { NotFound } from "./pages/NotFound";
+import { ErrorPage } from "./pages/ErrorPage";
 import PerfilArtesano from "./pages/PerfilArtesano";
 import { MisPedidos } from "./pages/MisPedidos";
 import Admin from "./pages/Admin";
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
   {
     path: "/",
     Component: Root,
+    errorElement: <ErrorPage />,
     children: [
       { index: true, Component: Home },
       { path: "registro", Component: Register },

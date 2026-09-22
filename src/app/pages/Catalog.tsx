@@ -114,8 +114,9 @@ export function Catalog() {
       const finalPriceA = a.precio_final ?? 0;
       const finalPriceB = b.precio_final ?? 0;
 
+      if (sortBy === 'price-asc') return finalPriceA - finalPriceB;
       if (sortBy === 'price-desc') return finalPriceB - finalPriceA;
-      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'name') return (a.nombre ?? '').localeCompare(b.nombre ?? '');
       return 0;
     });
 

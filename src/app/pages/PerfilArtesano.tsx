@@ -34,6 +34,7 @@ export default function PerfilArtesano() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filtroInventarioProd, setFiltroInventarioProd] = useState<string>('todos');
+  const [notifAbiertaEnMovil, setNotifAbiertaEnMovil] = useState(false);
 
   const { notificaciones, marcarLeida, marcarTodasLeidas } = useNotificaciones();
 
@@ -62,19 +63,26 @@ export default function PerfilArtesano() {
 
   return (
     <div className="min-h-screen bg-amber-50/60 font-sans text-base">
-      <Topbar noLeidas={notificaciones.filter(n => !n.leida).length} onVerPerfil={() => setTab('perfil')} />
+      <Topbar
+        noLeidas={notificaciones.filter(n => !n.leida).length}
+        onVerPerfil={() => setTab('perfil')}
+        onAbrirNotificaciones={() => setNotifAbiertaEnMovil(true)}
+      />
       <Sidebar active={tab} onChange={setTab} />
       <SidebarNotificaciones
         notificaciones={notificaciones}
         marcarLeida={marcarLeida}
         marcarTodasLeidas={marcarTodasLeidas}
+        abiertoEnMovil={notifAbiertaEnMovil}
+        onCerrarEnMovil={() => setNotifAbiertaEnMovil(false)}
         onNavegar={(t, productoId) => {
           if (productoId) setFiltroInventarioProd(String(productoId));
           setTab(t);
+          setNotifAbiertaEnMovil(false);
         }}
       />
-      <main className="pt-16 pl-40 pr-64 min-h-screen text-base">
-        <div className="max-w-7xl mx-auto px-8 py-8">
+      <main className="pt-16 pb-20 md:pb-0 md:pl-40 md:pr-64 min-h-screen text-base">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-8">
           {loading ? (
             <div className="flex items-center justify-center py-20 text-amber-700 text-sm gap-3">
               <span className="animate-spin text-xl">⏳</span>

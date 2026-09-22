@@ -160,7 +160,7 @@ export function ModuloInventario({
                   </div>
                   <button onClick={() => setModalProd(productoSeleccionado)} className="px-3 py-1 bg-green-100 hover:bg-green-200 text-green-700 text-xs font-semibold rounded-lg transition">+ Stock</button>
                 </div>
-                <div className="grid grid-cols-5 gap-2 text-center">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
                   {[
                     { label: 'Stock Total', value: productoSeleccionado.cantidad, color: 'text-stone-700' },
                     { label: 'Reservado', value: reservado, color: 'text-amber-600' },

@@ -37,7 +37,6 @@ export function Home() {
         return res.json();
       })
       .then((data) => {
-        console.log("Datos recibidos de la API:", data);
         // Ajustamos para tomar los primeros 3 productos de la base de datos
         if (Array.isArray(data)) {
           setFeaturedProducts(data.slice(0, 3));

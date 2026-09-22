@@ -336,7 +336,7 @@ export function ModuloPerfil() {
           </div>
  
           {/* Estadísticas */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
             {[
               { label: 'Productos', value: stats.productos, icon: '🛍️' },
               { label: 'Pedidos', value: stats.pedidos, icon: '🛒' },
@@ -359,7 +359,7 @@ export function ModuloPerfil() {
           </div>
 
           {/* Campos en dos columnas */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div className="bg-amber-50 rounded-xl p-4 border border-amber-100">
               <label htmlFor="nombre" className="text-xs uppercase tracking-wider font-bold text-amber-700 mb-1 block">Nombre</label>
               {editando
@@ -497,7 +497,7 @@ export function ModuloPerfil() {
               dejas alguno vacío, tus clientes solo verán la opción de pagar con Wompi.
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
                 <label htmlFor="pd-banco" className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Banco (o "Nequi")</label>
                 <input id="pd-banco" className={inputCls} value={pagoDirecto.pago_directo_banco}
