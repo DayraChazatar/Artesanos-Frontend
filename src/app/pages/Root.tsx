@@ -4,15 +4,17 @@ import { Footer } from '../components/Footer';
 
 export function Root() {
   const { pathname } = useLocation();
-  const isArtesano = pathname === '/perfil-artesano';
+  // El panel de artesano y el de administrador tienen su propia barra
+  // superior — no se combinan con la de cliente.
+  const tienePropiaBarra = pathname === '/perfil-artesano' || pathname === '/admin';
 
   return (
     <div className="min-h-screen flex flex-col">
-      {!isArtesano && <Navbar />}
+      {!tienePropiaBarra && <Navbar />}
       <main className="flex-1">
         <Outlet />
       </main>
-      {!isArtesano && <Footer />}
+      {!tienePropiaBarra && <Footer />}
     </div>
   );
 }

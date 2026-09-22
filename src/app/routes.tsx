@@ -14,6 +14,7 @@ import { Checkout } from "./pages/Checkout";
 import { NotFound } from "./pages/NotFound";
 import PerfilArtesano from "./pages/PerfilArtesano";
 import { MisPedidos } from "./pages/MisPedidos";
+import Admin from "./pages/Admin";
 import { RequireRole } from "./components/RequireRole";
 
 export const router = createBrowserRouter([
@@ -41,6 +42,14 @@ export const router = createBrowserRouter([
       { path: "carrito", Component: Cart },
       { path: "checkout", Component: Checkout },
       { path: "mis-pedidos", Component: MisPedidos },
+      {
+        path: "admin",
+        element: (
+          <RequireRole role="admin">
+            <Admin />
+          </RequireRole>
+        ),
+      },
       { path: "*", Component: NotFound },
     ],
   },

@@ -43,7 +43,7 @@ function mapDjangoUser(data: any, email?: string): User {
     id: String(data.id),
     name: data.nombre,
     email: resolvedEmail,
-    role: data.tipo === 'artesano' ? 'artisan' : 'customer',
+    role: data.tipo === 'artesano' ? 'artisan' : data.tipo === 'admin' ? 'admin' : 'customer',
     phone: data.telefono ?? '',
     address: data.direccion ?? '',
     bio: data.biografia ?? '',
@@ -65,6 +65,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // Mantiene la sesión sincronizada entre pestañas: cerrar sesión (o entrar
+  // con otra cuenta) en una pestaña actualiza a las demás de inmediato — sin
+  // esto, una pestaña vieja seguía usando el token/usuario anterior aunque
+  // ya no existiera, y sus peticiones periódicas fallaban en bucle.
+  useEffect(() => {
+    function handleStorage(e: StorageEvent) {
+      if (e.key !== 'user' && e.key !== 'token') return;
+      try {
+        const savedUser = localStorage.getItem('user');
+        const token = localStorage.getItem('token');
+        setUser(savedUser && token ? JSON.parse(savedUser) : null);
+      } catch {
+        setUser(null);
+      }
+    }
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   const login = async (email: string, password: string): Promise<{ user: User; token: string }> => {

@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 interface RequireRoleProps {
-  role: 'artisan' | 'customer';
+  role: 'artisan' | 'customer' | 'admin';
   children: ReactNode;
 }
 

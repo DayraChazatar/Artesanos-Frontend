@@ -26,6 +26,7 @@ import { API_BASE } from '../utils/config';
 
 function perfilRoute(role?: string) {
   if (role === 'artisan') return '/perfil-artesano';
+  if (role === 'admin') return '/admin';
   return '/perfil';
 }
 
@@ -427,7 +428,7 @@ export function Navbar({
 
               {user?.role === 'admin' && (
                 <Link
-                  to="/dashboard"
+                  to="/admin"
                   className="flex items-center gap-2 px-3 py-2 rounded-xl text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors font-medium"
                 >
                   <BarChart3 className="h-4 w-4" />
@@ -896,12 +897,14 @@ export function Navbar({
 
                       {user?.role === 'artisan'
                         ? 'Panel Artesano'
+                        : user?.role === 'admin'
+                        ? 'Panel Admin'
                         : 'Mi Perfil'}
                     </Link>
 
                     {user?.role === 'admin' && (
                       <Link
-                        to="/dashboard"
+                        to="/admin"
                         onClick={() =>
                           setOpen(false)
                         }

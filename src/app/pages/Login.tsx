@@ -17,10 +17,12 @@ export function Login() {
   const { login, loginWithGoogle, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
+  const destinoPorRol = (role: string) =>
+    role === 'admin' ? '/admin' : role === 'artisan' ? '/perfil-artesano' : '/catalogo';
+
   useEffect(() => {
     if (isAuthenticated && user) {
-      const destination = user.role === 'artisan' ? '/perfil-artesano' : '/catalogo';
-      navigate(destination);
+      navigate(destinoPorRol(user.role));
     }
   }, [isAuthenticated, user, navigate]);
 
@@ -31,8 +33,7 @@ export function Login() {
       // login() ya guarda el user con email en AuthContext,
       // no hace falta volver a hacer localStorage.setItem aquí
       toast.success('¡Bienvenido de nuevo!');
-      const destination = result.user.role === 'artisan' ? '/perfil-artesano' : '/catalogo';
-      navigate(destination);
+      navigate(destinoPorRol(result.user.role));
     } catch (error: any) {
       toast.error(error.message || 'Credenciales incorrectas');
     }
@@ -46,8 +47,7 @@ export function Login() {
     try {
       const result = await loginWithGoogle(credentialResponse.credential);
       toast.success(`¡Bienvenido, ${result.user.name}!`);
-      const destination = result.user.role === 'artisan' ? '/perfil-artesano' : '/catalogo';
-      navigate(destination);
+      navigate(destinoPorRol(result.user.role));
     } catch (error: any) {
       toast.error(error.message || 'Error al iniciar sesión con Google');
     }
