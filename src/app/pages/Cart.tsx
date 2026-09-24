@@ -120,21 +120,16 @@ export function Cart() {
                   Resumen del Pedido
                 </h2>
                 <div className="space-y-2 mb-4">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between text-sm">
                     <span className="text-gray-600">
-                      Subtotal ({totalItems} {totalItems === 1 ? 'item' : 'items'})
+                      {totalItems} {totalItems === 1 ? 'artículo' : 'artículos'}
                     </span>
-                    <span>${totalPrice.toLocaleString('es-CO')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Envío</span>
-                    <span>$10,000</span>
                   </div>
                   <div className="border-t pt-2 mt-2">
                     <div className="flex justify-between font-semibold text-lg">
                       <span>Total</span>
                       <span className="text-orange-600">
-                        ${(totalPrice + 10000).toLocaleString('es-CO')}
+                        ${totalPrice.toLocaleString('es-CO')}
                       </span>
                     </div>
                   </div>

@@ -62,7 +62,6 @@ export function Checkout() {
   const [artesanosInfo, setArtesanosInfo] = useState<Record<number, ArtesanoInfo>>({});
   const [metodosPago, setMetodosPago] = useState<Record<string, 'wompi' | 'transferencia'>>({});
 
-  const totalWithShipping = totalPrice + 10000;
 
   // El carrito puede tener productos de varios artesanos — cada uno se paga
   // por separado (cada quien recibe su propio dinero, por su propio método).
@@ -89,7 +88,7 @@ export function Checkout() {
         });
         setArtesanosInfo(info);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -108,7 +107,7 @@ export function Checkout() {
         .then(data => {
           if (data?.artesano) fijarArtesanoId(item.id, data.artesano);
         })
-        .catch(() => {});
+        .catch(() => { });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart.length]);
@@ -254,8 +253,8 @@ export function Checkout() {
         date: pedidosCreados[0]?.fecha,
         items: pedidosCreados.flatMap(p => p.detalles ?? []).length
           ? pedidosCreados.flatMap((p: any) => p.detalles.map((d: any) => ({
-              id: d.producto, name: d.producto_nombre, price: Number(d.precio), quantity: d.cantidad,
-            })))
+            id: d.producto, name: d.producto_nombre, price: Number(d.precio), quantity: d.cantidad,
+          })))
           : [],
         total: pedidosCreados.reduce((sum, p) => sum + Number(p.total), 0),
         customer: { name: formData.name, email: formData.email, phone: formData.phone },
@@ -511,18 +510,10 @@ export function Checkout() {
                     </div>
                   ))}
                 </div>
-                <div className="border-t pt-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span>${totalPrice.toLocaleString('es-CO')}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Envío</span>
-                    <span>$10.000</span>
-                  </div>
-                  <div className="flex justify-between font-semibold text-lg border-t pt-2">
+                <div className="border-t pt-4">
+                  <div className="flex justify-between font-semibold text-lg">
                     <span>Total</span>
-                    <span className="text-orange-600">${totalWithShipping.toLocaleString('es-CO')}</span>
+                    <span className="text-orange-600">${totalPrice.toLocaleString('es-CO')}</span>
                   </div>
                 </div>
                 <Button

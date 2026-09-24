@@ -28,7 +28,7 @@ export function Home() {
     // Solo se necesitan 3 productos destacados — pedirle al backend que
     // limite la respuesta evita traer el catálogo completo cada vez que
     // alguien abre la página de inicio.
-   const API_URL = `${API_BASE}/catalogo/?limit=3`;
+    const API_URL = `${API_BASE}/catalogo/?limit=3`;
     fetch(API_URL)
       .then((res) => {
         if (!res.ok) {
@@ -76,18 +76,18 @@ export function Home() {
             <p className="text-lg mb-6 text-white/90 drop-shadow">
               Productos unicos creados por artesanos talentosos. Cada pieza cuenta una historia.
             </p>
-<div className="flex gap-4">
-  {isAuthenticated && (
-    <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
-      <Link to="/catalogo">Ver Catálogo</Link>
-    </Button>
-  )}
-  {!isAuthenticated && (
-    <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
-      <Link to="/registro">Registrarse</Link>
-    </Button>
-  )}
-</div>
+            <div className="flex gap-4">
+              {isAuthenticated && (
+                <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
+                  <Link to="/catalogo">Ver Catálogo</Link>
+                </Button>
+              )}
+              {!isAuthenticated && (
+                <Button size="lg" className="bg-orange-600 hover:bg-orange-700" asChild>
+                  <Link to="/registro">Registrarse</Link>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -95,58 +95,40 @@ export function Home() {
       {/* Features */}
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <div className="relative group inline-block">
-                  <Heart className="h-12 w-12 mx-auto mb-4 text-orange-600 cursor-pointer" />
-                  <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    Productos hechos con amor y dedicación
-                  </span>
-                </div>
-                <h3 className="font-semibold mb-2">Hecho con Amor</h3>
-                <p className="text-sm text-gray-600">Cada producto es creado con dedicación y pasión</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <div className="relative group inline-block">
-                  <Star className="h-12 w-12 mx-auto mb-4 text-orange-600 cursor-pointer" />
-                  <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    Artesanía de la más alta calidad
-                  </span>
-                </div>
-                <h3 className="font-semibold mb-2">Calidad Premium</h3>
-                <p className="text-sm text-gray-600">Productos de la más alta calidad artesanal</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <div className="relative group inline-block">
-                  <Truck className="h-12 w-12 mx-auto mb-4 text-orange-600 cursor-pointer" />
-                  <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    Entrega confiable a todo el país
-                  </span>
-                </div>
-                <h3 className="font-semibold mb-2">Envío Seguro</h3>
-                <p className="text-sm text-gray-600">Entrega confiable a todo el país</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6 text-center">
-                <div className="relative group inline-block">
-                  <Shield className="h-12 w-12 mx-auto mb-4 text-orange-600 cursor-pointer" />
-                  <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    Tus datos y pagos siempre protegidos
-                  </span>
-                </div>
-                <h3 className="font-semibold mb-2">Compra Segura</h3>
-                <p className="text-sm text-gray-600">Protegemos tus datos y tu inversión</p>
-              </CardContent>
-            </Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {[
+              {
+                Icon: Heart,
+                tooltip: 'Productos hechos con amor y dedicación',
+                title: 'Hecho con Amor',
+                text: 'Cada producto es creado con dedicación y pasión',
+              },
+              {
+                Icon: Star,
+                tooltip: 'Artesanía de la más alta calidad',
+                title: 'Calidad Premium',
+                text: 'Productos de la más alta calidad artesanal',
+              },
+              {
+                Icon: Shield,
+                tooltip: 'Tus datos y pagos siempre protegidos',
+                title: 'Compra Segura',
+                text: 'Protegemos tus datos y tu inversión',
+              },
+            ].map(({ Icon, tooltip, title, text }) => (
+              <Card key={title} className="h-full">
+                <CardContent className="p-8 h-full flex flex-col items-center justify-center text-center">
+                  <div className="relative group mb-4">
+                    <Icon className="h-12 w-12 text-orange-600 cursor-pointer" />
+                    <span className="absolute -top-10 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-3 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      {tooltip}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold mb-2">{title}</h3>
+                  <p className="text-sm text-gray-600 max-w-[220px]">{text}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
@@ -188,13 +170,13 @@ export function Home() {
                   const image = (product as any).imagen || (product as any).foto || (product as any).imagen_url || product.image;
                   const artisan = (product as any).nombre_artesano || (product as any).artesano_nombre || ((product as any).artesano && (product as any).artesano.nombre) || "Lizeth Melo";
 
-                   return (
+                  return (
                     <Link to={`/producto/${id}`} key={id} className="block h-full">
                       <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 h-full flex flex-col justify-between border border-gray-100 bg-white">
-                        
+
                         {/* CONTENEDOR EFECTO CINEMÁTICO: Rellena los espacios vacíos estéticamente */}
                         <div className="relative w-full h-64 flex items-center justify-center overflow-hidden bg-gray-900">
-                          
+
                           {/* 1. Imagen de fondo duplicada y difuminada */}
                           <img
                             src={image || "/placeholder-product.png"}
@@ -253,7 +235,7 @@ export function Home() {
         </div>
       </section>
 
-            {/* About Section */}
+      {/* About Section */}
       <section className="py-16 bg-orange-50">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
