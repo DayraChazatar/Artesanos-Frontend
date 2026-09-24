@@ -13,8 +13,8 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Paths — igual que el alias "@" de vite.config.ts */
-    "baseUrl": ".",
+    /* Paths — igual que el alias "@" de vite.config.ts (sin baseUrl:
+       en TS moderno, "paths" ya se resuelve solo relativo a este archivo) */
     "paths": {
       "@/*": ["./src/*"]
     },
