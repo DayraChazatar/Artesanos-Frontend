@@ -16,6 +16,8 @@ import { ErrorPage } from "./pages/ErrorPage";
 import PerfilArtesano from "./pages/PerfilArtesano";
 import { MisPedidos } from "./pages/MisPedidos";
 import Admin from "./pages/Admin";
+import { PoliticaDatos } from "./pages/PoliticaDatos";
+import { TerminosCondiciones } from "./pages/TerminosCondiciones";
 import { RequireRole } from "./components/RequireRole";
 
 export const router = createBrowserRouter([
@@ -44,6 +46,8 @@ export const router = createBrowserRouter([
       { path: "carrito", Component: Cart },
       { path: "checkout", Component: Checkout },
       { path: "mis-pedidos", Component: MisPedidos },
+      { path: "politica-datos", Component: PoliticaDatos },
+      { path: "terminos-condiciones", Component: TerminosCondiciones },
       {
         path: "admin",
         element: (

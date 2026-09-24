@@ -557,7 +557,7 @@ export function ModuloProductos({
             <h2 className="font-serif text-xl text-amber-800 mb-2">📤 Cargar varios productos a la vez</h2>
             <p className="text-sm text-stone-500 mb-5">
               Si tienes muchos productos para registrar, descarga la plantilla, llénala en Excel (datos y foto
-              incluidos) y súbela aquí — se crean todos de una sola vez, en lugar de uno por uno.
+              incluidos) y súbela aquí se crean todos de una sola vez, en lugar de uno por uno.
               La categoría se asigna sola (la tuya).
             </p>
 

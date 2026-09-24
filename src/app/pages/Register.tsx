@@ -11,6 +11,33 @@ import { User, Palette } from 'lucide-react';
 import { getCategoriasDisponibles, registrarArtesano, type Categoria } from '../data/artesanoApi';
 import { API_BASE } from '../utils/config';
 
+function CasillaAceptacion({
+  checked, onChange, idPrefix,
+}: { checked: boolean; onChange: (v: boolean) => void; idPrefix: string }) {
+  const id = `${idPrefix}-acepta-terminos`;
+  return (
+    <div className="flex items-start gap-2">
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={e => onChange(e.target.checked)}
+        className="mt-1 h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+      />
+      <label htmlFor={id} className="text-sm text-gray-600">
+        Acepto la{' '}
+        <Link to="/politica-datos" target="_blank" className="text-orange-600 hover:underline">
+          política de tratamiento de datos
+        </Link>{' '}
+        y los{' '}
+        <Link to="/terminos-condiciones" target="_blank" className="text-orange-600 hover:underline">
+          términos y condiciones de uso
+        </Link>.
+      </label>
+    </div>
+  );
+}
+
 export function Register() {
   // ── Estado cliente ──────────────────────────────────────────────────────────
   const [clienteData, setClienteData] = useState({
@@ -27,6 +54,9 @@ export function Register() {
   // ── Categorías disponibles (sin artesano asignado) ──────────────────────────
   const [categoriasDisponibles, setCategoriasDisponibles] = useState<Categoria[]>([]);
   const [loadingCats, setLoadingCats] = useState(false);
+
+  // ── Aceptación de política de datos y términos (obligatoria) ────────────────
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
   const navigate = useNavigate();
 
@@ -51,6 +81,8 @@ export function Register() {
   const handleClienteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!aceptaTerminos)
+      return toast.error('Debes aceptar la política de datos y los términos de uso');
     if (clienteData.password !== clienteData.confirmPassword)
       return toast.error('Las contraseñas no coinciden');
     if (clienteData.password.length < 6)
@@ -84,6 +116,8 @@ export function Register() {
   const handleArtesanoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!aceptaTerminos)
+      return toast.error('Debes aceptar la política de datos y los términos de uso');
     if (artesanoData.password !== artesanoData.confirmPassword)
       return toast.error('Las contraseñas no coinciden');
     if (artesanoData.password.length < 6)
@@ -144,6 +178,7 @@ export function Register() {
                 <Input name="email" type="email" placeholder="Correo electrónico" onChange={handleClienteChange} required />
                 <Input name="password" type="password" placeholder="Contraseña" onChange={handleClienteChange} required />
                 <Input name="confirmPassword" type="password" placeholder="Confirmar contraseña" onChange={handleClienteChange} required />
+                <CasillaAceptacion checked={aceptaTerminos} onChange={setAceptaTerminos} idPrefix="cliente" />
                 <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700">
                   Registrarse como Cliente
                 </Button>
@@ -212,6 +247,8 @@ export function Register() {
 
                 <Input name="password" type="password" placeholder="Contraseña" onChange={handleArtesanoChange} required />
                 <Input name="confirmPassword" type="password" placeholder="Confirmar contraseña" onChange={handleArtesanoChange} required />
+
+                <CasillaAceptacion checked={aceptaTerminos} onChange={setAceptaTerminos} idPrefix="artesano" />
 
                 <Button
                   type="submit"

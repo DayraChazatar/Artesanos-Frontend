@@ -1,7 +1,16 @@
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Twitter, Mail, Phone, MapPin } from 'lucide-react';
+import { Mail, Phone, MapPin } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+
+function perfilRoute(role?: string) {
+  if (role === 'artisan') return '/perfil-artesano';
+  if (role === 'admin') return '/admin';
+  return '/perfil';
+}
 
 export function Footer() {
+  const { user, isAuthenticated } = useAuth();
+
   return (
     <footer className="border-t bg-gray-50 mt-auto">
       <div className="container mx-auto px-4 py-12">
@@ -24,16 +33,26 @@ export function Footer() {
                   Catálogo
                 </Link>
               </li>
-              <li>
-                <Link to="/registro" className="text-gray-600 hover:text-orange-600">
-                  Registro
-                </Link>
-              </li>
-              <li>
-                <Link to="/login" className="text-gray-600 hover:text-orange-600">
-                  Iniciar Sesión
-                </Link>
-              </li>
+              {isAuthenticated ? (
+                <li>
+                  <Link to={perfilRoute(user?.role)} className="text-gray-600 hover:text-orange-600">
+                    Mi cuenta
+                  </Link>
+                </li>
+              ) : (
+                <>
+                  <li>
+                    <Link to="/registro" className="text-gray-600 hover:text-orange-600">
+                      Registro
+                    </Link>
+                  </li>
+                  <li>
+                    <Link to="/login" className="text-gray-600 hover:text-orange-600">
+                      Iniciar Sesión
+                    </Link>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
 
@@ -42,7 +61,7 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-gray-600">
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                info@pakarishop.com
+                pakarishop.soporte@gmail.com
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4" />
@@ -56,18 +75,19 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4">Síguenos</h4>
-            <div className="flex gap-4">
-              <a href="#" className="text-gray-600 hover:text-orange-600">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-600 hover:text-orange-600">
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-600 hover:text-orange-600">
-                <Twitter className="h-5 w-5" />
-              </a>
-            </div>
+            <h4 className="font-semibold mb-4">Legal</h4>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link to="/politica-datos" className="text-gray-600 hover:text-orange-600">
+                  Política de datos
+                </Link>
+              </li>
+              <li>
+                <Link to="/terminos-condiciones" className="text-gray-600 hover:text-orange-600">
+                  Términos y condiciones
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
 
