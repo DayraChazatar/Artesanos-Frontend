@@ -105,7 +105,7 @@ export function generarGuiaEnvio(pedido: any) {
               <div class="block-name">PAKARI SHOP</div>
               <div class="block-detail">
                 Artesanías Colombianas hechas a mano<br/>
-                soporte@pakari.com
+                pakarishop.soporte@gmail.com
               </div>
             </div>
             <div class="address-block">
@@ -159,7 +159,7 @@ export function generarGuiaEnvio(pedido: any) {
 
           <!-- FOOTER -->
           <div class="footer">
-            <strong>Pakari Shop</strong> — Artesanías colombianas hechas a mano con amor 🤍 &nbsp;|&nbsp; soporte@pakari.com
+            <strong>Pakari Shop</strong> — Artesanías colombianas hechas a mano con amor 🤍 &nbsp;|&nbsp; pakarishop.soporte@gmail.com
           </div>
 
         </div>

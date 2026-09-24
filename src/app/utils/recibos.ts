@@ -130,7 +130,7 @@ export function generarReciboPDF(order: Order) {
             </div>
           </div>
           <div class="footer">
-            <strong>Pakari Shop</strong> — Artesanías colombianas hechas a mano con amor 🤍 &nbsp;|&nbsp; soporte@pakari.com
+            <strong>Pakari Shop</strong> — Artesanías colombianas hechas a mano con amor 🤍 &nbsp;|&nbsp; pakarishop.soporte@gmail.com
           </div>
         </div>
         <script>window.onload = () => { window.print(); }</script>
