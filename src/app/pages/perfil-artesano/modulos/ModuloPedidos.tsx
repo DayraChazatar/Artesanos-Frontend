@@ -24,8 +24,11 @@ const SIGUIENTES: Record<string, string[]> = {
   // Pago por transferencia directa: se confirma a mano una vez el cliente
   // sube el comprobante (ver el caso especial más abajo, igual que Enviar/
   // Confirmar entrega). El de Wompi se confirma solo, por su webhook.
+  // Al confirmar el pago (por transferencia o Wompi), el pedido pasa
+  // directo a "En proceso" — el backend ya hace ese salto solo. "Pendiente"
+  // queda aquí solo por si algún pedido viejo se quedó ahí a medias.
   'Pago pendiente': ['Pago confirmado'],
-  'Pago confirmado': ['Pendiente'],
+  'Pago confirmado': ['En proceso'],
   'Pendiente': ['En proceso'],
   'En proceso': [],
   'Enviado': [],
@@ -50,7 +53,7 @@ const BTN_COLOR: Record<string, string> = {
 };
 
 const MENSAJES_ESTADO: Record<string, string> = {
-  'Pago confirmado': '✅ Pago confirmado — pendiente de que aceptes el pedido',
+  'Pago confirmado': '✅ Pago confirmado — ya puedes registrar el envío en "Referencias"',
   'En proceso': '⚙️ Pedido en preparación',
   Enviado: '🚚 Pedido marcado como enviado',
   Entregado: '✅ Entregado — stock descontado',

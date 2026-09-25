@@ -104,6 +104,8 @@ export default function Admin() {
     }
   }, []);
 
+  const [confirmandoId, setConfirmandoId] = useState<number | null>(null);
+
   const cargarPedidos = useCallback(async () => {
     try {
       const params = new URLSearchParams();
@@ -156,6 +158,29 @@ export default function Admin() {
     }
   };
 
+  const confirmarPagoWompi = async (p: Pedido) => {
+    if (!window.confirm(
+      `¿Confirmas a mano que el pedido ${p.codigo} (${p.cliente_nombre}, $${Number(p.total).toLocaleString('es-CO')}) sí fue pagado?\n\n` +
+      'Úsalo SOLO si estás seguro de que el pago real llegó — esto no lo verifica con Wompi, es un último recurso ' +
+      'para cuando el aviso automático de Wompi nunca llegó.'
+    )) return;
+    setConfirmandoId(p.id);
+    try {
+      const r = await fetch(`${BASE}/admin/pedidos/${p.id}/confirmar-wompi/`, {
+        method: 'POST',
+        headers: authHeaders(),
+      });
+      const data = await r.json();
+      if (!r.ok) return mostrarAlerta(data.error ?? 'No se pudo confirmar el pago', 'error');
+      setPedidos(prev => prev.map(x => x.id === p.id ? { ...x, estado: data.estado } : x));
+      mostrarAlerta(`✓ Pago de ${p.codigo} confirmado a mano — el artesano ya puede enviarlo`, 'success');
+    } catch {
+      mostrarAlerta('Error de conexión', 'error');
+    } finally {
+      setConfirmandoId(null);
+    }
+  };
+
   const artesanosFiltrados = artesanos.filter(a =>
     !qArtesanos || a.nombre.toLowerCase().includes(qArtesanos.toLowerCase()) || a.correo.toLowerCase().includes(qArtesanos.toLowerCase())
   );
@@ -205,7 +230,7 @@ export default function Admin() {
         <p className="text-xs text-stone-500 mb-6">
           {tab === 'artesanos' && 'Aquí asignas la categoría de cada artesano y puedes suspender una cuenta si hace falta (no podrá iniciar sesión ni vender mientras esté suspendida).'}
           {tab === 'clientes' && 'Aquí puedes suspender la cuenta de un cliente si hace falta (no podrá iniciar sesión mientras esté suspendida). Suspender no borra su información.'}
-          {tab === 'pedidos' && 'Vista de solo consulta: aquí ves todos los pedidos de la página, pero los cambios de estado (confirmar pago, marcar enviado, etc.) los hace cada artesano desde su propio panel.'}
+          {tab === 'pedidos' && 'Vista de todos los pedidos de la página. Los cambios de estado los hace normalmente cada artesano desde su propio panel — la única excepción es "Confirmar pago a mano" en pedidos de Wompi, un último recurso para cuando el aviso automático de Wompi nunca llega.'}
         </p>
 
         {loading ? (
@@ -333,6 +358,7 @@ export default function Admin() {
                   <th className="text-left px-4 py-3">Método</th>
                   <th className="text-right px-4 py-3">Total</th>
                   <th className="text-left px-4 py-3">Fecha</th>
+                  <th className="text-left px-4 py-3">Acción</th>
                 </tr>
               </thead>
               <tbody>
@@ -349,10 +375,19 @@ export default function Admin() {
                     <td className="px-4 py-3 text-stone-500 text-xs">{p.metodo_pago === 'transferencia' ? 'Transferencia' : 'Wompi'}</td>
                     <td className="px-4 py-3 text-right font-semibold text-stone-800">${Number(p.total).toLocaleString('es-CO')}</td>
                     <td className="px-4 py-3 text-stone-400 text-xs">{new Date(p.fecha).toLocaleDateString('es-CO')}</td>
+                    <td className="px-4 py-3">
+                      {p.metodo_pago === 'wompi' && p.estado === 'Pago pendiente' && (
+                        <button onClick={() => confirmarPagoWompi(p)} disabled={confirmandoId === p.id}
+                          title="Solo úsalo si estás seguro de que el pago sí llegó — no lo verifica con Wompi"
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-100 text-amber-700 hover:bg-amber-200 transition disabled:opacity-50 whitespace-nowrap">
+                          {confirmandoId === p.id ? 'Confirmando...' : '⚠️ Confirmar pago a mano'}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
                 {pedidos.length === 0 && (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-stone-400">No hay pedidos que coincidan.</td></tr>
+                  <tr><td colSpan={8} className="px-4 py-8 text-center text-stone-400">No hay pedidos que coincidan.</td></tr>
                 )}
               </tbody>
             </table>
