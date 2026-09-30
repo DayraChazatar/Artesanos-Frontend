@@ -607,6 +607,15 @@ export function ProductDetail() {
   // ─────────────────────────────────────────────────────────────────────────
 
   const handleAddToCart = (): boolean => {
+    // Sin esto, un visitante sin sesión podía agregar al carrito, llegar
+    // hasta el checkout y llenar todo el formulario, y solo hasta el botón
+    // de confirmar el pedido se enteraba de que necesitaba iniciar sesión.
+    if (!user) {
+      toast.error('Inicia sesión para comprar');
+      navigate('/login');
+      return false;
+    }
+
     if (quantity > stock) {
       toast.error(
         'No hay suficiente stock disponible'

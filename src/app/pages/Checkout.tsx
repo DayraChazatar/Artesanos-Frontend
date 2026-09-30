@@ -58,6 +58,16 @@ export function Checkout() {
   const [subiendoComprobante, setSubiendoComprobante] = useState<string | null>(null);
   const [procesando, setProcesando] = useState(false);
 
+  // Respaldo por si alguien llega aquí sin sesión sin pasar por el botón
+  // "Agregar al Carrito" / "Comprar Ahora" (que ya bloquea esto antes) —
+  // por ejemplo, un carrito guardado de una sesión que después cerró.
+  useEffect(() => {
+    if (!user) {
+      toast.error('Inicia sesión para continuar con tu compra');
+      navigate('/login');
+    }
+  }, [user, navigate]);
+
   // ── Pago directo por artesano ────────────────────────────────────────────
   const [artesanosInfo, setArtesanosInfo] = useState<Record<number, ArtesanoInfo>>({});
   const [metodosPago, setMetodosPago] = useState<Record<string, 'wompi' | 'transferencia'>>({});
