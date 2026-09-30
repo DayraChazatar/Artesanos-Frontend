@@ -611,8 +611,7 @@ export function ProductDetail() {
     // hasta el checkout y llenar todo el formulario, y solo hasta el botón
     // de confirmar el pedido se enteraba de que necesitaba iniciar sesión.
     if (!user) {
-      toast.error('Inicia sesión para comprar');
-      navigate('/login');
+      toast.error('Debes registrarte o iniciar sesión para comprar');
       return false;
     }
 
