@@ -26,11 +26,11 @@ function CasillaAceptacion({
       />
       <label htmlFor={id} className="text-sm text-gray-600">
         Acepto la{' '}
-        <Link to="/politica-datos" target="_blank" className="text-orange-600 hover:underline">
+        <Link to="/politica-datos" target="_blank" className="text-orange-600 underline">
           política de tratamiento de datos
         </Link>{' '}
         y los{' '}
-        <Link to="/terminos-condiciones" target="_blank" className="text-orange-600 hover:underline">
+        <Link to="/terminos-condiciones" target="_blank" className="text-orange-600 underline">
           términos y condiciones de uso
         </Link>.
       </label>
@@ -263,7 +263,7 @@ export function Register() {
 
           <div className="mt-4 text-center text-sm">
             ¿Ya tienes cuenta?{' '}
-            <Link to="/login" className="text-orange-600 hover:underline">
+            <Link to="/login" className="text-orange-600 underline">
               Inicia sesión
             </Link>
           </div>

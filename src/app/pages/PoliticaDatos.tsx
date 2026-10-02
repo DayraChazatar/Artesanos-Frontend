@@ -25,7 +25,7 @@ export function PoliticaDatos() {
             El tratamiento de los datos personales recogidos en Pakari Shop está a cargo de quien desarrolla y
             administra el proyecto, en el marco de un trabajo de grado. Para cualquier pregunta, solicitud de
             acceso, corrección o eliminación de tus datos, puedes escribir a{' '}
-            <a href="mailto:pakarishop.soporte@gmail.com" className="text-orange-600 hover:underline">
+            <a href="mailto:pakarishop.soporte@gmail.com" className="text-orange-600 underline">
               pakarishop.soporte@gmail.com
             </a>.
           </p>
@@ -72,7 +72,7 @@ export function PoliticaDatos() {
             De acuerdo con la Ley 1581 de 2012 de Colombia, tienes derecho a conocer, actualizar, corregir y
             solicitar la eliminación de tus datos personales en cualquier momento. Puedes hacerlo directamente
             desde tu perfil dentro de la página, o escribiendo a{' '}
-            <a href="mailto:pakarishop.soporte@gmail.com" className="text-orange-600 hover:underline">
+            <a href="mailto:pakarishop.soporte@gmail.com" className="text-orange-600 underline">
               pakarishop.soporte@gmail.com
             </a>.
           </p>
@@ -87,7 +87,7 @@ export function PoliticaDatos() {
         </Seccion>
 
         <p className="text-xs text-gray-400 mt-10">
-          Ver también los <Link to="/terminos-condiciones" className="text-orange-600 hover:underline">Términos y condiciones de uso</Link>.
+          Ver también los <Link to="/terminos-condiciones" className="text-orange-600 underline">Términos y condiciones de uso</Link>.
         </p>
       </div>
     </div>

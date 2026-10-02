@@ -208,12 +208,14 @@ export function Catalog() {
             <Input
               type="text"
               placeholder="Buscar productos, artesanos..."
+              aria-label="Buscar productos o artesanos"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="pl-10 h-12 rounded-xl border-gray-200 shadow-sm"
             />
           </div>
           <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+            aria-label="Ordenar productos"
             className="border border-gray-200 rounded-xl px-4 py-2 text-sm bg-white shadow-sm">
             <option value="default">Ordenar por</option>
             <option value="price-asc">Precio: Menor a Mayor</option>
@@ -228,7 +230,7 @@ export function Catalog() {
           <div className="w-72 flex-shrink-0 space-y-6">
 
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <h3 className="text-xl font-semibold text-gray-900 mb-5">Categorías</h3>
+              <h2 className="text-xl font-semibold text-gray-900 mb-5">Categorías</h2>
               <div className="space-y-4">
                 <label className="flex items-center gap-3 cursor-pointer text-[15px] font-medium text-gray-700 hover:text-orange-600 transition-colors">
                   <input type="checkbox"
@@ -257,21 +259,22 @@ export function Catalog() {
             </div>
 
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <h3 className="text-xl font-semibold text-gray-900 mb-5">Rango de Precio</h3>
+              <h2 className="text-xl font-semibold text-gray-900 mb-5">Rango de Precio</h2>
               <div className="space-y-4">
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>${priceRange[0].toLocaleString('es-CO')}</span>
                   <span>${priceRange[1].toLocaleString('es-CO')}</span>
                 </div>
                 <input type="range" min={minProductPrice} max={maxProductPrice} step="10000"
+                  aria-label="Precio máximo"
                   value={priceRange[1]}
                   onChange={e => setPriceRange([priceRange[0], Math.round(Math.max(0, parseInt(e.target.value) || 0))])}
                   className="w-full accent-orange-600" />
                 <div className="flex gap-2">
-                  <Input type="number" step={10000} placeholder="Mín" value={priceRange[0]}
+                  <Input type="number" step={10000} placeholder="Mín" aria-label="Precio mínimo" value={priceRange[0]}
                     onChange={e => setPriceRange([Math.round(Math.max(0, parseInt(e.target.value) || 0)), priceRange[1]])}
                     className="rounded-xl" />
-                  <Input type="number" step={10000} placeholder="Máx" value={priceRange[1]}
+                  <Input type="number" step={10000} placeholder="Máx" aria-label="Precio máximo (número)" value={priceRange[1]}
                     onChange={e => setPriceRange([priceRange[0], Math.round(parseInt(e.target.value) || maxProductPrice)])}
                     className="rounded-xl" />
                 </div>
@@ -279,7 +282,7 @@ export function Catalog() {
             </div>
 
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <h3 className="text-xl font-semibold text-gray-900 mb-1">Descuentos</h3>
+              <h2 className="text-xl font-semibold text-gray-900 mb-1">Descuentos</h2>
               <p className="text-sm text-gray-500 mb-4 leading-relaxed">
                 Encuentra productos con promociones y precios especiales.
               </p>
@@ -313,7 +316,7 @@ export function Catalog() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
-                {filteredProducts.map(product => {
+                {filteredProducts.map((product, index) => {
                   const stockLabel = getStockLabel(product.cantidad_disponible);
                   const tieneDescuento = product.descuento && product.valor_descuento > 0;  // ← agregar
                   const discountedPrice = tieneDescuento ? product.precio_final : null;
@@ -329,7 +332,12 @@ export function Catalog() {
                             <img
                               src={product.imagen_url || 'https://via.placeholder.com/400x300'}
                               alt={product.nombre}
-                              loading="lazy"
+                              width={400}
+                              height={240}
+                              // La primera fila ya se ve al abrir la página: si se carga
+                              // "perezosa", la imagen principal se pinta tarde.
+                              loading={index < 3 ? 'eager' : 'lazy'}
+                              fetchPriority={index === 0 ? 'high' : undefined}
                               decoding="async"
                               className="w-full h-60 object-contain bg-white group-hover:scale-105 transition-transform duration-500"
                             />

@@ -93,7 +93,7 @@ export function TerminosCondiciones() {
         </Seccion>
 
         <p className="text-xs text-gray-400 mt-10">
-          Ver también la <Link to="/politica-datos" className="text-orange-600 hover:underline">Política de tratamiento de datos personales</Link>.
+          Ver también la <Link to="/politica-datos" className="text-orange-600 underline">Política de tratamiento de datos personales</Link>.
         </p>
       </div>
     </div>

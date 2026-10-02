@@ -542,7 +542,7 @@ export function ProductDetail() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-20 text-center text-amber-700">
+      <div className="container mx-auto min-h-[calc(100vh-4rem)] px-4 py-20 text-center text-amber-700">
         <span className="animate-spin text-3xl inline-block">
           ⏳
         </span>
@@ -742,14 +742,22 @@ export function ProductDetail() {
           ───────────────────────────────────── */}
 
           <div className="relative">
-            <img
-              src={
-                product.imagen_url ||
-                'https://via.placeholder.com/600x400'
-              }
-              alt={product.nombre}
-              className="w-full rounded-lg shadow-lg object-contain bg-white max-h-[500px]"
-            />
+            {/* Espacio reservado (4:3) para la foto: antes la caja crecía
+                cuando terminaba de cargar la imagen y movía todo lo de abajo
+                (reseñas, pie de página). */}
+            <div className="aspect-[4/3] max-h-[500px] w-full overflow-hidden rounded-lg bg-white shadow-lg">
+              <img
+                src={
+                  product.imagen_url ||
+                  'https://via.placeholder.com/600x400'
+                }
+                alt={product.nombre}
+                width={600}
+                height={450}
+                fetchPriority="high"
+                className="h-full w-full object-contain"
+              />
+            </div>
 
             {/* Descuento */}
             {descuento > 0 && (
@@ -990,9 +998,9 @@ export function ProductDetail() {
 
             <Card>
               <CardContent className="p-4">
-                <h3 className="font-semibold mb-2">
+                <h2 className="text-lg font-semibold mb-2">
                   Artesano
-                </h3>
+                </h2>
 
                 <p className="text-gray-600">
                   {product.artesano_nombre ??
