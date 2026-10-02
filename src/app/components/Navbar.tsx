@@ -370,6 +370,8 @@ export function Navbar({
             <img
               src="/logo.png"
               alt="Logo"
+              width={48}
+              height={48}
               className="h-10 w-10 sm:h-12 sm:w-12 object-contain flex-shrink-0"
             />
 

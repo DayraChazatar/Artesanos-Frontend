@@ -78,6 +78,18 @@
   --sidebar-ring: oklch(0.439 0 0);
 }
 
+/* Ajuste de accesibilidad (contraste WCAG AA, mínimo 4.5:1): el naranja y el
+   gris por defecto de Tailwind v4 son demasiado claros para texto pequeño o
+   para texto blanco sobre botones naranja (3.6:1). Como toda la app usa estas
+   clases (bg-orange-600, text-orange-600, text-gray-500…), se corrigen aquí
+   una sola vez en vez de tocar cada componente. */
+@theme {
+  --color-orange-600: #c2410c;
+  --color-orange-700: #9a3412;
+  --color-gray-500: #5b6472;
+  --color-red-500: #dc2626;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

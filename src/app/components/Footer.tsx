@@ -17,7 +17,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <img src="/logo.png" alt="Pakari Shop" className="h-8 w-8 object-contain" />
+              <img src="/logo.png" alt="Pakari Shop" width={32} height={32} loading="lazy" className="h-8 w-8 object-contain" />
               <h3 className="font-semibold text-orange-600">Pakari Shop</h3>
             </div>
             <p className="text-sm text-gray-600">

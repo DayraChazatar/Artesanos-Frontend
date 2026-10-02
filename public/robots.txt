@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /perfil
+Disallow: /perfil-artesano
+Disallow: /checkout
+Disallow: /carrito
+Disallow: /mis-pedidos
+
+Sitemap: https://artesanos-frontend.vercel.app/sitemap.xml

@@ -60,13 +60,22 @@ export function Home() {
   return (
     <div>
       {/* Hero Section */}
-      <section
-        className="relative h-[700px] bg-cover"
-        style={{
-          backgroundImage: `url('/hero.jpeg')`,
-          backgroundPosition: 'center 30%',
-        }}
-      >
+      <section className="relative h-[700px] overflow-hidden bg-stone-800">
+        {/* <img> en vez de background-image CSS: el navegador la descubre y
+            la pide de inmediato (es el elemento más grande de la página), y
+            con srcSet el celular baja una versión de 27 KB en vez de 73 KB. */}
+        <img
+          src="/hero-1536.webp"
+          srcSet="/hero-800.webp 800w, /hero-1536.webp 1536w"
+          sizes="100vw"
+          width={1536}
+          height={1024}
+          alt=""
+          fetchPriority="high"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ objectPosition: 'center 30%' }}
+        />
         <div className="absolute inset-0 bg-gradient-to-tr from-black/75 via-black/20 to-transparent" />
         <div className="relative container mx-auto px-4 h-full flex items-end justify-start pb-14">
           <div className="max-w-md">
@@ -124,7 +133,7 @@ export function Home() {
                       {tooltip}
                     </span>
                   </div>
-                  <h3 className="font-semibold mb-2">{title}</h3>
+                  <h2 className="text-lg font-semibold mb-2">{title}</h2>
                   <p className="text-sm text-gray-600 max-w-[220px]">{text}</p>
                 </CardContent>
               </Card>
@@ -181,6 +190,8 @@ export function Home() {
                           <img
                             src={image || "/placeholder-product.png"}
                             alt=""
+                            width={400}
+                            height={256}
                             loading="lazy"
                             decoding="async"
                             className="absolute inset-0 w-full h-full object-cover blur-md scale-110 opacity-40 pointer-events-none"
@@ -190,6 +201,8 @@ export function Home() {
                           <img
                             src={image || "/placeholder-product.png"}
                             alt={name}
+                            width={400}
+                            height={256}
                             loading="lazy"
                             decoding="async"
                             className="relative max-h-[90%] max-w-[90%] object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-300"
@@ -214,7 +227,7 @@ export function Home() {
                             <span className="text-gray-900 font-bold text-lg">
                               {isNaN(Number(price)) ? "$ 0" : `$${Number(price).toLocaleString('es-CO')}`}
                             </span>
-                            <span className="text-[11px] text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full font-medium">
+                            <span className="text-[11px] text-gray-600 bg-gray-100 px-2.5 py-1 rounded-full font-medium">
                               Por {artisan}
                             </span>
                           </div>
@@ -260,8 +273,12 @@ export function Home() {
             {/* CONTENEDOR OPTIMIZADO: Ajustamos la altura a h-[350px] para equilibrar el texto */}
             <div className="w-full h-[350px] rounded-xl overflow-hidden shadow-lg">
               <img
-                src="/arte.jpg"
-                alt="Artesanias"
+                src="/arte.webp"
+                alt="Artesanías hechas a mano"
+                width={640}
+                height={640}
+                loading="lazy"
+                decoding="async"
                 /* SOLUCIÓN: Cambiamos object-contain por object-cover y h-full w-full */
                 className="w-full h-full object-cover object-center hover:scale-102 transition-transform duration-500"
               />
