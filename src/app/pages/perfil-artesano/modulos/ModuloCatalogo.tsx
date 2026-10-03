@@ -93,7 +93,7 @@ export function ModuloCatalogo({ productos, imagenes, setProductos }: ModuloCata
         </div>
         <div className="overflow-x-auto rounded-xl border border-amber-100">
           <table className="w-full text-base">
-            <thead className="bg-amber-50 text-sm uppercase tracking-wider text-amber-900/60">
+            <thead className="bg-amber-50 text-sm uppercase tracking-wider text-amber-900/90">
               <tr>
                 {['Código', 'Lote', 'Producto', 'Precio neto', 'Precio Final', 'IVA', 'Desc.', 'Stock', 'Imagen', 'Visible'].map(h => (
                   <th key={h} className="px-3 py-3 text-left font-semibold">{h}</th>
@@ -112,7 +112,7 @@ export function ModuloCatalogo({ productos, imagenes, setProductos }: ModuloCata
                     <td className="px-3 py-3">
                       {p.precio_final
                         ? <span className="font-semibold text-green-700">${Number(p.precio_final).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                        : <span className="text-stone-300 text-xs italic">Sin definir</span>}
+                        : <span className="text-stone-500 text-xs italic">Sin definir</span>}
                     </td>
                     <td className="px-3 py-3">{p.iva}%</td>
                     <td className="px-3 py-3">{p.descuento ? <Badge color="bg-green-100 text-green-700">Sí</Badge> : '—'}</td>

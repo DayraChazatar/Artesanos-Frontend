@@ -42,7 +42,19 @@ export const router = createBrowserRouter([
       { path: "producto/editar/:id", lazy: async () => ({ Component: (await import("./pages/ProductEdit")).ProductEdit }) },
       { path: "carrito", lazy: async () => ({ Component: (await import("./pages/Cart")).Cart }) },
       { path: "checkout", lazy: async () => ({ Component: (await import("./pages/Checkout")).Checkout }) },
-      { path: "mis-pedidos", lazy: async () => ({ Component: (await import("./pages/MisPedidos")).MisPedidos }) },
+      {
+        path: "mis-pedidos",
+        lazy: async () => {
+          const { MisPedidos } = await import("./pages/MisPedidos");
+          return {
+            element: (
+              <RequireRole role="customer">
+                <MisPedidos />
+              </RequireRole>
+            ),
+          };
+        },
+      },
       { path: "politica-datos", lazy: async () => ({ Component: (await import("./pages/PoliticaDatos")).PoliticaDatos }) },
       { path: "terminos-condiciones", lazy: async () => ({ Component: (await import("./pages/TerminosCondiciones")).TerminosCondiciones }) },
       {

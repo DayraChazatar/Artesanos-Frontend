@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { getProductos, getCategorias, getKardex, type Producto, type Categoria, type Kardex } from '../data/artesanoApi';
 
 import { Tab } from './perfil-artesano/types';
@@ -11,7 +11,9 @@ import { ModuloContable } from './perfil-artesano/modulos/ModuloContable';
 import { ModuloProductos } from './perfil-artesano/modulos/ModuloProductos';
 import { ModuloInventario } from './perfil-artesano/modulos/ModuloInventario';
 import { ModuloPedidos } from './perfil-artesano/modulos/ModuloPedidos';
-import { ModuloReportes } from './perfil-artesano/modulos/ModuloReportes';
+// Reportes es la única pestaña que usa la librería de gráficos (la parte más pesada del panel):
+// se descarga solo cuando el artesano abre esa pestaña, no al entrar al panel.
+const ModuloReportes = lazy(() => import('./perfil-artesano/modulos/ModuloReportes').then(m => ({ default: m.ModuloReportes })));
 import { ModuloPerfil } from './perfil-artesano/modulos/ModuloPerfil';
 
 const ARTESANO_ID = Number(localStorage.getItem('usuario_id') ?? 1);
@@ -113,7 +115,11 @@ export default function PerfilArtesano() {
               {tab === 'pedidos' && (
                 <ModuloPedidos productos={productos} setProductos={setProductos} setKardex={setKardex} />
               )}
-              {tab === 'reportes' && <ModuloReportes productos={productos} kardex={kardex} />}
+              {tab === 'reportes' && (
+                <Suspense fallback={<div className="py-20 text-center text-sm text-amber-700">Cargando reportes...</div>}>
+                  <ModuloReportes productos={productos} kardex={kardex} />
+                </Suspense>
+              )}
             </>
           )}
         </div>

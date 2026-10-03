@@ -33,9 +33,11 @@ export function Catalog() {
     }
   };
   const allProducts = productos;
+  // Se descartan los productos sin categoría: antes aparecía una casilla
+  // de filtro sin nombre (sin texto que la identifique).
   const categories = [
     ...new Set(
-      allProducts.map((p: any) => p.categoria_nombre)
+      allProducts.map((p: any) => p.categoria_nombre).filter(Boolean)
     )
   ];
 
@@ -330,7 +332,7 @@ export function Catalog() {
                           <div className="relative overflow-hidden">
                             {/* Imagen — reemplaza el img hardcodeado */}
                             <img
-                              src={product.imagen_url || 'https://via.placeholder.com/400x300'}
+                              src={product.imagen_url || '/placeholder-product.svg'}
                               alt={product.nombre}
                               width={400}
                               height={240}

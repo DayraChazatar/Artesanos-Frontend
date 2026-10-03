@@ -18,7 +18,7 @@ export function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <img src="/logo.png" alt="Pakari Shop" width={32} height={32} loading="lazy" className="h-8 w-8 object-contain" />
-              <h3 className="font-semibold text-orange-600">Pakari Shop</h3>
+              <p className="font-semibold text-orange-600 text-lg">Pakari Shop</p>
             </div>
             <p className="text-sm text-gray-600">
               Conectando artesanos talentosos con personas que aprecian el trabajo hecho a mano.
@@ -26,7 +26,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4">Enlaces Rápidos</h4>
+            <h2 className="text-base font-semibold mb-4">Enlaces Rápidos</h2>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link to="/catalogo" className="text-gray-600 hover:text-orange-600">
@@ -57,7 +57,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4">Contacto</h4>
+            <h2 className="text-base font-semibold mb-4">Contacto</h2>
             <ul className="space-y-2 text-sm text-gray-600">
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
@@ -75,7 +75,7 @@ export function Footer() {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4">Legal</h4>
+            <h2 className="text-base font-semibold mb-4">Legal</h2>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link to="/politica-datos" className="text-gray-600 hover:text-orange-600">

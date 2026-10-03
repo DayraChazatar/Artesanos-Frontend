@@ -133,7 +133,7 @@ export function SidebarNotificaciones({
                     </div>
                     <p className="text-xs text-stone-400 line-clamp-2 leading-relaxed">{n.detalle}</p>
                     {n.ruta && <span className="text-xs text-amber-500 font-semibold mt-1 inline-block">Toca para ver →</span>}
-                    <p className="text-xs text-stone-300 mt-1">{n.fecha}</p>
+                    <p className="text-xs text-stone-500 mt-1">{n.fecha}</p>
                   </div>
                 </button>
               ))}

@@ -21,10 +21,10 @@ const Badge = ({ children, color }: { children: React.ReactNode; color: string }
 );
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-    <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">{label}</label>
+  <label className="flex flex-col gap-1 flex-1 min-w-[140px]">
+    <span className="text-xs font-semibold uppercase tracking-wider text-amber-900/90">{label}</span>
     {children}
-  </div>
+  </label>
 );
 
 const BannerCategoria = ({ categoria }: { categoria: Categoria | undefined }) => {
@@ -305,7 +305,7 @@ export function ModuloProductos({
               className="flex flex-col items-center justify-center border-2 border-dashed border-amber-300 rounded-xl p-8 cursor-pointer hover:bg-amber-50 transition text-stone-500">
               <span className="text-4xl mb-2">🖼️</span>
               <p className="text-sm">{archivos.length > 0 ? archivos[0] : 'Arrastra imágenes o haz clic para seleccionar'}</p>
-              <span className="text-xs opacity-60 mt-1">JPG, PNG — máx. 10 MB</span>
+              <span className="text-xs text-stone-500 mt-1">JPG, PNG — máx. 10 MB</span>
               {imagenFile && <img src={URL.createObjectURL(imagenFile)} className="mt-3 h-24 w-24 object-cover rounded-xl border border-amber-200" />}
             </div>
             <input id="input-imagen" type="file" accept="image/*" className="hidden"
@@ -519,7 +519,7 @@ export function ModuloProductos({
           </div>
           <div className="overflow-x-auto rounded-xl border border-amber-100">
             <table className="w-full text-sm">
-              <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+              <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/90">
                 <tr>{['Código', 'Lote', 'Nombre', 'Precio', 'IVA', 'Desc.', 'Stock', 'Mín.', 'Máx.', 'Acciones'].map(h => (
                   <th key={h} className="px-3 py-3 text-left font-semibold">{h}</th>
                 ))}</tr>
@@ -577,7 +577,7 @@ export function ModuloProductos({
               >
                 <span className="text-3xl mb-2">📊</span>
                 <p className="text-sm">{archivoMasivo ? archivoMasivo.name : 'Haz clic para seleccionar el Excel lleno'}</p>
-                <span className="text-xs opacity-60 mt-1">Solo archivos .xlsx</span>
+                <span className="text-xs text-stone-500 mt-1">Solo archivos .xlsx</span>
               </div>
               <input id="input-carga-masiva" type="file" accept=".xlsx" className="hidden"
                 onChange={e => { setArchivoMasivo(e.target.files?.[0] ?? null); setResultadoMasivo(null); }} />
@@ -596,7 +596,7 @@ export function ModuloProductos({
                 {resultadoMasivo.errores.length > 0 && (
                   <div className="overflow-x-auto rounded-xl border border-red-100">
                     <table className="w-full text-sm">
-                      <thead className="bg-red-50 text-xs uppercase tracking-wider text-red-700/70">
+                      <thead className="bg-red-50 text-xs uppercase tracking-wider text-red-700">
                         <tr>
                           <th className="px-3 py-2 text-left font-semibold">Fila</th>
                           <th className="px-3 py-2 text-left font-semibold">Producto</th>

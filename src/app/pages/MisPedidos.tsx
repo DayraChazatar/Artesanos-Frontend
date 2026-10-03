@@ -869,7 +869,7 @@ const handleReturnSubmit = async (reason: string, photos: string[]) => {
                   }`}>
                   {s}
                   <span className={`text-xs rounded-full px-1.5 py-0.5 font-bold ${
-                    filterStatus === s ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'
+                    filterStatus === s ? 'bg-black/25 text-white' : 'bg-gray-100 text-gray-500'
                   }`}>
                     {statusCount(s)}
                   </span>
@@ -898,7 +898,7 @@ const handleReturnSubmit = async (reason: string, photos: string[]) => {
                   onClear={() => setSelectedDate(null)}
                   orderDates={orderDates}
                 />
-                <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+                <select aria-label="Ordenar pedidos" value={sortBy} onChange={e => setSortBy(e.target.value)}
                   className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white text-gray-600">
                   <option value="reciente">Más reciente</option>
                   <option value="antiguo">Más antiguo</option>

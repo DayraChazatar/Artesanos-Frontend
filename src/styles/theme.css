@@ -88,7 +88,15 @@
   --color-orange-700: #9a3412;
   --color-gray-400: #636d7c;
   --color-gray-500: #5b6472;
-  --color-red-500: #dc2626;
+  --color-stone-400: #6f6963;
+  --color-stone-500: #625b55;
+  --color-amber-500: #a84f08;
+  --color-amber-600: #9a4a07;
+  --color-amber-700: #7c3c06;
+  --color-green-600: #15803d;
+  --color-green-700: #166534;
+  --color-red-500: #c81e1e;
+  --color-red-600: #b91c1c;
 }
 
 @theme inline {

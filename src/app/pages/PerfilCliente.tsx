@@ -601,7 +601,7 @@ export function Profile() {
                   </button>
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
                 </div>
-                <h3 className="font-bold text-xl mb-1 text-orange-600 tracking-wide">{user.name}</h3>
+                <h2 className="font-bold text-xl mb-1 text-orange-600 tracking-wide">{user.name}</h2>
                 <p className="text-xs text-gray-500 mb-2">{user.email}</p>
                 <span className="inline-block px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
                   {user.role === 'artisan' ? 'Artesano' : 'Cliente'}

@@ -448,7 +448,7 @@ export function ModuloPerfil() {
               { label: 'Confirmar nueva contraseña', field: 'password_confirmar' },
             ].map(({ label, field }) => (
               <div key={field} className="flex flex-col gap-1">
-                <label htmlFor={field} className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">{label}</label>
+                <label htmlFor={field} className="text-xs font-semibold uppercase tracking-wider text-amber-900/90">{label}</label>
                 <div className="relative">
                   <input id={field} type={verCampo[field as keyof typeof verCampo] ? 'text' : 'password'} className={`${inputCls} w-full pr-10`}
                     value={password[field as keyof typeof password]}
@@ -499,13 +499,13 @@ export function ModuloPerfil() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1">
-                <label htmlFor="pd-banco" className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Banco (o "Nequi")</label>
+                <label htmlFor="pd-banco" className="text-xs font-semibold uppercase tracking-wider text-amber-900/90">Banco (o "Nequi")</label>
                 <input id="pd-banco" className={inputCls} value={pagoDirecto.pago_directo_banco}
                   onChange={e => setPagoDirecto({ ...pagoDirecto, pago_directo_banco: e.target.value })}
                   placeholder="Ej: Bancolombia, Nequi" />
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="pd-tipo" className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Tipo de cuenta</label>
+                <label htmlFor="pd-tipo" className="text-xs font-semibold uppercase tracking-wider text-amber-900/90">Tipo de cuenta</label>
                 <select id="pd-tipo" className={inputCls} value={pagoDirecto.pago_directo_tipo_cuenta}
                   onChange={e => setPagoDirecto({ ...pagoDirecto, pago_directo_tipo_cuenta: e.target.value })}>
                   <option value="">— Selecciona —</option>
@@ -515,13 +515,13 @@ export function ModuloPerfil() {
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="pd-numero" className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Número de cuenta o celular Nequi</label>
+                <label htmlFor="pd-numero" className="text-xs font-semibold uppercase tracking-wider text-amber-900/90">Número de cuenta o celular Nequi</label>
                 <input id="pd-numero" className={inputCls} value={pagoDirecto.pago_directo_numero}
                   onChange={e => setPagoDirecto({ ...pagoDirecto, pago_directo_numero: e.target.value })}
                   placeholder="Ej: 3001234567" />
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="pd-titular" className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Nombre del titular</label>
+                <label htmlFor="pd-titular" className="text-xs font-semibold uppercase tracking-wider text-amber-900/90">Nombre del titular</label>
                 <input id="pd-titular" className={inputCls} value={pagoDirecto.pago_directo_titular}
                   onChange={e => setPagoDirecto({ ...pagoDirecto, pago_directo_titular: e.target.value })}
                   placeholder="Nombre completo tal como aparece en la cuenta" />

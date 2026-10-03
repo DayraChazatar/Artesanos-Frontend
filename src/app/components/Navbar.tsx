@@ -463,6 +463,7 @@ export function Navbar({
                 <Button
                   variant="ghost"
                   size="icon"
+                  aria-label="Ver carrito de compras"
                 >
                   <ShoppingCart className="h-5 w-5" />
 

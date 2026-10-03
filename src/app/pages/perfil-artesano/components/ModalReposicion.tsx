@@ -52,8 +52,8 @@ export function ModalReposicion({ producto, onClose, onConfirm }: ModalReposicio
         </div>
         <div className="space-y-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Cantidad a ingresar *</label>
-            <input type="number" min={1} value={cantidad || ''}
+            <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/90">Cantidad a ingresar *</label>
+            <input aria-label="Cantidad a ingresar" type="number" min={1} value={cantidad || ''}
               onChange={e => { setCantidad(Number(e.target.value)); setError(''); }}
               placeholder="Ej: 5"
               className="px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-base text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
@@ -64,14 +64,14 @@ export function ModalReposicion({ producto, onClose, onConfirm }: ModalReposicio
             </div>
           )}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Nota u observación</label>
-            <textarea value={nota} onChange={e => setNota(e.target.value)}
+            <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/90">Nota u observación</label>
+            <textarea aria-label="Nota u observación" value={nota} onChange={e => setNota(e.target.value)}
               placeholder="Ej: Compra feria artesanal junio 2025" rows={2}
               className="px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-stone-800 focus:outline-none focus:border-amber-500 resize-none" />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Fecha de ingreso *</label>
-            <input type="date" value={fecha} max={hoy}
+            <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/90">Fecha de ingreso *</label>
+            <input aria-label="Fecha de ingreso" type="date" value={fecha} max={hoy}
               onChange={e => { setFecha(e.target.value); setError(''); }}
               className="px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-sm text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200" />
           </div>

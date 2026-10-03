@@ -67,6 +67,7 @@ function StarPicker({
         <button
           key={s}
           type="button"
+          aria-label={`Calificar con ${s} ${s === 1 ? 'estrella' : 'estrellas'}`}
           onMouseEnter={() => setHovered(s)}
           onMouseLeave={() => setHovered(0)}
           onClick={() => onChange(s)}
@@ -381,7 +382,7 @@ export function ProductDetail() {
 
       try {
         const res = await fetch(
-          `${API_BASE}/inventario/favoritos/`,
+          `${API_BASE}/favoritos/`,
           {
             method: 'GET',
             headers: {
@@ -461,7 +462,7 @@ export function ProductDetail() {
 
       if (isFav) {
         const res = await fetch(
-          `${API_BASE}/inventario/favoritos/quitar/${product.id}/`,
+          `${API_BASE}/favoritos/producto/${product.id}/`,
           {
             method: 'DELETE',
             headers: {
@@ -492,7 +493,7 @@ export function ProductDetail() {
       // ───────────────────────────────────────
 
       const res = await fetch(
-        `${API_BASE}/inventario/favoritos/agregar/`,
+        `${API_BASE}/favoritos/`,
         {
           method: 'POST',
           headers: {
@@ -501,7 +502,7 @@ export function ProductDetail() {
               'application/json',
           },
           body: JSON.stringify({
-            producto_id: product.id,
+            producto: product.id,
           }),
         }
       );
@@ -749,7 +750,7 @@ export function ProductDetail() {
               <img
                 src={
                   product.imagen_url ||
-                  'https://via.placeholder.com/600x400'
+                  '/placeholder-product.svg'
                 }
                 alt={product.nombre}
                 width={600}

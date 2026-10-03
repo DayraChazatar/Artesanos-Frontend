@@ -120,23 +120,23 @@ export function ModuloInventario({
             <div className="space-y-4">
               <div>
                 <label className={labelCls}>Producto</label>
-                <select className={inputCls} value={form.producto} onChange={e => setForm({ ...form, producto: Number(e.target.value) })}>
+                <select aria-label="Producto" className={inputCls} value={form.producto} onChange={e => setForm({ ...form, producto: Number(e.target.value) })}>
                   {productos.map(p => <option key={p.id} value={p.id}>{p.nombre} [PROD-{String(p.id).padStart(4, '0')}]</option>)}
                 </select>
               </div>
               <div className="flex flex-wrap gap-4">
                 <div className="flex-1 min-w-[140px]">
                   <label className={labelCls}>Cantidad *</label>
-                  <input type="number" min={1} className={inputCls} placeholder="Ej: 10" value={form.cantidad} onChange={e => setForm({ ...form, cantidad: e.target.value })} />
+                  <input aria-label="Cantidad" type="number" min={1} className={inputCls} placeholder="Ej: 10" value={form.cantidad} onChange={e => setForm({ ...form, cantidad: e.target.value })} />
                 </div>
                 <div className="flex-1 min-w-[140px]">
                   <label className={labelCls}>Fecha *</label>
-                  <input type="date" max={hoyLocal()} className={inputCls} value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} />
+                  <input aria-label="Fecha" type="date" max={hoyLocal()} className={inputCls} value={form.fecha} onChange={e => setForm({ ...form, fecha: e.target.value })} />
                 </div>
               </div>
               <div>
                 <label className={labelCls}>Nota u observación</label>
-                <input className={inputCls} placeholder="Ej: Compra feria artesanal mayo 2026" value={form.nota} onChange={e => setForm({ ...form, nota: e.target.value })} />
+                <input aria-label="Nota u observación" className={inputCls} placeholder="Ej: Compra feria artesanal mayo 2026" value={form.nota} onChange={e => setForm({ ...form, nota: e.target.value })} />
               </div>
               <button onClick={handleAdd} disabled={loading}
                 className="px-5 py-2 rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-sm font-semibold transition">
@@ -195,9 +195,9 @@ export function ModuloInventario({
               />
             </div>
             <span>Desde</span>
-            <input type="date" max={hoyLocal()} className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.desde} onChange={e => setFiltros({ ...filtros, desde: e.target.value })} />
+            <input aria-label="Desde" type="date" max={hoyLocal()} className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.desde} onChange={e => setFiltros({ ...filtros, desde: e.target.value })} />
             <span>Hasta</span>
-            <input type="date" max={hoyLocal()} className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.hasta} onChange={e => setFiltros({ ...filtros, hasta: e.target.value })} />
+            <input aria-label="Hasta" type="date" max={hoyLocal()} className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.hasta} onChange={e => setFiltros({ ...filtros, hasta: e.target.value })} />
             <select className="border border-amber-200 bg-amber-50/40 rounded-lg px-2 py-1 text-xs" value={filtros.tipo} onChange={e => setFiltros({ ...filtros, tipo: e.target.value })}>
               <option value="todos">Tipo: todos</option>
               <option value="entrada">Entrada</option>
@@ -216,7 +216,7 @@ export function ModuloInventario({
           </div>
           <div className="overflow-x-auto rounded-xl border border-amber-100">
             <table className="w-full text-sm">
-              <thead className="bg-amber-50 text-[10px] font-semibold uppercase tracking-widest text-amber-900/60">
+              <thead className="bg-amber-50 text-[10px] font-semibold uppercase tracking-widest text-amber-900/90">
                 <tr>
                   {['Fecha', 'Producto', 'Tipo', 'Subtipo', 'Origen', 'Cant.', 'Stock Result.', 'PVP Unit.', 'Pedido ref.', 'Registrado por', 'Nota'].map(h => (
                     <th key={h} className="px-3 py-3 text-left">{h}</th>

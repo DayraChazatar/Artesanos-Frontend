@@ -223,7 +223,7 @@ export function ModuloReferencias({ pedidos, onRefrescar, setProductos, setKarde
         <div className="flex flex-wrap items-end gap-4">
 
           <div className="flex flex-col gap-1 flex-1 min-w-[200px] relative" ref={dropdownRef}>
-            <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">No. Pedido</label>
+            <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/90">No. Pedido</label>
             <div className="flex gap-1">
               <input
                 className={`${inputCls} flex-1`}
@@ -243,7 +243,7 @@ export function ModuloReferencias({ pedidos, onRefrescar, setProductos, setKarde
 
             {dropdownAbierto && (
               <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-white border border-amber-200 rounded-xl shadow-xl max-h-72 overflow-y-auto">
-                <p className="px-3 py-2 text-xs font-semibold text-amber-900/60 uppercase tracking-wider border-b border-amber-50 sticky top-0 bg-white">
+                <p className="px-3 py-2 text-xs font-semibold text-amber-900/90 uppercase tracking-wider border-b border-amber-50 sticky top-0 bg-white">
                   Pedidos listos para enviar ({listosParaEnviar.length})
                 </p>
                 {listosParaEnviar.length === 0 ? (
@@ -270,8 +270,8 @@ export function ModuloReferencias({ pedidos, onRefrescar, setProductos, setKarde
           </div>
 
           <div className="flex flex-col gap-1 flex-1 min-w-[200px]">
-            <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">Referencia o Ticket</label>
-            <input
+            <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/90">Referencia o Ticket</label>
+            <input aria-label="Referencia o Ticket"
               className={inputCls}
               placeholder="Número que te dio la transportadora"
               value={form.referencia}
@@ -309,9 +309,9 @@ export function ModuloReferencias({ pedidos, onRefrescar, setProductos, setKarde
         {/* ── Filtros de búsqueda ── */}
         <div className="flex flex-wrap items-end gap-3 mb-4 p-3 bg-amber-50/60 rounded-xl border border-amber-100">
           <div className="relative flex-1 min-w-[220px]">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/70 block mb-1">Buscar</label>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/90 block mb-1">Buscar</label>
             <Search className="absolute left-3 top-1/2 translate-y-[3px] h-4 w-4 text-stone-400" />
-            <input
+            <input aria-label="Buscar"
               className={`${inputCls} pl-9 py-2 w-full`}
               placeholder="Pedido, referencia, cliente o producto..."
               value={busqueda}
@@ -319,21 +319,21 @@ export function ModuloReferencias({ pedidos, onRefrescar, setProductos, setKarde
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/70">Estado</label>
-            <select className={`${inputCls} py-2`} value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/90">Estado</label>
+            <select aria-label="Estado" className={`${inputCls} py-2`} value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
               <option value="">Todos</option>
               <option value="Enviado">Enviado</option>
               <option value="Entregado">Entregado</option>
             </select>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/70">Enviado desde</label>
-            <input type="date" max={hoyLocal()} className={`${inputCls} py-2`}
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/90">Enviado desde</label>
+            <input aria-label="Enviado desde" type="date" max={hoyLocal()} className={`${inputCls} py-2`}
               value={filtroDesde} onChange={e => setFiltroDesde(e.target.value)} />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/70">Hasta</label>
-            <input type="date" max={hoyLocal()} className={`${inputCls} py-2`}
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-amber-900/90">Hasta</label>
+            <input aria-label="Hasta" type="date" max={hoyLocal()} className={`${inputCls} py-2`}
               value={filtroHasta} onChange={e => setFiltroHasta(e.target.value)} />
           </div>
           {hayFiltrosActivos && (
@@ -346,7 +346,7 @@ export function ModuloReferencias({ pedidos, onRefrescar, setProductos, setKarde
 
         <div className="overflow-x-auto rounded-xl border border-amber-100">
           <table className="w-full text-sm">
-            <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+            <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/90">
               <tr>
                 {['Código/Id', 'Producto', 'Pedido + referencia', 'Estado', ''].map(h => (
                   <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>

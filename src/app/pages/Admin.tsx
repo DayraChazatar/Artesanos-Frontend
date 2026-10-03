@@ -261,7 +261,7 @@ export default function Admin() {
                     <td className="px-4 py-3 text-stone-500">{a.correo}</td>
                     <td className="px-4 py-3 text-stone-500">{a.telefono || '—'}</td>
                     <td className="px-4 py-3">
-                      <select value={a.categoria_id ?? ''} onChange={e => cambiarCategoria(a, e.target.value)}
+                      <select aria-label={`Categoría de ${a.nombre}`} value={a.categoria_id ?? ''} onChange={e => cambiarCategoria(a, e.target.value)}
                         className="px-2 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-xs focus:outline-none focus:border-amber-500">
                         <option value="">— Sin categoría —</option>
                         {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
@@ -341,7 +341,7 @@ export default function Admin() {
               <input value={qPedidos} onChange={e => setQPedidos(e.target.value)}
                 placeholder="Buscar por código, cliente o artesano..."
                 className="flex-1 min-w-[220px] px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 text-sm focus:outline-none focus:border-amber-500" />
-              <select value={estadoPedidos} onChange={e => setEstadoPedidos(e.target.value)}
+              <select aria-label="Filtrar pedidos por estado" value={estadoPedidos} onChange={e => setEstadoPedidos(e.target.value)}
                 className="px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 text-sm focus:outline-none focus:border-amber-500">
                 <option value="">Todos los estados</option>
                 {ESTADOS_PEDIDO.map(e => <option key={e} value={e}>{e}</option>)}

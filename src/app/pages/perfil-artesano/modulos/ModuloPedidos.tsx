@@ -176,7 +176,7 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
           <h2 className="font-serif text-2xl text-amber-800">🛒 Gestión de Pedidos</h2>
           <p className="text-stone-500 text-sm mt-1">Los cambios de estado actualizan el inventario automáticamente</p>
         </div>
-        <button onClick={fetchPedidos} className="p-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100 transition">
+        <button onClick={fetchPedidos} aria-label="Actualizar la lista de pedidos" className="p-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100 transition">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
@@ -202,7 +202,7 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
           <div className="flex flex-wrap gap-4">
             <input type="text" placeholder="Buscar cliente, código o producto..." value={busqueda}
               onChange={e => setBusqueda(e.target.value)} className={`${inputCls} flex-1 min-w-[200px]`} />
-            <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className={inputCls}>
+            <select aria-label="Filtrar pedidos por estado" value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)} className={inputCls}>
               <option value="">Todos los estados</option>
               {['Pendiente', 'En proceso', 'Enviado', 'Entregado', 'Cancelado', 'Devolucion solicitada', 'Devuelto', 'Devolucion aprobada', 'Devolucion rechazada'].map(e => (
                 <option key={e}>{e}</option>
@@ -210,11 +210,11 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
             </select>
             <div className="flex items-center gap-2">
               <span className="text-sm text-stone-500">Desde</span>
-              <input type="date" max={hoyLocal()} value={filtroDesde} onChange={e => setFiltroDesde(e.target.value)} className={inputCls} />
+              <input aria-label="Pedidos desde" type="date" max={hoyLocal()} value={filtroDesde} onChange={e => setFiltroDesde(e.target.value)} className={inputCls} />
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-stone-500">Hasta</span>
-              <input type="date" max={hoyLocal()} value={filtroHasta} onChange={e => setFiltroHasta(e.target.value)} className={inputCls} />
+              <input aria-label="Pedidos hasta" type="date" max={hoyLocal()} value={filtroHasta} onChange={e => setFiltroHasta(e.target.value)} className={inputCls} />
             </div>
             {(busqueda || filtroEstado || filtroDesde || filtroHasta) && (
               <button
@@ -269,7 +269,7 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
         ) : (
           <div className="overflow-x-auto rounded-xl border border-amber-100">
             <table className="w-full text-sm">
-              <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+              <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/90">
                 <tr>
                   {['Código / Estado', 'Cliente', 'Productos', 'Total', 'Fecha', 'Acciones'].map(h => (
                     <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
@@ -318,7 +318,7 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
                                 <span className="text-xs text-amber-500 italic">⏳ Esperando comprobante del cliente</span>
                               )
                             ) : pedido.estado === 'Pago pendiente' ? (
-                              <span className="text-xs text-stone-300 italic">⏳ Esperando confirmación de Wompi</span>
+                              <span className="text-xs text-stone-500 italic">⏳ Esperando confirmación de Wompi</span>
                             ) : pedido.estado === 'En proceso' ? (
                               <button onClick={() => irAReferencias(pedido.codigo, 'enviar')}
                                 className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200 transition">
@@ -330,7 +330,7 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
                                 📦 Confirmar entrega
                               </button>
                             ) : (SIGUIENTES[pedido.estado] ?? []).length === 0 ? (
-                              <span className="text-xs text-stone-300 italic">Finalizado</span>
+                              <span className="text-xs text-stone-500 italic">Finalizado</span>
                             ) : (SIGUIENTES[pedido.estado] ?? []).map(siguiente => (
                               <button key={siguiente} disabled={isLoading} onClick={() => actualizarEstado(pedido, siguiente)}
                                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition disabled:opacity-50 ${BTN_COLOR[siguiente] ?? 'bg-gray-100 text-gray-600'}`}>

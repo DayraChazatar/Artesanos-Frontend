@@ -4,10 +4,10 @@ import { Producto } from '../../../data/artesanoApi';
 const inputCls = 'px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-base text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition';
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-    <label className="text-xs font-semibold uppercase tracking-wider text-amber-900/70">{label}</label>
+  <label className="flex flex-col gap-1 flex-1 min-w-[140px]">
+    <span className="text-xs font-semibold uppercase tracking-wider text-amber-900/90">{label}</span>
     {children}
-  </div>
+  </label>
 );
 
 interface ModuloContableProps {
@@ -37,7 +37,7 @@ export function ModuloContable({ productos }: ModuloContableProps) {
                 { label: 'Categoría', value: producto.categoria_nombre ?? '—' },
               ].map(({ label, value }) => (
                 <div key={label} className="flex-1 min-w-[130px] bg-amber-50 rounded-xl px-4 py-3">
-                  <div className="text-xs uppercase tracking-wider text-amber-900/60 font-semibold mb-1">{label}</div>
+                  <div className="text-xs uppercase tracking-wider text-amber-900/90 font-semibold mb-1">{label}</div>
                   <div className="text-sm font-semibold text-stone-800 font-mono">{value}</div>
                 </div>
               ))}

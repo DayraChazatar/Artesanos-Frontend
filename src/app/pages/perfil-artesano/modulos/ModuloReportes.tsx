@@ -139,7 +139,7 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
       <div className="flex flex-wrap items-end gap-3 mb-5 p-4 bg-amber-50 rounded-xl border border-amber-100">
         <div className="flex flex-col gap-1">
           <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Producto</label>
-          <select className={selCls} value={f.producto ?? ''} onChange={e => setF({ ...f, producto: e.target.value })}>
+          <select aria-label="Producto" className={selCls} value={f.producto ?? ''} onChange={e => setF({ ...f, producto: e.target.value })}>
             <option value="">Todos</option>
             {productos.map(p => <option key={p.id} value={String(p.id)}>{p.nombre}</option>)}
           </select>
@@ -147,7 +147,7 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
         {f.tipo !== undefined && (
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Tipo</label>
-            <select className={selCls} value={f.tipo ?? 'todos'} onChange={e => setF({ ...f, tipo: e.target.value })}>
+            <select aria-label="Tipo" className={selCls} value={f.tipo ?? 'todos'} onChange={e => setF({ ...f, tipo: e.target.value })}>
               <option value="todos">Todos</option>
               <option value="entrada">Entrada</option>
               <option value="salida">Salida</option>
@@ -158,7 +158,7 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
         {f.subtipo !== undefined && (
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Subtipo</label>
-            <select className={selCls} value={f.subtipo ?? 'todos'} onChange={e => setF({ ...f, subtipo: e.target.value })}>
+            <select aria-label="Subtipo" className={selCls} value={f.subtipo ?? 'todos'} onChange={e => setF({ ...f, subtipo: e.target.value })}>
               <option value="todos">Todos</option>
               <option value="venta">Venta</option>
               <option value="reposicion">Reposición</option>
@@ -168,13 +168,13 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
         )}
         <div className="flex flex-col gap-1">
           <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Desde</label>
-          <input type="date" max={hoy} className={dateCls(err.desde)} value={f.desde}
+          <input aria-label="Desde" type="date" max={hoy} className={dateCls(err.desde)} value={f.desde}
             onChange={e => { setF({ ...f, desde: e.target.value }); validarFechas(e.target.value, f.hasta, setErr); }} />
           {err.desde && <span className="text-xs text-red-500 font-medium">{err.desde}</span>}
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Hasta</label>
-          <input type="date" max={hoy} className={dateCls(err.hasta)} value={f.hasta}
+          <input aria-label="Hasta" type="date" max={hoy} className={dateCls(err.hasta)} value={f.hasta}
             onChange={e => { setF({ ...f, hasta: e.target.value }); validarFechas(f.desde, e.target.value, setErr); }} />
           {err.hasta && <span className="text-xs text-red-500 font-medium">{err.hasta}</span>}
         </div>
@@ -247,9 +247,9 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
             </div>
           )}
           {vista['ventas'] === 'tabla' && (
-            <div className="overflow-x-auto rounded-xl border border-amber-100">
+            <div className="overflow-x-auto rounded-xl border border-amber-100" tabIndex={0} role="region" aria-label="Tabla de resultados (se puede desplazar con el teclado)">
               <table className="w-full text-sm">
-                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/90">
                   <tr>{['Fecha', 'Producto', 'Tipo', 'Subtipo', 'Cantidad', 'PVP Unit.', 'Total', 'Pedido ref.', 'Registrado por'].map(h => (
                     <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
                   ))}</tr>
@@ -311,9 +311,9 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
             </div>
           )}
           {vista['inventario'] === 'tabla' && (
-            <div className="overflow-x-auto rounded-xl border border-amber-100">
+            <div className="overflow-x-auto rounded-xl border border-amber-100" tabIndex={0} role="region" aria-label="Tabla de resultados (se puede desplazar con el teclado)">
               <table className="w-full text-sm">
-                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/90">
                   <tr>{['Fecha', 'Producto', 'Tipo', 'Subtipo', 'Origen', 'Cant.', 'Stock result.', 'PVP Unit.', 'Pedido ref.', 'Registrado por', 'Nota'].map(h => (
                     <th key={h} className="px-3 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
                   ))}</tr>
@@ -388,9 +388,9 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
             </div>
           )}
           {vista['productos'] === 'tabla' && (
-            <div className="overflow-x-auto rounded-xl border border-amber-100">
+            <div className="overflow-x-auto rounded-xl border border-amber-100" tabIndex={0} role="region" aria-label="Tabla de resultados (se puede desplazar con el teclado)">
               <table className="w-full text-sm">
-                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/90">
                   <tr>{['Código', 'Lote', 'Producto', 'Categoría', 'Precio neto', 'PVP', 'IVA', 'Stock', 'Mín.', 'Máx.', 'Estado'].map(h => (
                     <th key={h} className="px-4 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
                   ))}</tr>
@@ -443,9 +443,9 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
             </div>
           )}
           {vista['contable'] === 'tabla' && (
-            <div className="overflow-x-auto rounded-xl border border-amber-100">
+            <div className="overflow-x-auto rounded-xl border border-amber-100" tabIndex={0} role="region" aria-label="Tabla de resultados (se puede desplazar con el teclado)">
               <table className="w-full text-sm">
-                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/60">
+                <thead className="bg-amber-50 text-xs uppercase tracking-wider text-amber-900/90">
                   <tr>{['Fecha', 'Producto', 'Tipo', 'Subtipo', 'Cantidad', 'PVP Unit.', 'Ventas', 'Inventario', 'Pedido ref.', 'Nota'].map(h => (
                     <th key={h} className="px-3 py-3 text-left font-semibold whitespace-nowrap">{h}</th>
                   ))}</tr>

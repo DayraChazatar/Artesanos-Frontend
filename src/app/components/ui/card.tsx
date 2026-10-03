@@ -30,9 +30,12 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
 
 function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <h4
+    // h2 en vez de h4: los títulos de tarjeta saltaban del título de la página
+    // (h1) directo a h4, lo que desordena la jerarquía para lectores de
+    // pantalla. "text-base" conserva el tamaño que tenía el h4.
+    <h2
       data-slot="card-title"
-      className={cn("leading-none", className)}
+      className={cn("text-base leading-none", className)}
       {...props}
     />
   );

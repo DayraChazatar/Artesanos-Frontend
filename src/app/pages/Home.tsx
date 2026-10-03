@@ -188,7 +188,7 @@ export function Home() {
 
                           {/* 1. Imagen de fondo duplicada y difuminada */}
                           <img
-                            src={image || "/placeholder-product.png"}
+                            src={image || "/placeholder-product.svg"}
                             alt=""
                             width={400}
                             height={256}
@@ -199,7 +199,7 @@ export function Home() {
 
                           {/* 2. Imagen del producto real flotando nítida encima */}
                           <img
-                            src={image || "/placeholder-product.png"}
+                            src={image || "/placeholder-product.svg"}
                             alt={name}
                             width={400}
                             height={256}
@@ -207,7 +207,13 @@ export function Home() {
                             decoding="async"
                             className="relative max-h-[90%] max-w-[90%] object-contain drop-shadow-2xl hover:scale-105 transition-transform duration-300"
                             onError={(e) => {
-                              (e.target as HTMLImageElement).src = "/placeholder-product.png";
+                              // Se desactiva el manejador antes de cambiar la imagen: si el
+                              // reemplazo también fallara, volvería a dispararse el error
+                              // y la página pediría la imagen sin parar (así pasó cuando el
+                              // archivo de reemplazo no existía: miles de peticiones por segundo).
+                              const img = e.currentTarget as HTMLImageElement;
+                              img.onerror = null;
+                              img.src = "/placeholder-product.svg";
                             }}
                           />
                         </div>
