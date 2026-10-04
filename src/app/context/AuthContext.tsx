@@ -20,11 +20,19 @@ interface User {
   profileImage?: string;
 }
 
+/** "login": solo entra a cuentas existentes. "registro": crea la cuenta (exige aceptar términos; artesano exige categoría). */
+interface OpcionesGoogle {
+  modo?: 'login' | 'registro';
+  tipo?: 'cliente' | 'artesano';
+  categoriaId?: number;
+  aceptaTerminos?: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ user: User; token: string }>;
-  loginWithGoogle: (credential: string) => Promise<{ user: User; token: string }>;
+  loginWithGoogle: (credential: string, opciones?: OpcionesGoogle) => Promise<{ user: User; token: string; creado: boolean }>;
   register: (name: string, email: string, password: string, role: 'customer' | 'artisan') => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -115,11 +123,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { user: loggedUser, token: data.token };
   };
 
-  const loginWithGoogle = async (credential: string): Promise<{ user: User; token: string }> => {
+  const loginWithGoogle = async (
+    credential: string,
+    opciones: OpcionesGoogle = {},
+  ): Promise<{ user: User; token: string; creado: boolean }> => {
     const res = await fetch(`${BASE}/login-google/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ credential }),
+      body: JSON.stringify({
+        credential,
+        modo: opciones.modo ?? 'login',
+        ...(opciones.modo === 'registro' && {
+          tipo: opciones.tipo ?? 'cliente',
+          categoria_id: opciones.categoriaId,
+          acepta_terminos: opciones.aceptaTerminos === true,
+        }),
+      }),
     });
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'Error al iniciar sesión con Google');
@@ -132,7 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('usuario_nombre', data.nombre);
     if (data.token) localStorage.setItem('token', data.token);
 
-    return { user: loggedUser, token: data.token };
+    return { user: loggedUser, token: data.token, creado: data.creado === true };
   };
 
   const register = async (

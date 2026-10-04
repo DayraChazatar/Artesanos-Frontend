@@ -10,6 +10,9 @@ import { toast } from 'sonner';
 import { User, Palette } from 'lucide-react';
 import { getCategoriasDisponibles, registrarArtesano, type Categoria } from '../data/artesanoApi';
 import { API_BASE } from '../utils/config';
+import { useAuth } from '../context/AuthContext';
+import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
+import { GOOGLE_CLIENT_ID } from '../utils/googleConfig';
 
 function CasillaAceptacion({
   checked, onChange, idPrefix,
@@ -38,6 +41,49 @@ function CasillaAceptacion({
   );
 }
 
+/**
+ * Botón "Registrarse con Google". Hasta que se cumplan los requisitos (aceptar la
+ * política de datos y, en artesanos, elegir categoría) se muestra un botón
+ * inactivo que explica qué falta; recién entonces aparece el botón real de Google.
+ * El backend vuelve a exigir lo mismo, esto es solo para guiar a la persona.
+ */
+function RegistroGoogle({
+  listo, motivoFalta, onCredential, nota,
+}: { listo: boolean; motivoFalta: string; onCredential: (credential: string) => void; nota?: string }) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="flex-1 border-t border-gray-200" />
+        <span className="text-sm text-gray-500">o regístrate con</span>
+        <div className="flex-1 border-t border-gray-200" />
+      </div>
+      <div className="flex justify-center">
+        {listo ? (
+          <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+            <GoogleLogin
+              onSuccess={r => (r?.credential ? onCredential(r.credential) : toast.error('Error al registrarse con Google'))}
+              onError={() => toast.error('Error al registrarse con Google')}
+              text="signup_with"
+              shape="rectangular"
+            />
+          </GoogleOAuthProvider>
+        ) : (
+          <button
+            type="button"
+            onClick={() => toast.error(motivoFalta)}
+            className="h-10 px-5 rounded border border-gray-300 bg-gray-100 text-sm text-gray-500 cursor-not-allowed"
+          >
+            Registrarse con Google
+          </button>
+        )}
+      </div>
+      <p className="text-center text-xs text-gray-500">
+        {nota ?? 'Usaremos tu nombre y correo de Google. Podrás completar el resto en tu perfil.'}
+      </p>
+    </div>
+  );
+}
+
 export function Register() {
   // ── Estado cliente ──────────────────────────────────────────────────────────
   const [clienteData, setClienteData] = useState({
@@ -59,6 +105,7 @@ export function Register() {
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
   const navigate = useNavigate();
+  const { loginWithGoogle } = useAuth();
 
   // Carga las categorías al montar el componente
   useEffect(() => {
@@ -109,6 +156,22 @@ export function Register() {
       }
     } catch {
       toast.error('Error de conexión con el servidor');
+    }
+  };
+
+  // ── Registro con Google (cliente o artesano) ────────────────────────────────
+  const handleGoogleRegistro = async (credential: string, tipo: 'cliente' | 'artesano') => {
+    try {
+      const result = await loginWithGoogle(credential, {
+        modo: 'registro',
+        tipo,
+        categoriaId: tipo === 'artesano' ? Number(artesanoData.categoria_id) : undefined,
+        aceptaTerminos,
+      });
+      toast.success(`¡Cuenta creada! Bienvenido, ${result.user.name}`);
+      navigate(result.user.role === 'artisan' ? '/perfil-artesano' : '/catalogo');
+    } catch (err: any) {
+      toast.error(err.message || 'Error al registrarse con Google');
     }
   };
 
@@ -183,6 +246,13 @@ export function Register() {
                   Registrarse como Cliente
                 </Button>
               </form>
+              <div className="mt-4">
+                <RegistroGoogle
+                  listo={aceptaTerminos}
+                  motivoFalta="Marca la casilla de la política de datos y los términos para continuar con Google"
+                  onCredential={c => handleGoogleRegistro(c, 'cliente')}
+                />
+              </div>
             </TabsContent>
 
             {/* ── TAB ARTESANO ── */}
@@ -258,6 +328,16 @@ export function Register() {
                   Registrarse como Artesano
                 </Button>
               </form>
+              <div className="mt-4">
+                <RegistroGoogle
+                  listo={aceptaTerminos && !!artesanoData.categoria_id}
+                  motivoFalta={!aceptaTerminos
+                    ? 'Marca la casilla de la política de datos y los términos para continuar con Google'
+                    : 'Selecciona tu categoría artesanal para continuar con Google'}
+                  onCredential={c => handleGoogleRegistro(c, 'artesano')}
+                  nota="Usaremos tu nombre y correo de Google. El teléfono y la biografía los completas luego en tu perfil."
+                />
+              </div>
             </TabsContent>
           </Tabs>
 
