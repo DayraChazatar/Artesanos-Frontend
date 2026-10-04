@@ -9,6 +9,11 @@ import { toast } from 'sonner';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import { Eye, EyeOff } from 'lucide-react';
 
+// Client ID de Google (público por diseño). Se puede cambiar sin tocar código con VITE_GOOGLE_CLIENT_ID.
+const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  '488911224398-v38b4s2o8317bu2j6jkia4e2i8vqh6i5.apps.googleusercontent.com';
+
 export function Login() {
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
@@ -110,7 +115,7 @@ export function Login() {
               app y cargaba el script de Google (con sus cookies de terceros)
               en cada página, aunque nadie fuera a iniciar sesión. */}
           <div className="flex justify-center">
-            <GoogleOAuthProvider clientId="845925419316-dnpgshd089pchteb2pvt2b5u55t96cn9.apps.googleusercontent.com">
+            <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => toast.error('Error al iniciar sesión con Google')}
@@ -119,6 +124,9 @@ export function Login() {
               />
             </GoogleOAuthProvider>
           </div>
+          <p className="mt-3 text-center text-xs text-gray-500">
+            Con Google se crea una cuenta de cliente. Para vender como artesano, regístrate con el formulario.
+          </p>
 
           <div className="mt-6 text-center text-sm">
             ¿No tienes cuenta?{' '}
