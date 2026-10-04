@@ -235,22 +235,22 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
             <span className="text-xs text-stone-400">{pedidosFiltrados.length} pedido{pedidosFiltrados.length !== 1 ? 's' : ''}</span>
           )}
         </div>
-        <div className="flex gap-2 mb-4 border-b border-amber-100">
+        <div className="flex gap-1 sm:gap-2 mb-4 border-b border-amber-100 overflow-x-auto">
           <button
             onClick={() => setPestaña('pedidos')}
-            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${pestaña === 'pedidos' ? 'border-amber-600 text-amber-800' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
+            className={`px-3 sm:px-4 py-2 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${pestaña === 'pedidos' ? 'border-amber-600 text-amber-800' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
           >
             Pedidos ({pedidos.filter(p => !FINALIZADOS.includes(p.estado)).length})
           </button>
           <button
             onClick={() => setPestaña('historial')}
-            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${pestaña === 'historial' ? 'border-amber-600 text-amber-800' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
+            className={`px-3 sm:px-4 py-2 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${pestaña === 'historial' ? 'border-amber-600 text-amber-800' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
           >
             Historial ({pedidos.filter(p => FINALIZADOS.includes(p.estado)).length})
           </button>
           <button
             onClick={() => setPestaña('referencias')}
-            className={`px-4 py-2 text-sm font-semibold border-b-2 transition-colors ${pestaña === 'referencias' ? 'border-amber-600 text-amber-800' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
+            className={`px-3 sm:px-4 py-2 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${pestaña === 'referencias' ? 'border-amber-600 text-amber-800' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
           >
             📮 Referencias ({pedidos.filter(p => !!p.numero_guia).length})
           </button>

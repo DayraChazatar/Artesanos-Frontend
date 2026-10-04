@@ -546,7 +546,7 @@ export function Navbar({
 
                 {user?.role !== 'artisan' &&
                   bellOpen && (
-                    <div className="absolute right-0 mt-3 w-[360px] max-w-[calc(100vw-24px)] bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                    <div className="fixed left-3 right-3 top-full mt-2 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-[360px] bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
 
                       {/* =========================================
                           CABECERA
@@ -594,7 +594,7 @@ export function Navbar({
                           LISTA
                       ========================================= */}
 
-                      <div className="max-h-[420px] overflow-y-auto">
+                      <div className="max-h-[min(420px,calc(100vh-14rem))] overflow-y-auto">
 
                         {orders.length === 0 ? (
 
@@ -847,7 +847,7 @@ export function Navbar({
                   className="flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-full hover:bg-gray-100 transition-colors border border-gray-200"
                 >
 
-                  <span className="text-sm font-semibold text-gray-700 max-w-[120px] truncate">
+                  <span className="text-sm font-semibold text-gray-700 max-w-[120px] truncate max-[339px]:hidden">
                     {user?.name}
                   </span>
 

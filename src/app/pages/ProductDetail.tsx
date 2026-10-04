@@ -931,7 +931,7 @@ export function ProductDetail() {
                   </div>
 
                   {/* Botones compra */}
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-3">
 
                     {user?.role ===
                     'artisan' ? (
@@ -949,7 +949,7 @@ export function ProductDetail() {
                         disabled={
                           stock === 0
                         }
-                        className="flex-1 bg-orange-600 hover:bg-orange-700"
+                        className="flex-1 min-w-[9.5rem] bg-orange-600 hover:bg-orange-700"
                       >
                         <ShoppingCart className="mr-2 h-4 w-4" />
                         Agregar al Carrito
@@ -966,7 +966,7 @@ export function ProductDetail() {
                           stock === 0
                         }
                         variant="outline"
-                        className="flex-1"
+                        className="flex-1 min-w-[9.5rem]"
                       >
                         Comprar Ahora
                       </Button>
