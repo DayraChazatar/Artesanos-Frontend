@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Search, Edit, X, Heart } from 'lucide-react';
+import { Search, Edit, X, Heart, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 import { API_BASE } from '../utils/config';
@@ -11,6 +11,8 @@ import { API_BASE } from '../utils/config';
 export function Catalog() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  // En celular los filtros van plegados arriba de los productos; en pantallas grandes siempre se ven.
+  const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState('default');
   const [showOffers, setShowOffers] = useState(false);
   const [productos, setProductos] = useState<any[]>([]);
@@ -226,10 +228,21 @@ export function Catalog() {
           </select>
         </div>
 
-        <div className="flex gap-8">
+        <button
+          type="button"
+          onClick={() => setShowFilters(v => !v)}
+          aria-expanded={showFilters}
+          aria-controls="filtros-catalogo"
+          className="lg:hidden mb-6 w-full h-12 rounded-xl bg-white border border-gray-200 shadow-sm flex items-center justify-center gap-2 text-gray-700 font-medium"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          {showFilters ? 'Ocultar filtros' : 'Mostrar filtros'}
+        </button>
+
+        <div className="flex flex-col lg:flex-row gap-8">
 
           {/* ── Sidebar filtros ── */}
-          <div className="w-72 flex-shrink-0 space-y-6">
+          <div id="filtros-catalogo" className={`${showFilters ? 'block' : 'hidden'} lg:block w-full lg:w-72 lg:flex-shrink-0 space-y-6`}>
 
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
               <h2 className="text-xl font-semibold text-gray-900 mb-5">Categorías</h2>
@@ -309,7 +322,7 @@ export function Catalog() {
           </div>
 
           {/* ── Grid productos ── */}
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <p className="text-sm text-gray-500 mb-6">{filteredProducts.length} productos encontrados</p>
 
             {filteredProducts.length === 0 ? (
