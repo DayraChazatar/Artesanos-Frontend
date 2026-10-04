@@ -37,7 +37,7 @@ export function ModalReposicion({ producto, onClose, onConfirm }: ModalReposicio
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4">
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center gap-3 mb-1">
           <span className="text-2xl">📦</span>
           <div>

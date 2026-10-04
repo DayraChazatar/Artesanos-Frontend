@@ -41,13 +41,13 @@ export function Cart() {
             {cart.map((item) => (
               <Card key={item.id}>
                 <CardContent className="p-4">
-                  <div className="flex gap-4">
+                  <div className="flex flex-wrap gap-3 sm:gap-4">
                     <img
                       src={item.image}
                       alt={item.name}
-                      className="w-24 h-24 object-cover rounded"
+                      className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 object-cover rounded"
                     />
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-[7.5rem]">
                       <Link
                         to={`/producto/${item.id}`}
                         className="font-semibold hover:text-orange-600"
@@ -57,7 +57,7 @@ export function Cart() {
                       <p className="text-sm text-gray-600 mb-2">
                         Por {item.artisan}
                       </p>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 sm:gap-2">
                         <Button
                           size="icon"
                           variant="outline"
@@ -79,7 +79,7 @@ export function Cart() {
                               parseInt(e.target.value) || 1
                             )
                           }
-                          className="w-16 text-center"
+                          className="w-12 sm:w-16 px-1 text-center"
                         />
                         <Button
                           size="icon"
@@ -94,7 +94,7 @@ export function Cart() {
                         </Button>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0 ml-auto">
                       <p className="font-semibold text-orange-600 mb-2">
                         ${(item.price * item.quantity).toLocaleString('es-CO')}
                       </p>
