@@ -265,7 +265,7 @@ export function ModuloPerfil() {
               <button
                 onClick={() => document.getElementById('input-foto')?.click()}
                 aria-label="Cambiar foto de perfil"
-                className="absolute bottom-0 right-0 w-8 h-8 bg-amber-600 rounded-full flex items-center justify-center text-white text-sm hover:bg-amber-700 transition shadow">
+                className="absolute bottom-0 right-0 w-8 h-8 bg-amber-600 rounded-full flex items-center justify-center text-amber-950 text-sm hover:bg-amber-500 transition shadow">
                 <span aria-hidden="true">📷</span>
               </button>
               <input id="input-foto" type="file" accept="image/*" className="hidden"

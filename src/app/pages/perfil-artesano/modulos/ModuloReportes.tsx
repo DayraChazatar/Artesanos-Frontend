@@ -191,7 +191,7 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
     return (
       <div className="flex gap-2 flex-wrap">
         <button onClick={() => toggleVista(tab)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${esDash ? 'bg-amber-600 text-white border-amber-600 shadow-sm' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'}`}>
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${esDash ? 'bg-amber-600 text-amber-950 border-amber-600 shadow-sm' : 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'}`}>
           {esDash ? '📋 Ver tabla' : '📊 Dashboard'}
         </button>
         <button onClick={() => descargarReporte(tipo, 'excel', ARTESANO_ID)}
@@ -325,7 +325,7 @@ export function ModuloReportes({ productos, kardex }: ModuloReportesProps) {
                       <td className="px-3 py-3 font-semibold">{k.producto_nombre}</td>
                       <td className="px-3 py-3"><TipoBadge tipo={k.tipo} /></td>
                       <td className="px-3 py-3"><span className="text-xs bg-stone-50 border border-stone-100 px-2 py-0.5 rounded-full text-stone-500">{(k as any).subtipo ?? '—'}</span></td>
-                      <td className="px-3 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${(k as any).origen === 'automatico' ? 'bg-purple-50 text-purple-600' : 'bg-amber-50 text-amber-600'}`}>{(k as any).origen === 'automatico' ? '⚡ auto' : '✍️ manual'}</span></td>
+                      <td className="px-3 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${(k as any).origen === 'automatico' ? 'bg-purple-50 text-purple-600' : 'bg-amber-50 text-amber-700'}`}>{(k as any).origen === 'automatico' ? '⚡ auto' : '✍️ manual'}</span></td>
                       <td className="px-3 py-3 font-bold text-center">{k.cantidad}</td>
                       <td className="px-3 py-3 font-semibold text-green-700 text-center">{k.stock_resultante}</td>
                       <td className="px-3 py-3 text-stone-600">{(k as any).precio_unitario ? `$${Number((k as any).precio_unitario).toLocaleString('es-CO')}` : '—'}</td>

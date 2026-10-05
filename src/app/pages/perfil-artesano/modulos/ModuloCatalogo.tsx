@@ -29,7 +29,7 @@ function StockBadge({ p }: { p: Producto }) {
   return (
     <span className="inline-flex flex-col gap-0.5">
       <Badge color="bg-green-100 text-green-700">{disponible}</Badge>
-      {reservado > 0 && <span className="text-[10px] text-amber-600 font-semibold">{reservado} reservados</span>}
+      {reservado > 0 && <span className="text-[10px] text-amber-700 font-semibold">{reservado} reservados</span>}
     </span>
   );
 }

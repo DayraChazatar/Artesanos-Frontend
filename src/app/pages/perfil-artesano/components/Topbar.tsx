@@ -56,7 +56,7 @@ export function Topbar({ noLeidas, onVerPerfil, onAbrirNotificaciones }: TopbarP
           <div className="relative" ref={menuRef}>
             <button onClick={() => setOpen(prev => !prev)}
               className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-amber-100 bg-amber-50 hover:bg-amber-100 transition">
-              <div className="w-7 h-7 rounded-full bg-amber-600 flex items-center justify-center text-white text-xs font-bold">
+              <div className="w-7 h-7 rounded-full bg-amber-600 flex items-center justify-center text-amber-950 text-xs font-bold">
                 {user?.name?.slice(0, 2).toUpperCase()}
               </div>
               <span className="text-sm text-stone-700 font-medium hidden sm:block">{user?.name}</span>

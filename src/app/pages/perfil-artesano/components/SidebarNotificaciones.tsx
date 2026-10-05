@@ -61,7 +61,7 @@ export function SidebarNotificaciones({
       {detalle ? (
         <div className="flex-1 overflow-y-auto p-5">
           <button onClick={() => setDetalle(null)}
-            className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-800 mb-4 font-semibold transition">
+            className="flex items-center gap-1 text-xs text-amber-700 hover:text-amber-800 mb-4 font-semibold transition">
             ← Volver
           </button>
           <div className="flex items-center gap-2 mb-3">
@@ -80,7 +80,7 @@ export function SidebarNotificaciones({
                 }
                 setDetalle(null);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors shadow-sm"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-amber-950 text-xs font-semibold transition-colors shadow-sm"
             >
               {detalle.tipo === 'pedido' ? '🛍️ Ir a pedidos' : '📦 Ir a inventario'} →
             </button>
@@ -91,7 +91,7 @@ export function SidebarNotificaciones({
           <div className="flex gap-2 px-4 pb-3">
             {(['todas', 'pedido', 'stock'] as const).map(f => (
               <button key={f} onClick={() => setFiltro(f)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold transition ${filtro === f ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-700'}`}>
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition ${filtro === f ? 'bg-amber-500 text-amber-950' : 'bg-amber-50 text-amber-700'}`}>
                 {f === 'todas' ? 'Todas' : f === 'pedido' ? 'Pedidos' : 'Inventario'}
               </button>
             ))}
@@ -116,7 +116,7 @@ export function SidebarNotificaciones({
             <>
               {filtradas.filter(n => !n.leida).length > 0 && (
                 <button onClick={marcarTodasLeidas}
-                  className="w-full text-xs text-amber-600 hover:text-amber-800 font-semibold px-5 py-2 text-right transition">
+                  className="w-full text-xs text-amber-700 hover:text-amber-800 font-semibold px-5 py-2 text-right transition">
                   Marcar todas como leídas
                 </button>
               )}
@@ -132,7 +132,7 @@ export function SidebarNotificaciones({
                       {!n.leida && <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />}
                     </div>
                     <p className="text-xs text-stone-400 line-clamp-2 leading-relaxed">{n.detalle}</p>
-                    {n.ruta && <span className="text-xs text-amber-500 font-semibold mt-1 inline-block">Toca para ver →</span>}
+                    {n.ruta && <span className="text-xs text-amber-700 font-semibold mt-1 inline-block">Toca para ver →</span>}
                     <p className="text-xs text-stone-500 mt-1">{n.fecha}</p>
                   </div>
                 </button>

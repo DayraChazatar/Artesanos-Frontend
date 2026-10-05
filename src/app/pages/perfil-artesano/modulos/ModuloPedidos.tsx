@@ -176,7 +176,7 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
           <h2 className="font-serif text-2xl text-amber-800">🛒 Gestión de Pedidos</h2>
           <p className="text-stone-500 text-sm mt-1">Los cambios de estado actualizan el inventario automáticamente</p>
         </div>
-        <button onClick={fetchPedidos} aria-label="Actualizar la lista de pedidos" className="p-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100 transition">
+        <button onClick={fetchPedidos} aria-label="Actualizar la lista de pedidos" className="p-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 transition">
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
@@ -315,7 +315,7 @@ export function ModuloPedidos({ productos, setProductos, setKardex }: ModuloPedi
                                   </button>
                                 </>
                               ) : (
-                                <span className="text-xs text-amber-500 italic">⏳ Esperando comprobante del cliente</span>
+                                <span className="text-xs text-amber-700 italic">⏳ Esperando comprobante del cliente</span>
                               )
                             ) : pedido.estado === 'Pago pendiente' ? (
                               <span className="text-xs text-stone-500 italic">⏳ Esperando confirmación de Wompi</span>

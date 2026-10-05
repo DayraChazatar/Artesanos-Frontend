@@ -163,7 +163,7 @@ export function ModuloInventario({
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
                   {[
                     { label: 'Stock Total', value: productoSeleccionado.cantidad, color: 'text-stone-700' },
-                    { label: 'Reservado', value: reservado, color: 'text-amber-600' },
+                    { label: 'Reservado', value: reservado, color: 'text-amber-700' },
                     { label: 'Disponible', value: disponible, color: bajo ? 'text-red-600' : 'text-green-600' },
                     { label: 'Mínimo', value: productoSeleccionado.stock_minimo, color: 'text-stone-400' },
                     { label: 'Máximo', value: productoSeleccionado.stock_maximo || '—', color: 'text-stone-400' },
@@ -234,7 +234,7 @@ export function ModuloInventario({
                       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${String(k.tipo).toLowerCase() === 'entrada' ? 'bg-green-100 text-green-700' : String(k.tipo).toLowerCase() === 'salida' ? 'bg-red-100 text-red-600' : 'bg-stone-100 text-stone-500'}`}>{k.tipo}</span>
                     </td>
                     <td className="px-3 py-3"><span className="text-xs bg-stone-50 border border-stone-100 px-2 py-0.5 rounded-full text-stone-500">{(k as any).subtipo ?? '—'}</span></td>
-                    <td className="px-3 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${(k as any).origen === 'automatico' ? 'bg-purple-50 text-purple-600' : 'bg-amber-50 text-amber-600'}`}>{(k as any).origen === 'automatico' ? '⚡ auto' : '✍️ manual'}</span></td>
+                    <td className="px-3 py-3"><span className={`text-xs px-2 py-0.5 rounded-full ${(k as any).origen === 'automatico' ? 'bg-purple-50 text-purple-600' : 'bg-amber-50 text-amber-700'}`}>{(k as any).origen === 'automatico' ? '⚡ auto' : '✍️ manual'}</span></td>
                     <td className="px-3 py-3 font-bold">{k.cantidad}</td>
                     <td className="px-3 py-3 font-semibold text-green-700">{k.stock_resultante}</td>
                     <td className="px-3 py-3 text-stone-600">{(k as any).precio_unitario ? `$${Math.round(Number((k as any).precio_unitario)).toLocaleString('es-CO')}` : '—'}</td>

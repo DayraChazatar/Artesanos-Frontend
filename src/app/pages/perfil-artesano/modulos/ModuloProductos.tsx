@@ -404,7 +404,7 @@ export function ModuloProductos({
                             if (hexEncontrado) setColorHexActual(hexEncontrado);
                           }}
                         />
-                        <button type="button" onClick={agregarColor} className="px-3 py-2 rounded-xl bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 transition">+ Agregar</button>
+                        <button type="button" onClick={agregarColor} className="px-3 py-2 rounded-xl bg-amber-600 text-amber-950 text-sm font-semibold hover:bg-amber-500 transition">+ Agregar</button>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {(prod.colores ?? []).map(color => (
@@ -441,7 +441,7 @@ export function ModuloProductos({
                           placeholder="Ej: S, M, L o 16, 17, 18"
                           className={`${inputCls} flex-1 min-w-[160px]`}
                         />
-                        <button type="button" onClick={agregarTalla} className="px-3 py-2 rounded-xl bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 transition">+ Agregar</button>
+                        <button type="button" onClick={agregarTalla} className="px-3 py-2 rounded-xl bg-amber-600 text-amber-950 text-sm font-semibold hover:bg-amber-500 transition">+ Agregar</button>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {(prod.tallas ?? []).map(talla => (

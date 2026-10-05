@@ -24,10 +24,10 @@ export function Sidebar({ active, onChange }: SidebarProps) {
             onClick={() => onChange(tab)}
             title={label}
             className={`flex flex-col items-center gap-2 w-24 py-4 rounded-2xl text-center transition
-              ${active === tab ? 'bg-amber-600 text-white shadow-md' : 'text-amber-800 hover:bg-amber-50'}`}
+              ${active === tab ? 'bg-amber-600 text-amber-950 shadow-md' : 'text-amber-800 hover:bg-amber-50'}`}
           >
             <span className="text-4xl leading-none">{icon}</span>
-            <span className={`text-sm font-semibold leading-tight ${active === tab ? 'text-white' : 'text-stone-500'}`}>
+            <span className={`text-sm font-semibold leading-tight ${active === tab ? 'text-amber-950' : 'text-stone-500'}`}>
               {label}
             </span>
           </button>
