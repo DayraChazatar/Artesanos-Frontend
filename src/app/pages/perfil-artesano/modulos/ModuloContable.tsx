@@ -42,16 +42,16 @@ export function ModuloContable({ productos }: ModuloContableProps) {
                 </div>
               ))}
             </div>
-            <div className="bg-gradient-to-br from-amber-700 to-amber-500 rounded-2xl p-5 text-white">
-              <div className="text-xs uppercase tracking-wider opacity-70 font-semibold mb-3">Resumen de precios</div>
+            <div className="bg-gradient-to-br from-amber-600 to-amber-500 rounded-2xl p-5 text-amber-950">
+              <div className="text-xs uppercase tracking-wider opacity-90 font-semibold mb-3">Resumen de precios</div>
               <div className="flex gap-8 flex-wrap">
                 <div>
-                  <div className="text-xs opacity-70">Precio + IVA</div>
+                  <div className="text-xs opacity-90">Precio + IVA</div>
                   <div className="text-2xl font-serif font-bold">${(producto.precio_con_iva ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                 </div>
                 {producto.descuento && (
                   <div>
-                    <div className="text-xs opacity-70">Con descuento ({producto.valor_descuento}%)</div>
+                    <div className="text-xs opacity-90">Con descuento ({producto.valor_descuento}%)</div>
                     <div className="text-2xl font-serif font-bold text-green-200">${(producto.precio_final ?? 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                   </div>
                 )}

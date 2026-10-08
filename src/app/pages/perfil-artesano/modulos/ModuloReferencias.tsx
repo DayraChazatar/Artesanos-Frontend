@@ -282,7 +282,7 @@ export function ModuloReferencias({ pedidos, onRefrescar, setProductos, setKarde
           <button
             onClick={handleGuardar}
             disabled={guardando}
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white text-sm font-semibold shadow hover:shadow-md transition disabled:opacity-60"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 text-amber-950 text-sm font-semibold shadow hover:shadow-md transition disabled:opacity-60"
           >
             {guardando ? 'Guardando...' : 'Guardar'}
           </button>

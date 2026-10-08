@@ -13,6 +13,7 @@ import {
   ChevronRight, Package2, TruckIcon, CheckCircle, AlertCircle,
 } from 'lucide-react';
 import { API_BASE } from '../utils/config';
+import { prepararImagen } from '../utils/imagen';
  
 // ─── Tipos ────────────────────────────────────────────────────────────────────
  
@@ -520,8 +521,9 @@ export function Profile() {
   };
  
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const original = e.target.files?.[0];
+    if (!original) return;
+    const file = await prepararImagen(original);
  
     const usuarioId = localStorage.getItem('usuario_id') ?? user?.id;
     const token = localStorage.getItem('token') ?? '';

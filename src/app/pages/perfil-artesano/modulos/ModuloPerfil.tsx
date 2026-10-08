@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { API_BASE } from '../../../utils/config';
+import { prepararImagen } from '../../../utils/imagen';
 import { useAuth } from '../../../context/AuthContext';
 
 const inputCls = 'px-4 py-3 rounded-xl border border-amber-200 bg-amber-50 text-base text-stone-800 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition';
@@ -270,10 +271,11 @@ export function ModuloPerfil() {
               </button>
               <input id="input-foto" type="file" accept="image/*" className="hidden"
                 onChange={async e => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setPreview(URL.createObjectURL(file));
+                  const original = e.target.files?.[0];
+                  if (!original) return;
                   setLoading(true);
+                  const file = await prepararImagen(original);
+                  setPreview(URL.createObjectURL(file));
                   try {
                     const formData = new FormData();
                     formData.append('foto', file);
@@ -420,7 +422,7 @@ export function ModuloPerfil() {
  
           {editando && (
             <button onClick={handleGuardar} disabled={loading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white font-semibold shadow hover:shadow-md transition disabled:opacity-60">
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 text-amber-950 font-semibold shadow hover:shadow-md transition disabled:opacity-60">
               {loading ? 'Guardando...' : '✓ Guardar cambios'}
             </button>
           )}
@@ -464,7 +466,7 @@ export function ModuloPerfil() {
               </div>
             ))}
             <button onClick={handleCambiarPassword} disabled={loadingPass}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white font-semibold shadow hover:shadow-md transition disabled:opacity-60">
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 text-amber-950 font-semibold shadow hover:shadow-md transition disabled:opacity-60">
               {loadingPass ? 'Actualizando...' : '✓ Cambiar contraseña'}
             </button>
           </div>
@@ -529,7 +531,7 @@ export function ModuloPerfil() {
             </div>
 
             <button onClick={handleGuardarPagoDirecto} disabled={loadingPagoDirecto}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white font-semibold shadow hover:shadow-md transition disabled:opacity-60">
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 text-amber-950 font-semibold shadow hover:shadow-md transition disabled:opacity-60">
               {loadingPagoDirecto ? 'Guardando...' : '✓ Guardar datos de pago'}
             </button>
             {pagoDirectoActivo && (

@@ -26,6 +26,8 @@ interface OpcionesGoogle {
   tipo?: 'cliente' | 'artesano';
   categoriaId?: number;
   aceptaTerminos?: boolean;
+  telefono?: string;
+  biografia?: string;
 }
 
 interface AuthContextType {
@@ -137,6 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           tipo: opciones.tipo ?? 'cliente',
           categoria_id: opciones.categoriaId,
           acepta_terminos: opciones.aceptaTerminos === true,
+          telefono: opciones.telefono ?? '',
+          biografia: opciones.biografia ?? '',
         }),
       }),
     });

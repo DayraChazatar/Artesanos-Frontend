@@ -167,6 +167,8 @@ export function Register() {
         tipo,
         categoriaId: tipo === 'artesano' ? Number(artesanoData.categoria_id) : undefined,
         aceptaTerminos,
+        telefono: tipo === 'artesano' ? artesanoData.phone : undefined,
+        biografia: tipo === 'artesano' ? artesanoData.bio : undefined,
       });
       toast.success(`¡Cuenta creada! Bienvenido, ${result.user.name}`);
       navigate(result.user.role === 'artisan' ? '/perfil-artesano' : '/catalogo');
@@ -335,7 +337,7 @@ export function Register() {
                     ? 'Marca la casilla de la política de datos y los términos para continuar con Google'
                     : 'Selecciona tu categoría artesanal para continuar con Google'}
                   onCredential={c => handleGoogleRegistro(c, 'artesano')}
-                  nota="Usaremos tu nombre y correo de Google. El teléfono y la biografía los completas luego en tu perfil."
+                  nota="Usaremos tu nombre y correo de Google, y guardaremos el teléfono y la biografía que escribiste arriba."
                 />
               </div>
             </TabsContent>

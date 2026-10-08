@@ -6,6 +6,7 @@ import {
 } from '../../../data/artesanoApi';
 import { ModalReposicion } from '../components/ModalReposicion';
 import { API_BASE } from '../../../utils/config';
+import { prepararImagen } from '../../../utils/imagen';
 
 const ARTESANO_ID = Number(localStorage.getItem('usuario_id') ?? 1);
 
@@ -170,7 +171,6 @@ export function ModuloProductos({
         formData.append('valor_descuento', String(prod.valor_descuento));
         formData.append('tallas', JSON.stringify(prod.tallas ?? []));
         formData.append('colores', JSON.stringify(prod.colores ?? []));
-        (prod.tallas ?? []).forEach(t => formData.append('tallas', t));
         const categoriaId = categorias[0]?.id;
         if (categoriaId) formData.append('categoria', String(categoriaId));
         if (imagenFile) formData.append('imagen', imagenFile);
@@ -180,14 +180,20 @@ export function ModuloProductos({
   headers: { Authorization: `Token ${localStorage.getItem('token')}` },
   body: formData,
 });
-        if (!response.ok) { const error = await response.json(); throw new Error(JSON.stringify(error)); }
+        if (!response.ok) {
+          const error = await response.json().catch(() => null);
+          const detalle = error && typeof error === 'object'
+            ? (error.error ?? Object.entries(error).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(' ') : v}`).join(' · '))
+            : `El servidor no pudo guardar el producto (código ${response.status}). Intenta de nuevo.`;
+          throw new Error(detalle);
+        }
         const nuevo = await response.json();
         setProductos(prev => [...prev, nuevo]);
         if (nuevo.id && nuevo.imagen_url) setImagenes(prev => ({ ...prev, [nuevo.id]: nuevo.imagen_url }));
         setImagenFile(null);
         setArchivos([]);
         setProd({ codigo_barra: generarCodigo(), lote: generarLote(), nombre: '', categoria: categorias[0]?.id ?? null, precio_neto: 0, iva: 0, descuento: false, valor_descuento: 0, cantidad: 0, stock_minimo: 0, stock_maximo: 0, artesano: ARTESANO_ID, colores: [], maneja_tallas: false, tallas: [] });
-        showAlert('✓ Producto creado correctamente');
+        showAlert(imagenFile ? '✓ Producto creado correctamente' : '✓ Producto creado, pero sin foto. Puedes crear otro con foto o agregarla después.');
       }
 
     } catch (err: any) {
@@ -309,7 +315,15 @@ export function ModuloProductos({
               {imagenFile && <img src={URL.createObjectURL(imagenFile)} className="mt-3 h-24 w-24 object-cover rounded-xl border border-amber-200" />}
             </div>
             <input id="input-imagen" type="file" accept="image/*" className="hidden"
-              onChange={e => { const file = e.target.files?.[0]; if (file) { setImagenFile(file); setArchivos([file.name]); } }} />
+              onChange={async e => {
+                const original = e.target.files?.[0];
+                if (!original) return;
+                setArchivos(['Preparando la foto…']);
+                const file = await prepararImagen(original);
+                setImagenFile(file);
+                setArchivos([original.name]);
+                e.target.value = ''; // permite volver a elegir la misma foto
+              }} />
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm p-6">
@@ -490,7 +504,7 @@ export function ModuloProductos({
 
               <div className="flex gap-3 mt-2">
                 <button onClick={handleAddProducto} disabled={loading}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white text-sm font-semibold shadow hover:shadow-md transition disabled:opacity-60">
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 text-amber-950 text-sm font-semibold shadow hover:shadow-md transition disabled:opacity-60">
                   {loading ? 'Guardando...' : editandoId ? 'Actualizar producto' : 'Guardar producto'}
                 </button>
                 <button onClick={() => { setEditandoId(null); setProd({ codigo_barra: generarCodigo(), lote: generarLote(), nombre: '', categoria: null, precio_neto: 0, iva: 0, descuento: false, valor_descuento: 0, cantidad: 0, stock_minimo: 0, stock_maximo: 0, artesano: ARTESANO_ID, colores: [], maneja_tallas: false, tallas: [] }); }}
@@ -583,7 +597,7 @@ export function ModuloProductos({
                 onChange={e => { setArchivoMasivo(e.target.files?.[0] ?? null); setResultadoMasivo(null); }} />
 
               <button onClick={handleCargarMasivo} disabled={!archivoMasivo || loadingMasivo}
-                className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 text-white text-sm font-semibold shadow hover:shadow-md transition disabled:opacity-60">
+                className="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 text-amber-950 text-sm font-semibold shadow hover:shadow-md transition disabled:opacity-60">
                 {loadingMasivo ? 'Procesando...' : '📤 Cargar productos'}
               </button>
             </div>
