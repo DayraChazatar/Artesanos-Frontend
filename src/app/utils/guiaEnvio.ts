@@ -1,3 +1,4 @@
+import { esc } from './html';
 export function generarGuiaEnvio(pedido: any) {
   const fecha = new Date(pedido.fecha).toLocaleDateString('es-CO', {
     day: '2-digit', month: 'long', year: 'numeric'
@@ -5,12 +6,12 @@ export function generarGuiaEnvio(pedido: any) {
 
   // No se trabaja con ninguna transportadora — ni real ni inventada. Este
   // comprobante lo emite Pakari Shop directamente, no una empresa de envíos.
-  const numeroGuia = pedido.numero_guia || `PKR-PED-${String(pedido.id).padStart(5,'0')}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
+  const numeroGuia = esc(pedido.numero_guia || `PKR-PED-${String(pedido.id).padStart(5,'0')}-${Math.random().toString(36).slice(2,7).toUpperCase()}`);
 
   const productosHTML = pedido.detalles?.map((d: any) => `
     <tr>
-      <td style="padding:12px 16px; border-bottom:1px solid #fde68a; color:#44403c;">${d.producto_nombre}</td>
-      <td style="padding:12px 16px; border-bottom:1px solid #fde68a; text-align:center; font-weight:600; color:#92400e;">${d.cantidad}</td>
+      <td style="padding:12px 16px; border-bottom:1px solid #fde68a; color:#44403c;">${esc(d.producto_nombre)}</td>
+      <td style="padding:12px 16px; border-bottom:1px solid #fde68a; text-align:center; font-weight:600; color:#92400e;">${esc(d.cantidad)}</td>
       <td style="padding:12px 16px; border-bottom:1px solid #fde68a; text-align:right; color:#44403c;">$${Number(d.precio ?? d.subtotal ?? 0).toLocaleString('es-CO')}</td>
       <td style="padding:12px 16px; border-bottom:1px solid #fde68a; text-align:right; font-weight:600; color:#92400e;">$${Number(d.subtotal ?? 0).toLocaleString('es-CO')}</td>
     </tr>
@@ -94,7 +95,7 @@ export function generarGuiaEnvio(pedido: any) {
           <!-- ESTADO -->
           <div class="status-band">
             <div class="status-dot"></div>
-            <span class="status-text">Estado: ${pedido.estado}</span>
+            <span class="status-text">Estado: ${esc(pedido.estado)}</span>
             <span style="margin-left:auto; font-size:12px; color:#92400e;">📅 ${fecha}</span>
           </div>
 
@@ -110,10 +111,10 @@ export function generarGuiaEnvio(pedido: any) {
             </div>
             <div class="address-block">
               <div class="block-title">🏠 Destinatario</div>
-              <div class="block-name">${pedido.cliente_nombre}</div>
+              <div class="block-name">${esc(pedido.cliente_nombre)}</div>
               <div class="block-detail">
-                ${pedido.telefono ? `📞 ${pedido.telefono}<br/>` : ''}
-                ${pedido.direccion ? `📍 ${pedido.direccion}` : ''}
+                ${pedido.telefono ? `📞 ${esc(pedido.telefono)}<br/>` : ''}
+                ${pedido.direccion ? `📍 ${esc(pedido.direccion)}` : ''}
               </div>
             </div>
           </div>
@@ -122,7 +123,7 @@ export function generarGuiaEnvio(pedido: any) {
           <div class="shipping-info">
             <div class="info-item">
               <span class="info-item-label">Pedido</span>
-              <span class="info-item-value">#${pedido.codigo ?? pedido.id}</span>
+              <span class="info-item-value">#${esc(pedido.codigo ?? pedido.id)}</span>
             </div>
             <div class="info-item">
               <span class="info-item-label">Fecha</span>

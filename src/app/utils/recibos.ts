@@ -1,3 +1,4 @@
+import { esc } from './html';
 interface Order {
   id: string;
   date: string;
@@ -28,8 +29,8 @@ export function generarReciboPDF(order: Order) {
 
   const itemsHTML = order.items.map((item: any) => `
     <tr>
-      <td style="padding:12px 16px; border-bottom:1px solid #fde68a; color:#44403c;">${item.name}</td>
-      <td style="padding:12px 16px; border-bottom:1px solid #fde68a; text-align:center; color:#44403c;">${item.quantity}</td>
+      <td style="padding:12px 16px; border-bottom:1px solid #fde68a; color:#44403c;">${esc(item.name)}</td>
+      <td style="padding:12px 16px; border-bottom:1px solid #fde68a; text-align:center; color:#44403c;">${esc(item.quantity)}</td>
       <td style="padding:12px 16px; border-bottom:1px solid #fde68a; text-align:right; color:#44403c;">$${Number(item.price).toLocaleString('es-CO')}</td>
       <td style="padding:12px 16px; border-bottom:1px solid #fde68a; text-align:right; font-weight:600; color:#92400e;">$${Number(item.price * item.quantity).toLocaleString('es-CO')}</td>
     </tr>
@@ -38,7 +39,7 @@ export function generarReciboPDF(order: Order) {
   const html = `
     <html>
       <head>
-        <title>Recibo Pakari Shop — #${order.id.slice(-6)}</title>
+        <title>Recibo Pakari Shop — #${esc(order.id.slice(-6))}</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body { font-family: 'Segoe UI', Arial, sans-serif; background: #fffbf5; color: #44403c; }
@@ -86,27 +87,27 @@ export function generarReciboPDF(order: Order) {
             </div>
             <div class="header-right">
               <div class="recibo-label">Recibo de compra</div>
-              <div class="recibo-num">#${order.id.slice(-6).toUpperCase()}</div>
+              <div class="recibo-num">#${esc(order.id.slice(-6).toUpperCase())}</div>
             </div>
           </div>
           <div class="status-band">
             <div class="status-dot"></div>
-            <span class="status-text">Estado del pedido: ${order.status}</span>
+            <span class="status-text">Estado del pedido: ${esc(order.status)}</span>
             ${order.numero_guia ? `<span style="margin-left:auto; font-size:12px; color:#92400e;">📦 Referencia: <strong>${order.numero_guia}</strong></span>` : ''}
           </div>
           <div class="info-section">
             <div class="info-block">
               <div class="info-title">📋 Datos del pedido</div>
               <div class="info-row"><span class="info-label">Fecha</span><span class="info-value">${fecha}</span></div>
-              <div class="info-row"><span class="info-label">Pedido</span><span class="info-value">#${order.id.slice(-6).toUpperCase()}</span></div>
+              <div class="info-row"><span class="info-label">Pedido</span><span class="info-value">#${esc(order.id.slice(-6).toUpperCase())}</span></div>
               ${order.fecha_envio ? `<div class="info-row"><span class="info-label">Enviado</span><span class="info-value">${new Date(order.fecha_envio).toLocaleDateString('es-CO')}</span></div>` : ''}
               ${order.fecha_entrega ? `<div class="info-row"><span class="info-label">Entregado</span><span class="info-value">${new Date(order.fecha_entrega).toLocaleDateString('es-CO')}</span></div>` : ''}
             </div>
             <div class="info-block">
               <div class="info-title">👤 Datos del cliente</div>
-              <div class="info-row"><span class="info-label">Nombre</span><span class="info-value">${nombreCliente}</span></div>
-              ${order.customer.email ? `<div class="info-row"><span class="info-label">Email</span><span class="info-value">${order.customer.email}</span></div>` : ''}
-              ${order.customer.phone ? `<div class="info-row"><span class="info-label">Teléfono</span><span class="info-value">${order.customer.phone}</span></div>` : ''}
+              <div class="info-row"><span class="info-label">Nombre</span><span class="info-value">${esc(nombreCliente)}</span></div>
+              ${order.customer.email ? `<div class="info-row"><span class="info-label">Email</span><span class="info-value">${esc(order.customer.email)}</span></div>` : ''}
+              ${order.customer.phone ? `<div class="info-row"><span class="info-label">Teléfono</span><span class="info-value">${esc(order.customer.phone)}</span></div>` : ''}
             </div>
           </div>
           <div class="table-section">
